@@ -235,7 +235,7 @@ class DataService {
     await box.put(lastKey + 1, game.toMap());
 
     // Save to user additions
-    List<Map> addedGames = List<Map>.from(userBox.get('addedGames') ?? []);
+    dynamic addedGames = userBox.get('addedGames') ?? [];
     addedGames.add(game.toMap());
     await userBox.put('addedGames', addedGames);
   }
@@ -253,7 +253,7 @@ class DataService {
     ).toMap());
 
     // Save to user additions
-    List<Map> addedRiddles = List<Map>.from(userBox.get('addedRiddles') ?? []);
+    dynamic addedRiddles = userBox.get('addedRiddles') ?? [];
     addedRiddles.add({'category': category, 'riddles': riddles});
     await userBox.put('addedRiddles', addedRiddles);
   }
@@ -291,7 +291,7 @@ class DataService {
     buffer.writeln('===== User Additions =====\n');
 
     // Added games
-    final addedGames = List<Map>.from(userBox.get('addedGames') ?? []);
+    dynamic addedGames = userBox.get('addedGames') ?? [];
     if (addedGames.isNotEmpty) {
       buffer.writeln('New Games:');
       for (var game in addedGames) {
@@ -303,7 +303,7 @@ class DataService {
     }
 
     // Added riddles
-    final addedRiddles = List<Map>.from(userBox.get('addedRiddles') ?? []);
+    dynamic addedRiddles = userBox.get('addedRiddles') ?? [];
     if (addedRiddles.isNotEmpty) {
       buffer.writeln('New Riddle Categories:');
       for (var riddleCategory in addedRiddles) {
