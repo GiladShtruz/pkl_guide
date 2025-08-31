@@ -1,379 +1,481 @@
+import 'dart:async';
+import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show rootBundle;
-import 'package:csv/csv.dart';
-import 'package:hive_flutter/hive_flutter.dart';
-import 'package:flutter_card_swiper/flutter_card_swiper.dart';
-import 'package:share_plus/share_plus.dart';
-import 'dart:io';
-import 'package:path_provider/path_provider.dart';
-import '/models/game.dart';
-import '/models/riddle.dart';
-import '/models/circle.dart';
-import '/models/word_game.dart';
-import '/models/search_result.dart';
-import '/services/data_service.dart';
-import '/app.dart';
-import '/screens/home_screen.dart';
-import '/widgets/category_card.dart';
-import '/screens/games_list_screen.dart';
-import '/screens/game_detail_screen.dart';
-import '/screens/stickers_game_screen.dart';
-import '/screens/riddles_list_screen.dart';
-import '/screens/riddle_detail_screen.dart';
-import '/screens/circles_list_screen.dart';
-import '/screens/circle_detail_screen.dart';
-import '/screens/search_screen.dart';
+import 'package:flutter/services.dart';
+import 'package:swipable_stack/swipable_stack.dart';
+// import 'package:vibration/vibration.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../models/item_model.dart';
 
 class PantomimeGameScreen extends StatefulWidget {
-  final WordGame wordGame;
+  final ItemModel item;
 
-  const PantomimeGameScreen({Key? key, required this.wordGame}) : super(key: key);
+  const PantomimeGameScreen({
+    super.key,
+    required this.item,
+  });
 
   @override
   State<PantomimeGameScreen> createState() => _PantomimeGameScreenState();
 }
 
-class _PantomimeGameScreenState extends State<PantomimeGameScreen> with TickerProviderStateMixin {
-  late AnimationController _timerController;
-  late CardSwiperController _cardController;
+class _PantomimeGameScreenState extends State<PantomimeGameScreen>
+    with TickerProviderStateMixin {
+  late SwipableStackController _controller;
   late List<String> _words;
-  int _successCount = 0;
+  late List<String> _usedWords;
+  int _currentTeam = 1;
+  int _team1Score = 0;
+  int _team2Score = 0;
+  int _currentRoundScore = 0;
   bool _isPlaying = false;
   int _remainingSeconds = 60;
+  Timer? _timer;
+  bool _wordsRepeating = false;
+  late AnimationController _timerAnimationController;
+  late Animation<double> _timerAnimation;
 
   @override
   void initState() {
     super.initState();
-    _words = List.from(widget.wordGame.allWords)..shuffle();
-    _cardController = CardSwiperController();
+    _controller = SwipableStackController();
+    _words = List.from(widget.item.content);
+    _usedWords = [];
+    _shuffleWords();
 
-    _timerController = AnimationController(
+    _timerAnimationController = AnimationController(
       duration: const Duration(seconds: 60),
       vsync: this,
     );
 
-    _timerController.addListener(() {
-      setState(() {
-        _remainingSeconds = (60 - (_timerController.value * 60)).round();
+    _timerAnimation = Tween<double>(
+      begin: 1.0,
+      end: 0.0,
+    ).animate(_timerAnimationController);
+
+    _checkShowRules();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _timerAnimationController.dispose();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _checkShowRules() async {
+    final prefs = await SharedPreferences.getInstance();
+    final dontShowAgain = prefs.getBool('pantomime_rules_dont_show') ?? false;
+
+    if (!dontShowAgain && mounted) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showRulesDialog(isFirstTime: true);
       });
-    });
-
-    _timerController.addStatusListener((status) {
-      if (status == AnimationStatus.completed) {
-        _endGame();
-      }
-    });
+    }
   }
 
-  void _startGame() {
-    setState(() {
-      _isPlaying = true;
-      _successCount = 0;
-      _words.shuffle();
-    });
-    _timerController.forward(from: 0);
-  }
-
-  void _endGame() {
-    setState(() {
-      _isPlaying = false;
-    });
-    _timerController.stop();
-
+  void _showRulesDialog({bool isFirstTime = false}) {
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        title: const Text('Time\'s Up!'),
+        title: const Text('חוקי המשחק - פנטומימה'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'המשחק מיועד לשתי קבוצות.\n\n'
+                'כיצד לשחק:',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                '1. בחר איזו קבוצה משחקת כעת\n'
+                '2. לחץ על כפתור ההפעלה להתחלת הסיבוב\n'
+                '3. שחקן מהקבוצה מציג את המילה בפנטומימה\n'
+                '4. החלק ימינה - אם הקבוצה ניחשה נכון\n'
+                '5. החלק שמאלה - לעבור למילה הבאה\n'
+                '6. כל סיבוב נמשך דקה\n\n'
+                'הקבוצה עם הכי הרבה ניחושים מנצחת!',
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          if (isFirstTime)
+            Row(
+              children: [
+                Checkbox(
+                  value: false,
+                  onChanged: (value) async {
+                    if (value == true) {
+                      final prefs = await SharedPreferences.getInstance();
+                      await prefs.setBool('pantomime_rules_dont_show', true);
+                    }
+                    Navigator.pop(context);
+                  },
+                ),
+                const Text('אל תציג שוב'),
+              ],
+            ),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('הבנתי'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _shuffleWords() {
+    _words.shuffle(Random());
+  }
+
+  void _startTimer() {
+    setState(() {
+      _isPlaying = true;
+      _remainingSeconds = 60;
+      _currentRoundScore = 0;
+    });
+
+    _timerAnimationController.forward(from: 0.0);
+
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      setState(() {
+        _remainingSeconds--;
+      });
+
+      if (_remainingSeconds <= 0) {
+        _endRound();
+      }
+    });
+  }
+
+  void _endRound() {
+    _timer?.cancel();
+    _timerAnimationController.stop();
+
+    setState(() {
+      _isPlaying = false;
+      if (_currentTeam == 1) {
+        _team1Score += _currentRoundScore;
+      } else {
+        _team2Score += _currentRoundScore;
+      }
+    });
+
+    // Vibrate and play sound
+    // if (Vibration.hasVibrator() != null) {
+    //   Vibration.vibrate(duration: 500);
+    // }
+
+    _showRoundSummary();
+  }
+
+  void _showRoundSummary() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: Text('סיום סיבוב - קבוצה $_currentTeam'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.timer_off, size: 64, color: Colors.red),
-            const SizedBox(height: 16),
             Text(
-              'You presented $_successCount words!',
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              'ניחשתם $_currentRoundScore מילים!',
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
+            const SizedBox(height: 16),
+            Text('ניקוד כולל: $_team1Score - $_team2Score'),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              _resetGame();
+              setState(() {
+                _currentTeam = _currentTeam == 1 ? 2 : 1;
+                _controller.currentIndex = 0;
+              });
             },
-            child: const Text('Play Again'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              Navigator.pop(context);
-            },
-            child: const Text('Exit'),
+            child: const Text('אישור'),
           ),
         ],
       ),
     );
   }
 
-  void _resetGame() {
-    setState(() {
-      _remainingSeconds = 60;
-      _successCount = 0;
-      _isPlaying = false;
-    });
-    _timerController.reset();
-  }
+  void _handleSwipe(SwipeDirection direction) {
+    if (!_isPlaying) return;
 
-  void _showAddWordsDialog() {
-    final controller = TextEditingController();
+    if (direction == SwipeDirection.right) {
+      setState(() {
+        _currentRoundScore++;
+      });
 
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Add Words to Pantomime'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(
-            labelText: 'Enter words separated by comma',
-            hintText: 'chair, table, computer',
+      // Success animation feedback
+      HapticFeedback.lightImpact();
+    }
+
+    // Mark word as used
+    if (_controller.currentIndex < _words.length) {
+      _usedWords.add(_words[_controller.currentIndex]);
+    }
+
+    // Check if need to recycle words
+    if (_controller.currentIndex >= _words.length - 1) {
+      if (!_wordsRepeating) {
+        setState(() {
+          _wordsRepeating = true;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('המילים נגמרו - מתחילים מחזור חדש'),
+            duration: Duration(seconds: 2),
           ),
-          maxLines: 3,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              if (controller.text.isNotEmpty) {
-                final words = controller.text.split(',')
-                    .map((w) => w.trim())
-                    .where((w) => w.isNotEmpty)
-                    .toList();
+        );
+      }
 
-                await DataService.addWordsToGame('פנטומימה', words);
-                Navigator.pop(context);
-
-                // Refresh words
-                setState(() {
-                  _words = [...widget.wordGame.words, ...words];
-                  _words.shuffle();
-                });
-
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Added ${words.length} words')),
-                );
-              }
-            },
-            child: const Text('Add'),
-          ),
-        ],
-      ),
-    );
+      // Reshuffle and reset
+      _shuffleWords();
+      setState(() {
+        _controller.currentIndex = 0;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.red.shade50,
+      backgroundColor: Colors.grey[900],
       appBar: AppBar(
-        title: const Text('Pantomime'),
-        backgroundColor: Colors.red,
+        title: const Text('פנטומימה'),
+        centerTitle: true,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        foregroundColor: Colors.white,
         actions: [
           IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: _showAddWordsDialog,
+            icon: const Icon(Icons.info_outline),
+            onPressed: () => _showRulesDialog(),
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
+      body: SafeArea(
         child: Column(
           children: [
-            // Success counter
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 4,
-                  ),
-                ],
-              ),
+            // Team scores
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  const Icon(Icons.check_circle, color: Colors.green, size: 32),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Success: $_successCount',
-                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                  ),
+                  _buildTeamScore(1, _team1Score),
+                  _buildTeamScore(2, _team2Score),
                 ],
               ),
             ),
 
-            const SizedBox(height: 24),
+            // Current round score
+            if (_isPlaying)
+              Container(
+                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                decoration: BoxDecoration(
+                  color: Colors.green,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  'סיבוב נוכחי: $_currentRoundScore',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
 
-            // Swipeable word cards
+            // Cards area
             Expanded(
-              child: _isPlaying
-                  ? CardSwiper(
-                      controller: _cardController,
-                      cardsCount: _words.length,
-                      numberOfCardsDisplayed: 3,
-                      backCardOffset: const Offset(20, 20),
-                      padding: const EdgeInsets.all(24.0),
-                      cardBuilder: (context, index, horizontalOffsetPercentage, verticalOffsetPercentage) {
-                        return Container(
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(20),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.red.withOpacity(0.3),
-                                blurRadius: 10,
-                                spreadRadius: 2,
+              child: Center(
+                child: SizedBox(
+                  width: 350,
+                  height: 500,
+                  child: SwipableStack(
+                    controller: _controller,
+                    stackClipBehaviour: Clip.none,
+                    allowVerticalSwipe: false,
+                    onSwipeCompleted: (index, direction) {
+                      _handleSwipe(direction);
+                    },
+                    horizontalSwipeThreshold: 0.8,
+                    detectableSwipeDirections: const {
+                      SwipeDirection.left,
+                      SwipeDirection.right,
+                    },
+                    itemCount: _words.length,
+                    builder: (context, properties) {
+                      final itemIndex = properties.index % _words.length;
+                      final word = _words[itemIndex];
+
+                      return Stack(
+                        children: [
+                          Card(
+                            elevation: 10,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(20),
+                                gradient: LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [
+                                    Colors.purple[400]!,
+                                    Colors.blue[600]!,
+                                  ],
+                                ),
                               ),
-                            ],
-                          ),
-                          child: Center(
-                            child: Text(
-                              _words[index % _words.length],
-                              style: const TextStyle(
-                                fontSize: 48,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.red,
+                              child: Center(
+                                child: Text(
+                                  word,
+                                  style: const TextStyle(
+                                    fontSize: 48,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
                               ),
-                              textAlign: TextAlign.center,
                             ),
                           ),
-                        );
-                      },
-                      onSwipe: (previousIndex, currentIndex, direction) {
-                        if (direction == CardSwiperDirection.right) {
-                          setState(() {
-                            _successCount++;
-                          });
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('✓ Success!'),
-                              backgroundColor: Colors.green,
-                              duration: Duration(milliseconds: 500),
+
+                          // Swipe indicators
+                          if (properties.swipeProgress != 0)
+                            Positioned.fill(
+                              child: AnimatedOpacity(
+                                duration: const Duration(milliseconds: 200),
+                                opacity: properties.swipeProgress.abs() * 2,
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(20),
+                                    color: properties.swipeProgress > 0
+                                        ? Colors.green.withOpacity(0.5)
+                                        : Colors.red.withOpacity(0.5),
+                                  ),
+                                  child: Center(
+                                    child: Icon(
+                                      properties.swipeProgress > 0
+                                          ? Icons.check_circle
+                                          : Icons.skip_next,
+                                      size: 100,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ),
                             ),
-                          );
-                        } else if (direction == CardSwiperDirection.left) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('← Pass'),
-                              backgroundColor: Colors.orange,
-                              duration: Duration(milliseconds: 500),
-                            ),
-                          );
-                        }
-                        return true;
-                      },
-                      onEnd: () {
-                        // When cards run out, shuffle and restart
-                        setState(() {
-                          _words.shuffle();
-                        });
-                      },
-                    )
-                  : Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.red.withOpacity(0.2),
-                            blurRadius: 10,
-                            spreadRadius: 2,
-                          ),
                         ],
-                      ),
-                      child: Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(
-                              Icons.theater_comedy,
-                              size: 80,
-                              color: Colors.red,
-                            ),
-                            const SizedBox(height: 16),
-                            Padding(
-                              padding: const EdgeInsets.all(24.0),
-                              child: Text(
-                                widget.wordGame.description,
-                                style: const TextStyle(fontSize: 16),
-                                textAlign: TextAlign.center,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
+                      );
+                    },
+                  ),
+                ),
+              ),
             ),
 
-            const SizedBox(height: 24),
-
-            // Timer
+            // Timer and controls
             Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 4,
-                  ),
-                ],
-              ),
+              padding: const EdgeInsets.all(20),
               child: Column(
                 children: [
-                  Text(
-                    '${(_remainingSeconds ~/ 60).toString().padLeft(2, '0')}:${(_remainingSeconds % 60).toString().padLeft(2, '0')}',
-                    style: TextStyle(
-                      fontSize: 48,
-                      fontWeight: FontWeight.bold,
-                      color: _remainingSeconds <= 10 ? Colors.red : Colors.black,
+                  // Timer display
+                  if (_isPlaying)
+                    Column(
+                      children: [
+                        AnimatedBuilder(
+                          animation: _timerAnimation,
+                          builder: (context, child) {
+                            return Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                SizedBox(
+                                  width: 80,
+                                  height: 80,
+                                  child: CircularProgressIndicator(
+                                    value: _timerAnimation.value,
+                                    strokeWidth: 8,
+                                    backgroundColor: Colors.grey[700],
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      _remainingSeconds <= 10
+                                          ? Colors.red
+                                          : Colors.green,
+                                    ),
+                                  ),
+                                ),
+                                Text(
+                                  '$_remainingSeconds',
+                                  style: TextStyle(
+                                    fontSize: 32,
+                                    fontWeight: FontWeight.bold,
+                                    color: _remainingSeconds <= 10
+                                        ? Colors.red
+                                        : Colors.white,
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 20),
+                      ],
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  LinearProgressIndicator(
-                    value: _isPlaying ? 1 - _timerController.value : 0,
-                    backgroundColor: Colors.grey.shade300,
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      _remainingSeconds <= 10 ? Colors.red : Colors.blue,
+
+                  // Play button or team selector
+                  if (!_isPlaying)
+                    Column(
+                      children: [
+                        Text(
+                          'בחר קבוצה:',
+                          style: TextStyle(
+                            fontSize: 18,
+                            color: Colors.grey[300],
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            _buildTeamSelector(1),
+                            const SizedBox(width: 20),
+                            _buildTeamSelector(2),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+                        ElevatedButton.icon(
+                          onPressed: _startTimer,
+                          icon: const Icon(Icons.play_arrow, size: 32),
+                          label: const Text(
+                            'התחל סיבוב',
+                            style: TextStyle(fontSize: 20),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 40,
+                              vertical: 15,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                            backgroundColor: Colors.green,
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
                 ],
-              ),
-            ),
-
-            const SizedBox(height: 24),
-
-            // Play/Stop button
-            ElevatedButton.icon(
-              onPressed: _isPlaying ? _endGame : _startGame,
-              icon: Icon(_isPlaying ? Icons.stop : Icons.play_arrow, size: 32),
-              label: Text(
-                _isPlaying ? 'Stop' : 'Start',
-                style: const TextStyle(fontSize: 20),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _isPlaying ? Colors.orange : Colors.green,
-                padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30),
-                ),
               ),
             ),
           ],
@@ -382,9 +484,70 @@ class _PantomimeGameScreenState extends State<PantomimeGameScreen> with TickerPr
     );
   }
 
-  @override
-  void dispose() {
-    _timerController.dispose();
-    super.dispose();
+  Widget _buildTeamScore(int team, int score) {
+    final isActive = _currentTeam == team && !_isPlaying;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      decoration: BoxDecoration(
+        color: isActive ? Colors.blue : Colors.grey[800],
+        borderRadius: BorderRadius.circular(15),
+        border: isActive
+            ? Border.all(color: Colors.blue[300]!, width: 2)
+            : null,
+      ),
+      child: Column(
+        children: [
+          Text(
+            'קבוצה $team',
+            style: TextStyle(
+              color: Colors.grey[300],
+              fontSize: 14,
+            ),
+          ),
+          Text(
+            '$score',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTeamSelector(int team) {
+    final isSelected = _currentTeam == team;
+
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _currentTeam = team;
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.blue : Colors.grey[800],
+          borderRadius: BorderRadius.circular(15),
+          border: isSelected
+              ? Border.all(color: Colors.blue[300]!, width: 2)
+              : null,
+        ),
+        child: Text(
+          'קבוצה $team',
+          style: TextStyle(
+            color: isSelected ? Colors.white : Colors.grey[400],
+            fontSize: 16,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
+      ),
+    );
   }
 }
+
+
+

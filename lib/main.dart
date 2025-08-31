@@ -1,18 +1,65 @@
-
-
 import 'package:flutter/material.dart';
-import 'package:hive/hive.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:pkl_guide/services/data_service.dart';
-
-import 'app.dart';
+import 'package:provider/provider.dart';
+import 'screens/home_screen.dart';
+import 'services/storage_service.dart';
+import 'services/csv_service.dart';
+import 'providers/app_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Hive
   await Hive.initFlutter();
 
-  // Load data from CSV
-  await DataService.loadDataFromCSV();
+  // Initialize services
+  final storageService = StorageService();
+  await storageService.init();
 
-  runApp(const MyApp());
+  final csvService = CsvService(storageService);
+  // Don't load data here - let HomeScreen handle it with loading state
+
+  runApp(
+    MultiProvider(
+      providers: [
+        Provider<StorageService>.value(value: storageService),
+        Provider<CsvService>.value(value: csvService),
+        ChangeNotifierProvider(create: (_) => AppProvider()),
+      ],
+      child: const MyApp(),
+    ),
+  );
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'פק״ל למדריך',
+      debugShowCheckedModeBanner: false,
+      locale: const Locale('he', 'IL'),
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('he', 'IL'),
+      ],
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+        fontFamily: 'Heebo',
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.white,
+          foregroundColor: Colors.black,
+          elevation: 1,
+        ),
+        useMaterial3: true,
+      ),
+      home: const HomeScreen(),
+    );
+  }
 }

@@ -1,107 +1,285 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show rootBundle;
-import 'package:csv/csv.dart';
-import 'package:hive_flutter/hive_flutter.dart';
-import 'package:flutter_card_swiper/flutter_card_swiper.dart';
-import 'package:share_plus/share_plus.dart';
-import 'dart:io';
-import 'package:path_provider/path_provider.dart';
-import '/models/game.dart';
-import '/models/riddle.dart';
-import '/models/circle.dart';
-import '/models/word_game.dart';
-import '/models/search_result.dart';
-import '/services/data_service.dart';
-import '/app.dart';
-import '/widgets/category_card.dart';
-import '/screens/games_list_screen.dart';
-import '/screens/game_detail_screen.dart';
-import '/screens/pantomime_game_screen.dart';
-import '/screens/stickers_game_screen.dart';
-import '/screens/riddles_list_screen.dart';
-import '/screens/riddle_detail_screen.dart';
-import '/screens/circles_list_screen.dart';
-import '/screens/circle_detail_screen.dart';
-import '/screens/search_screen.dart';
+import 'package:provider/provider.dart';
+import '../models/category.dart';
+import '../services/import_export_service.dart';
+import '../services/storage_service.dart';
+import '../services/csv_service.dart';
+import '../widgets/category_card.dart';
+import '../widgets/bottom_nav.dart';
+import '../screens/category_screen.dart';
+import '../screens/search_screen.dart';
+import '../screens/favorites_screen.dart';
+import '../dialogs/update_dialog.dart';
+import '../dialogs/about_dialog.dart';
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../models/category.dart';
+import '../services/storage_service.dart';
+import '../services/csv_service.dart';
+import '../services/import_export_service.dart';
+import '../widgets/category_card.dart';
+import '../widgets/bottom_nav.dart';
+import '../screens/category_screen.dart';
+import '../screens/search_screen.dart';
+import '../screens/favorites_screen.dart';
+import '../dialogs/update_dialog.dart';
+import '../dialogs/about_dialog.dart';
+import 'debug_screen.dart';
 
-class HomeScreen extends StatelessWidget {
-  const HomeScreen({Key? key}) : super(key: key);
+class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  int _currentIndex = 0;
+  bool _hasUpdate = false;
+  Map<String, String>? _updateInfo;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeData();
+  }
+
+  Future<void> _initializeData() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // Load initial data
+      final csvService = context.read<CsvService>();
+      await csvService.loadInitialData();
+
+      // Check for updates
+      await _checkForUpdates();
+    } catch (e) {
+      print('Error initializing data: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _checkForUpdates() async {
+    try {
+      final csvService = context.read<CsvService>();
+      final updateInfo = await csvService.checkForUpdates();
+
+      if (updateInfo != null && mounted) {
+        setState(() {
+          _hasUpdate = true;
+          _updateInfo = updateInfo;
+        });
+
+        _showUpdateDialog();
+      }
+    } catch (e) {
+      print('Error checking for updates: $e');
+    }
+  }
+
+  void _showUpdateDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => UpdateDialog(
+        onConfirm: () async {
+          final csvService = context.read<CsvService>();
+          await csvService.updateFromOnline(
+            _updateInfo!['csv']!,
+            _updateInfo!['version']!,
+          );
+          setState(() {
+            _hasUpdate = false;
+            _updateInfo = null;
+          });
+          // Refresh the data
+          await _initializeData();
+        },
+        onDecline: () {
+          // Keep the update button visible
+        },
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    final categories = [
-      {'title': 'משחקים', 'icon': Icons.sports_esports, 'color': Colors.blue},
-      {'title': 'חידות', 'icon': Icons.psychology, 'color': Colors.purple},
-      {'title': 'מעגלים', 'icon': Icons.circle_outlined, 'color': Colors.green},
-      {'title': 'קטעים', 'icon': Icons.article, 'color': Colors.orange},
-    ];
+    if (_isLoading) {
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('טוען נתונים...'),
+            ],
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('פקל למדריך'),
+      backgroundColor: Colors.grey[50],
+      appBar: _currentIndex == 0 ? AppBar(
+        title: const Text('פק״ל למדריך'),
         centerTitle: true,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const SearchScreen()),
-              );
-            },
-          ),
+          if (_hasUpdate)
+            IconButton(
+              icon: const Icon(Icons.update, color: Colors.orange),
+              onPressed: _showUpdateDialog,
+              tooltip: 'עדכון זמין',
+            ),
           PopupMenuButton<String>(
-            onSelected: (value) async {
-              if (value == 'share') {
-                final shareText = await DataService.generateShareText();
-                if (shareText.trim().isNotEmpty) {
-                  // Create temporary file
-                  final directory = await getTemporaryDirectory();
-                  final file = File('${directory.path}/user_additions.txt');
-                  await file.writeAsString(shareText);
-
-                  // Share file
-                  await Share.shareXFiles(
-                    [XFile(file.path)],
-                    subject: 'PKL Guide Additions',
+            onSelected: (value) {
+              switch (value) {
+                case 'import':
+                  _handleImport();
+                  break;
+                case 'debug':
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const DebugScreen(),
+                    ),
                   );
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('No additions to share')),
-                  );
-                }
+                  break;
+                case 'export':
+                  _handleExport();
+                  break;
+                case 'share':
+                  _handleShare();
+                  break;
+                case 'about':
+                  _showAbout();
+                  break;
               }
             },
             itemBuilder: (context) => [
               const PopupMenuItem(
+                value: 'import',
+                child: Row(
+                  children: [
+                    Icon(Icons.upload_file),
+                    SizedBox(width: 8),
+                    Text('ייבוא'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'export',
+                child: Row(
+                  children: [
+                    Icon(Icons.download),
+                    SizedBox(width: 8),
+                    Text('ייצוא'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
                 value: 'share',
                 child: Row(
                   children: [
-                    Icon(Icons.share, color: Colors.black54),
+                    Icon(Icons.developer_mode),
                     SizedBox(width: 8),
-                    Text('Share Additions'),
+                    Text('שתף תוספות'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'debug',
+                child: Row(
+                  children: [
+                    Icon(Icons.bug_report),
+                    SizedBox(width: 8),
+                    Text('Debug'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'about',
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline),
+                    SizedBox(width: 8),
+                    Text('אודות'),
+                    const PopupMenuItem(
+                      value: 'debug',
+                      child: Row(
+                        children: [
+                          Icon(Icons.bug_report),
+                          SizedBox(width: 8),
+                          Text('Debug'),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               ),
             ],
           ),
         ],
+      ) : null,
+      body: IndexedStack(
+        index: _currentIndex,
+        children: [
+          _buildHomeGrid(),
+          const SearchScreen(),
+          const FavoritesScreen(),
+        ],
       ),
-      body: Padding(
+      bottomNavigationBar: CustomBottomNav(
+        currentIndex: _currentIndex,
+        onTap: (index) {
+          setState(() {
+            _currentIndex = index;
+          });
+        },
+      ),
+    );
+  }
+
+  Widget _buildHomeGrid() {
+    final storageService = context.read<StorageService>();
+
+    return RefreshIndicator(
+      onRefresh: _initializeData,
+      child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: GridView.builder(
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 2,
+            childAspectRatio: 1.2,
             crossAxisSpacing: 16,
             mainAxisSpacing: 16,
           ),
-          itemCount: categories.length,
+          itemCount: CategoryType.values.length,
           itemBuilder: (context, index) {
+            final category = CategoryType.values[index];
+            final itemCount = storageService.getAllItems(category: category).length;
+
             return CategoryCard(
-              title: categories[index]['title'] as String,
-              icon: categories[index]['icon'] as IconData,
-              color: categories[index]['color'] as Color,
-              onTap: () => _navigateToCategory(context, index),
+              category: category,
+              itemCount: itemCount,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => CategoryScreen(category: category),
+                  ),
+                ).then((_) {
+                  setState(() {}); // Refresh counts
+                });
+              },
             );
           },
         ),
@@ -109,28 +287,38 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  void _navigateToCategory(BuildContext context, int index) {
-    switch (index) {
-      case 0: // Games
-        Navigator.push(context, MaterialPageRoute(
-          builder: (context) => const GamesListScreen(),
-        ));
-        break;
-      case 1: // Riddles
-        Navigator.push(context, MaterialPageRoute(
-          builder: (context) => const RiddlesListScreen(),
-        ));
-        break;
-      case 2: // Circles
-        Navigator.push(context, MaterialPageRoute(
-          builder: (context) => const CirclesListScreen(),
-        ));
-        break;
-      case 3: // Segments
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Segments category is empty')),
-        );
-        break;
-    }
+  void _handleImport() async {
+    final importExportService = ImportExportService(
+      csvService: context.read<CsvService>(),
+      storageService: context.read<StorageService>(),
+    );
+
+    await importExportService.importCSV(context);
+    setState(() {}); // Refresh UI
+  }
+
+  void _handleExport() async {
+    final importExportService = ImportExportService(
+      csvService: context.read<CsvService>(),
+      storageService: context.read<StorageService>(),
+    );
+
+    await importExportService.exportCSV(context);
+  }
+
+  void _handleShare() async {
+    final importExportService = ImportExportService(
+      csvService: context.read<CsvService>(),
+      storageService: context.read<StorageService>(),
+    );
+
+    await importExportService.shareAdditions(context);
+  }
+
+  void _showAbout() {
+    showDialog(
+      context: context,
+      builder: (context) => const AboutDialogWidget(),
+    );
   }
 }
