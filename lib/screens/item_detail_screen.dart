@@ -144,15 +144,22 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                           ),
                         ),
                         const SizedBox(height: 12),
-                        ...widget.item.content.map((content) => Padding(
+                        // Numbered list
+                        ...widget.item.content.asMap().entries.map((entry) => Padding(
                           padding: const EdgeInsets.symmetric(vertical: 4),
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text('• ', style: TextStyle(fontSize: 16)),
+                              Text(
+                                '${entry.key + 1}. ',
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                               Expanded(
                                 child: Text(
-                                  content,
+                                  entry.value,
                                   style: const TextStyle(fontSize: 16),
                                 ),
                               ),
@@ -171,19 +178,20 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
       ),
       floatingActionButton: isPantomime
           ? FloatingActionButton.extended(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => PantomimeGameScreen(item: widget.item),
-                  ),
-                );
-              },
-              label: const Text('התחל משחק'),
-              icon: const Icon(Icons.play_arrow),
-              backgroundColor: Colors.green,
-            )
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => PantomimeGameScreen(item: widget.item),
+            ),
+          );
+        },
+        label: const Text('התחל משחק'),
+        icon: const Icon(Icons.play_arrow),
+        backgroundColor: Colors.green,
+      )
           : null,
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
   }
 
@@ -202,6 +210,3 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     }
   }
 }
-
-
-

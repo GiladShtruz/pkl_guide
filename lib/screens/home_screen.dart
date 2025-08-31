@@ -1,19 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/category.dart';
-import '../services/import_export_service.dart';
-import '../services/storage_service.dart';
-import '../services/csv_service.dart';
-import '../widgets/category_card.dart';
-import '../widgets/bottom_nav.dart';
-import '../screens/category_screen.dart';
-import '../screens/search_screen.dart';
-import '../screens/favorites_screen.dart';
-import '../dialogs/update_dialog.dart';
-import '../dialogs/about_dialog.dart';
-import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../models/category.dart';
 import '../services/storage_service.dart';
 import '../services/csv_service.dart';
 import '../services/import_export_service.dart';
@@ -24,7 +11,6 @@ import '../screens/search_screen.dart';
 import '../screens/favorites_screen.dart';
 import '../dialogs/update_dialog.dart';
 import '../dialogs/about_dialog.dart';
-import 'debug_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -37,38 +23,46 @@ class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
   bool _hasUpdate = false;
   Map<String, String>? _updateInfo;
-  bool _isLoading = true;
+  bool _isInitialLoad = true;
 
   @override
   void initState() {
     super.initState();
-    _initializeData();
+    _quickInit();
   }
 
-  Future<void> _initializeData() async {
-    setState(() {
-      _isLoading = true;
-    });
+  Future<void> _quickInit() async {
+    // Quick check if data exists
+    final storageService = context.read<StorageService>();
+    final hasData = storageService.getAppData().isNotEmpty;
 
-    try {
-      // Load initial data
+    if (!hasData) {
+      // First time - need to load CSV
+      setState(() {
+        _isInitialLoad = true;
+      });
+
       final csvService = context.read<CsvService>();
-      await csvService.loadInitialData();
-
-      // Check for updates
-      await _checkForUpdates();
-    } catch (e) {
-      print('Error initializing data: $e');
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      await csvService.loadFromLocalCSV();
     }
+
+    // Data is ready - show UI immediately
+    if (mounted) {
+      setState(() {
+        _isInitialLoad = false;
+      });
+    }
+
+    // Check for updates in background (non-blocking)
+    _checkForUpdatesInBackground();
   }
 
-  Future<void> _checkForUpdates() async {
+  Future<void> _checkForUpdatesInBackground() async {
+    // Small delay to let UI render first
+    await Future.delayed(const Duration(seconds: 1));
+
+    if (!mounted) return;
+
     try {
       final csvService = context.read<CsvService>();
       final updateInfo = await csvService.checkForUpdates();
@@ -100,8 +94,6 @@ class _HomeScreenState extends State<HomeScreen> {
             _hasUpdate = false;
             _updateInfo = null;
           });
-          // Refresh the data
-          await _initializeData();
         },
         onDecline: () {
           // Keep the update button visible
@@ -110,9 +102,30 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Future<void> _forceReloadData() async {
+    // Clear all data
+    final storageService = context.read<StorageService>();
+    await storageService.appDataBox.clear();
+    await storageService.userAdditionsBox.clear();
+
+    // Reload from CSV
+    final csvService = context.read<CsvService>();
+    await csvService.loadFromLocalCSV();
+
+    // Refresh UI
+    setState(() {});
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('נתונים נטענו מחדש'),
+        backgroundColor: Colors.green,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
+    if (_isInitialLoad) {
       return Scaffold(
         body: Center(
           child: Column(
@@ -120,7 +133,7 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               CircularProgressIndicator(),
               SizedBox(height: 16),
-              Text('טוען נתונים...'),
+              Text('טוען נתונים ראשוניים...'),
             ],
           ),
         ),
@@ -140,24 +153,19 @@ class _HomeScreenState extends State<HomeScreen> {
               tooltip: 'עדכון זמין',
             ),
           PopupMenuButton<String>(
-            onSelected: (value) {
+            onSelected: (value) async {
               switch (value) {
                 case 'import':
                   _handleImport();
-                  break;
-                case 'debug':
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const DebugScreen(),
-                    ),
-                  );
                   break;
                 case 'export':
                   _handleExport();
                   break;
                 case 'share':
                   _handleShare();
+                  break;
+                case 'reload':
+                  await _forceReloadData();
                   break;
                 case 'about':
                   _showAbout();
@@ -196,12 +204,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               const PopupMenuItem(
-                value: 'debug',
+                value: 'reload',
                 child: Row(
                   children: [
-                    Icon(Icons.bug_report),
+                    Icon(Icons.refresh),
                     SizedBox(width: 8),
-                    Text('Debug'),
+                    Text('טען מחדש'),
                   ],
                 ),
               ),
@@ -212,16 +220,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     Icon(Icons.info_outline),
                     SizedBox(width: 8),
                     Text('אודות'),
-                    const PopupMenuItem(
-                      value: 'debug',
-                      child: Row(
-                        children: [
-                          Icon(Icons.bug_report),
-                          SizedBox(width: 8),
-                          Text('Debug'),
-                        ],
-                      ),
-                    ),
                   ],
                 ),
               ),
@@ -252,7 +250,9 @@ class _HomeScreenState extends State<HomeScreen> {
     final storageService = context.read<StorageService>();
 
     return RefreshIndicator(
-      onRefresh: _initializeData,
+      onRefresh: () async {
+        await _forceReloadData();
+      },
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: GridView.builder(

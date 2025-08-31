@@ -16,23 +16,51 @@ class CsvService {
 
   CsvService(this.storageService);
 
+  // Future<void> loadInitialData() async {
+  //   try {
+  //     // Check if we have local data
+  //     final hasLocalData = storageService
+  //         .getAppData()
+  //         .isNotEmpty;
+  //
+  //     if (!hasLocalData) {
+  //       // Load from local CSV file first time
+  //       await loadFromLocalCSV();
+  //     }
+  //
+  //     // Check for updates in background
+  //     checkForUpdates();
+  //   } catch (e) {
+  //     print('Error loading initial data: $e');
+  //   }
+  // }
+
+
   Future<void> loadInitialData() async {
     try {
-      // Check if we have local data
-      final hasLocalData = storageService
-          .getAppData()
-          .isNotEmpty;
+      // Check if we have local data in Hive
+      final hasLocalData = storageService.getAppData().isNotEmpty;
 
       if (!hasLocalData) {
-        // Load from local CSV file first time
+        // First time - load from local CSV file
+        print('First time loading - loading from CSV');
         await loadFromLocalCSV();
+      } else {
+        // Data exists - load from Hive (already loaded)
+        print('Loading from existing Hive data');
       }
 
-      // Check for updates in background
-      checkForUpdates();
+      // Don't block - check for updates in background after app loads
     } catch (e) {
       print('Error loading initial data: $e');
     }
+  }
+
+  // New method to check updates after app is running
+  Future<Map<String, String>?> checkForUpdatesAsync() async {
+    // Add small delay to let app fully load first
+    await Future.delayed(const Duration(seconds: 2));
+    return checkForUpdates();
   }
 
   Future<void> loadFromLocalCSV() async {

@@ -2,9 +2,10 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:swipable_stack/swipable_stack.dart';
 // import 'package:vibration/vibration.dart';
+// import 'package:flutter_swipable_stack/flutter_swipable_stack.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:swipable_stack/swipable_stack.dart';
 import '../models/item_model.dart';
 
 class PantomimeGameScreen extends StatefulWidget {
@@ -29,11 +30,14 @@ class _PantomimeGameScreenState extends State<PantomimeGameScreen>
   int _team2Score = 0;
   int _currentRoundScore = 0;
   bool _isPlaying = false;
+  bool _isPaused = false;
   int _remainingSeconds = 60;
+  int _totalSeconds = 60;
   Timer? _timer;
   bool _wordsRepeating = false;
   late AnimationController _timerAnimationController;
   late Animation<double> _timerAnimation;
+  bool _canSwipe = false;
 
   @override
   void initState() {
@@ -44,7 +48,7 @@ class _PantomimeGameScreenState extends State<PantomimeGameScreen>
     _shuffleWords();
 
     _timerAnimationController = AnimationController(
-      duration: const Duration(seconds: 60),
+      duration: Duration(seconds: _totalSeconds),
       vsync: this,
     );
 
@@ -88,18 +92,18 @@ class _PantomimeGameScreenState extends State<PantomimeGameScreen>
             children: [
               const Text(
                 'המשחק מיועד לשתי קבוצות.\n\n'
-                'כיצד לשחק:',
+                    'כיצד לשחק:',
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
               const Text(
                 '1. בחר איזו קבוצה משחקת כעת\n'
-                '2. לחץ על כפתור ההפעלה להתחלת הסיבוב\n'
-                '3. שחקן מהקבוצה מציג את המילה בפנטומימה\n'
-                '4. החלק ימינה - אם הקבוצה ניחשה נכון\n'
-                '5. החלק שמאלה - לעבור למילה הבאה\n'
-                '6. כל סיבוב נמשך דקה\n\n'
-                'הקבוצה עם הכי הרבה ניחושים מנצחת!',
+                    '2. לחץ על כפתור ההפעלה להתחלת הסיבוב\n'
+                    '3. שחקן מהקבוצה מציג את המילה בפנטומימה\n'
+                    '4. החלק ימינה - אם הקבוצה ניחשה נכון ✓\n'
+                    '5. החלק שמאלה - לעבור למילה הבאה ✗\n'
+                    '6. כל סיבוב נמשך דקה\n\n'
+                    'הקבוצה עם הכי הרבה ניחושים מנצחת!',
               ),
             ],
           ),
@@ -130,6 +134,47 @@ class _PantomimeGameScreenState extends State<PantomimeGameScreen>
     );
   }
 
+  void _showEditScoreDialog(int team) {
+    final controller = TextEditingController(
+        text: team == 1 ? _team1Score.toString() : _team2Score.toString());
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('עריכת ניקוד - קבוצה $team'),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(
+            labelText: 'ניקוד',
+            border: OutlineInputBorder(),
+          ),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('ביטול'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final newScore = int.tryParse(controller.text) ?? 0;
+              setState(() {
+                if (team == 1) {
+                  _team1Score = newScore;
+                } else {
+                  _team2Score = newScore;
+                }
+              });
+              Navigator.pop(context);
+            },
+            child: const Text('שמור'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _shuffleWords() {
     _words.shuffle(Random());
   }
@@ -137,21 +182,54 @@ class _PantomimeGameScreenState extends State<PantomimeGameScreen>
   void _startTimer() {
     setState(() {
       _isPlaying = true;
-      _remainingSeconds = 60;
+      _isPaused = false;
+      _canSwipe = true;
+      _remainingSeconds = _totalSeconds;
       _currentRoundScore = 0;
     });
 
     _timerAnimationController.forward(from: 0.0);
 
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      setState(() {
-        _remainingSeconds--;
-      });
+      if (!_isPaused) {
+        setState(() {
+          _remainingSeconds--;
+        });
 
-      if (_remainingSeconds <= 0) {
-        _endRound();
+        if (_remainingSeconds <= 0) {
+          _endRound();
+        }
       }
     });
+  }
+
+  void _pauseTimer() {
+    setState(() {
+      _isPaused = !_isPaused;
+    });
+
+    if (_isPaused) {
+      _timerAnimationController.stop();
+    } else {
+      _timerAnimationController.forward();
+    }
+  }
+
+  void _stopAndReset() {
+    _timer?.cancel();
+    _timerAnimationController.stop();
+    _timerAnimationController.reset();
+
+    setState(() {
+      _isPlaying = false;
+      _isPaused = false;
+      _canSwipe = false;
+      _remainingSeconds = _totalSeconds;
+      _currentRoundScore = 0;
+      _controller.currentIndex = 0;
+    });
+
+    _shuffleWords();
   }
 
   void _endRound() {
@@ -160,6 +238,8 @@ class _PantomimeGameScreenState extends State<PantomimeGameScreen>
 
     setState(() {
       _isPlaying = false;
+      _isPaused = false;
+      _canSwipe = false;
       if (_currentTeam == 1) {
         _team1Score += _currentRoundScore;
       } else {
@@ -209,7 +289,7 @@ class _PantomimeGameScreenState extends State<PantomimeGameScreen>
   }
 
   void _handleSwipe(SwipeDirection direction) {
-    if (!_isPlaying) return;
+    if (!_isPlaying || _isPaused || !_canSwipe) return;
 
     if (direction == SwipeDirection.right) {
       setState(() {
@@ -274,8 +354,14 @@ class _PantomimeGameScreenState extends State<PantomimeGameScreen>
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  _buildTeamScore(1, _team1Score),
-                  _buildTeamScore(2, _team2Score),
+                  GestureDetector(
+                    onTap: () => _showEditScoreDialog(1),
+                    child: _buildTeamScore(1, _team1Score),
+                  ),
+                  GestureDetector(
+                    onTap: () => _showEditScoreDialog(2),
+                    child: _buildTeamScore(2, _team2Score),
+                  ),
                 ],
               ),
             ),
@@ -308,14 +394,14 @@ class _PantomimeGameScreenState extends State<PantomimeGameScreen>
                     controller: _controller,
                     stackClipBehaviour: Clip.none,
                     allowVerticalSwipe: false,
-                    onSwipeCompleted: (index, direction) {
+                    onSwipeCompleted: _canSwipe ? (index, direction) {
                       _handleSwipe(direction);
-                    },
+                    } : null,
                     horizontalSwipeThreshold: 0.8,
-                    detectableSwipeDirections: const {
+                    detectableSwipeDirections: _canSwipe ? const {
                       SwipeDirection.left,
                       SwipeDirection.right,
-                    },
+                    } : const {},
                     itemCount: _words.length,
                     builder: (context, properties) {
                       final itemIndex = properties.index % _words.length;
@@ -354,13 +440,12 @@ class _PantomimeGameScreenState extends State<PantomimeGameScreen>
                             ),
                           ),
 
-                          // Swipe indicators
-                          if (properties.swipeProgress != 0)
+                          // Swipe indicators - FIXED
+                          if (properties.swipeProgress != 0 && _canSwipe)
                             Positioned.fill(
                               child: AnimatedOpacity(
                                 duration: const Duration(milliseconds: 200),
-                                opacity: 1,
-                                // opacity: properties.swipeProgress.abs() * 2,
+                                opacity: min(properties.swipeProgress.abs(), 0.5),
                                 child: Container(
                                   decoration: BoxDecoration(
                                     borderRadius: BorderRadius.circular(20),
@@ -372,7 +457,7 @@ class _PantomimeGameScreenState extends State<PantomimeGameScreen>
                                     child: Icon(
                                       properties.swipeProgress > 0
                                           ? Icons.check_circle
-                                          : Icons.skip_next,
+                                          : Icons.cancel,
                                       size: 100,
                                       color: Colors.white,
                                     ),
@@ -387,6 +472,7 @@ class _PantomimeGameScreenState extends State<PantomimeGameScreen>
                 ),
               ),
             ),
+
 
             // Timer and controls
             Container(
@@ -407,7 +493,7 @@ class _PantomimeGameScreenState extends State<PantomimeGameScreen>
                                   width: 80,
                                   height: 80,
                                   child: CircularProgressIndicator(
-                                    value: _timerAnimation.value,
+                                    value: _remainingSeconds / _totalSeconds,
                                     strokeWidth: 8,
                                     backgroundColor: Colors.grey[700],
                                     valueColor: AlwaysStoppedAnimation<Color>(
@@ -432,6 +518,32 @@ class _PantomimeGameScreenState extends State<PantomimeGameScreen>
                           },
                         ),
                         const SizedBox(height: 20),
+                        // Control buttons during game
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            IconButton(
+                              onPressed: _pauseTimer,
+                              icon: Icon(
+                                _isPaused ? Icons.play_arrow : Icons.pause,
+                                size: 32,
+                              ),
+                              style: IconButton.styleFrom(
+                                backgroundColor: Colors.orange,
+                                foregroundColor: Colors.white,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            IconButton(
+                              onPressed: _stopAndReset,
+                              icon: const Icon(Icons.stop, size: 32),
+                              style: IconButton.styleFrom(
+                                backgroundColor: Colors.red,
+                                foregroundColor: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
                       ],
                     ),
 
@@ -514,6 +626,11 @@ class _PantomimeGameScreenState extends State<PantomimeGameScreen>
               fontWeight: FontWeight.bold,
             ),
           ),
+          Icon(
+            Icons.edit,
+            size: 16,
+            color: Colors.grey[400],
+          ),
         ],
       ),
     );
@@ -549,6 +666,3 @@ class _PantomimeGameScreenState extends State<PantomimeGameScreen>
     );
   }
 }
-
-
-

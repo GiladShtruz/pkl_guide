@@ -225,6 +225,8 @@ class _CategoryScreenState extends State<CategoryScreen> {
               ? Colors.red
               : Theme.of(context).primaryColor,
         ),
+        floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+        //floatingActionButtonAnimator: FloatingActionButtonAnimator.scaling,
       ),
     );
   }
