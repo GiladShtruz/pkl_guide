@@ -359,7 +359,8 @@ class _PantomimeGameScreenState extends State<PantomimeGameScreen>
                             Positioned.fill(
                               child: AnimatedOpacity(
                                 duration: const Duration(milliseconds: 200),
-                                opacity: properties.swipeProgress.abs() * 2,
+                                opacity: 1,
+                                // opacity: properties.swipeProgress.abs() * 2,
                                 child: Container(
                                   decoration: BoxDecoration(
                                     borderRadius: BorderRadius.circular(20),

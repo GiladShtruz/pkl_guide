@@ -1,3 +1,4 @@
+// lib/services/csv_service.dart - FINAL FIXED VERSION
 import 'dart:convert';
 import 'dart:io';
 import 'package:csv/csv.dart';
@@ -49,20 +50,25 @@ class CsvService {
       final response = await http.get(Uri.parse(onlineCSVUrl));
       if (response.statusCode == 200) {
         final csvString = utf8.decode(response.bodyBytes);
-        final lines = const CsvToListConverter().convert(csvString);
 
-        if (lines.length >= 2) {
-          final version = lines[0][0].toString();
-          final csvUrl = lines[1][0].toString();
+        // Try to parse first line for version info
+        final firstLine = csvString
+            .split('\n')
+            .first;
+        if (firstLine.contains(',')) {
+          // Regular CSV format, check first cell
+          final cells = firstLine.split(',');
+          if (cells.isNotEmpty) {
+            final version = cells[0].replaceAll('"', '').trim();
+            final currentVersion = storageService.getVersion();
 
-          final currentVersion = storageService.getVersion();
-
-          if (currentVersion != version) {
-            return {
-              'version': version,
-              'url': csvUrl,
-              'csv': csvString,
-            };
+            if (currentVersion != version && version.isNotEmpty) {
+              return {
+                'version': version,
+                'url': '', // URL might be in second row
+                'csv': csvString,
+              };
+            }
           }
         }
       }
@@ -82,70 +88,76 @@ class CsvService {
     try {
       print('Starting CSV parsing...');
 
-      final lines = const CsvToListConverter().convert(csvContent);
-      if (lines.isEmpty) {
+      // Parse CSV into a 2D array
+      final List<List<dynamic>> rows = const CsvToListConverter().convert(
+          csvContent);
+
+      if (rows.isEmpty) {
         print('CSV is empty');
         return;
       }
 
       List<ItemModel> items = [];
 
-      // Skip first 2 rows (version and URL)
-      int currentRow = 2;
-      CategoryType? currentCategory;
+      // The CSV is organized by COLUMNS, not rows
+      // Row 0 contains headers/categories
+      // Separators (-) are in specific columns
 
-      // Parse each section
-      while (currentRow < lines.length) {
-        final row = lines[currentRow];
-
-        // Check for category separator
-        if (row.isNotEmpty && row[0].toString().trim() == '-') {
-          print('Found separator at row $currentRow, moving to next category');
-
-          // Determine next category
-          if (currentCategory == null) {
-            currentCategory = CategoryType.games;
-          } else if (currentCategory == CategoryType.games) {
-            currentCategory = CategoryType.activities;
-          } else if (currentCategory == CategoryType.activities) {
-            currentCategory = CategoryType.texts;
-          } else if (currentCategory == CategoryType.texts) {
-            currentCategory = CategoryType.riddles;
-          } else {
-            break; // No more categories
-          }
-
-          currentRow++;
-          continue;
-        }
-
-        // Set initial category if not set
-        if (currentCategory == null) {
-          currentCategory = CategoryType.games;
-        }
-
-        print(
-            'Processing category: ${currentCategory.name} at row $currentRow');
-
-        // Parse based on category
-        if (currentCategory == CategoryType.games ||
-            currentCategory == CategoryType.activities) {
-          items.addAll(
-              _parseGamesOrActivities(lines, currentRow, currentCategory));
-          // Move to next section
-          currentRow = _findNextSeparator(lines, currentRow);
-        } else if (currentCategory == CategoryType.texts) {
-          items.addAll(_parseTexts(lines, currentRow));
-          // Move to next section
-          currentRow = _findNextSeparator(lines, currentRow);
-        } else if (currentCategory == CategoryType.riddles) {
-          items.addAll(_parseRiddles(lines, currentRow));
-          // We've reached the end
-          break;
+      // Find separator positions in first row
+      List<int> separatorPositions = [];
+      for (int col = 0; col < rows[0].length; col++) {
+        if (rows[0][col]?.toString().trim() == '-') {
+          separatorPositions.add(col);
+          print('Found separator at column $col');
         }
       }
 
+      // Parse sections based on separators
+      int startCol = 0;
+      CategoryType? currentCategory;
+
+      for (int sepIndex = 0; sepIndex <=
+          separatorPositions.length; sepIndex++) {
+        int endCol = sepIndex < separatorPositions.length
+            ? separatorPositions[sepIndex]
+            : rows[0].length;
+
+        // Determine category based on position
+        if (startCol == 0) {
+          // First section: Games (columns 0-6)
+          currentCategory = CategoryType.games;
+          print('Parsing games from columns $startCol to ${endCol - 1}');
+          items.addAll(_parseGamesSection(rows, startCol, endCol));
+        }
+        else if (separatorPositions.indexOf(startCol - 1) == 0) {
+          // After first separator: Activities
+          currentCategory = CategoryType.activities;
+          print('Parsing activities from columns $startCol to ${endCol - 1}');
+          items.addAll(_parseActivitiesSection(rows, startCol, endCol));
+        }
+        else if (separatorPositions.indexOf(startCol - 1) == 1) {
+          // After second separator: Texts
+          currentCategory = CategoryType.texts;
+          print('Parsing texts from columns $startCol to ${endCol - 1}');
+          items.addAll(_parseTextsSection(rows, startCol, endCol));
+        }
+        else if (separatorPositions.indexOf(startCol - 1) == 2) {
+          // After third separator: Riddles
+          currentCategory = CategoryType.riddles;
+          print('Parsing riddles from columns $startCol to ${endCol - 1}');
+          items.addAll(_parseRiddlesSection(rows, startCol, endCol));
+        }
+
+        startCol = endCol + 1; // Move past the separator
+      }
+
       print('Parsed ${items.length} items total');
+      for (var category in CategoryType.values) {
+        final count = items
+            .where((item) => item.category == category.name)
+            .length;
+        print('  ${category.displayName}: $count items');
+      }
 
       // Save to storage
       if (isUpdate) {
@@ -159,36 +171,36 @@ class CsvService {
     }
   }
 
-  List<ItemModel> _parseGamesOrActivities(List<List<dynamic>> lines,
-      int startRow, CategoryType category) {
+  List<ItemModel> _parseGamesSection(List<List<dynamic>> rows, int startCol,
+      int endCol) {
     List<ItemModel> items = [];
-    int currentRow = startRow;
 
-    print('Parsing ${category.name} from row $startRow');
-
-    // Part A: First 4 columns (list format)
-    while (currentRow < lines.length &&
-        lines[currentRow][0].toString().trim() != '-') {
-      final row = lines[currentRow];
-
-      // Check if this is still part of the 4-column format
-      if (row.length >= 4 && row[0] != null && row[0]
-          .toString()
-          .isNotEmpty && row[0].toString() != '-') {
-        final name = row[0].toString().trim();
-        final description = row.length > 1 && row[1] != null ? row[1]
-            .toString()
-            .trim() : '';
-        final link = row.length > 2 && row[2] != null
-            ? row[2].toString().trim()
+    // Part 1: First 4 columns (list format)
+    // Columns: משחק, הסבר, קישור, סיווג
+    for (int row = 1; row < rows.length; row++) {
+      if (rows[row].length > startCol &&
+          rows[row][startCol] != null &&
+          rows[row][startCol]
+              .toString()
+              .trim()
+              .isNotEmpty) {
+        final name = rows[row][startCol].toString().trim();
+        final description = (rows[row].length > startCol + 1 &&
+            rows[row][startCol + 1] != null)
+            ? rows[row][startCol + 1].toString().trim()
             : '';
-        final classification = row.length > 3 && row[3] != null ? row[3]
-            .toString()
-            .trim() : '';
+        final link = (rows[row].length > startCol + 2 &&
+            rows[row][startCol + 2] != null)
+            ? rows[row][startCol + 2].toString().trim()
+            : '';
+        final classification = (rows[row].length > startCol + 3 &&
+            rows[row][startCol + 3] != null)
+            ? rows[row][startCol + 3].toString().trim()
+            : '';
 
-        if (name.isNotEmpty && name != '-') {
-          final item = ItemModel(
-            id: '${category.name}_${DateTime
+        if (name.isNotEmpty) {
+          items.add(ItemModel(
+            id: 'games_${DateTime
                 .now()
                 .millisecondsSinceEpoch}_${items.length}',
             name: name,
@@ -196,199 +208,240 @@ class CsvService {
             link: link.isNotEmpty ? link : null,
             classification: classification.isNotEmpty ? classification : null,
             content: [],
-            category: category.name,
-          );
-          items.add(item);
-          print('Added item from 4-column format: $name');
-        }
-      }
-      currentRow++;
-
-      // Check if we've moved to column format (no more valid 4-column entries)
-      if (currentRow < lines.length) {
-        final nextRow = lines[currentRow];
-        // If next row doesn't have valid first column data, we're done with 4-column format
-        if (nextRow.isEmpty || nextRow[0] == null || nextRow[0]
-            .toString()
-            .isEmpty || nextRow[0].toString() == '-') {
-          break;
+            category: CategoryType.games.name,
+          ));
+          print('Added game from list format: $name');
         }
       }
     }
 
-    // Part B: Column format (starting from column 5)
-    // Find the start of column data (where we have the item names)
-    int columnStartRow = startRow;
+    // Part 2: Column format games (columns 4-6)
+    for (int col = startCol + 4; col < endCol; col++) {
+      if (rows[0].length > col && rows[0][col] != null) {
+        final name = rows[0][col].toString().trim();
 
-    // Get max columns to check
-    int maxColumns = 0;
-    for (int r = startRow; r < lines.length &&
-        lines[r][0].toString() != '-'; r++) {
-      if (lines[r].length > maxColumns) {
-        maxColumns = lines[r].length;
-      }
-    }
+        if (name.isNotEmpty && name != '-') {
+          String? link;
+          String? description;
+          List<String> content = [];
 
-    print('Checking columns 4 to $maxColumns for ${category.name}');
-
-    // Parse each column (starting from column index 4)
-    for (int col = 4; col < maxColumns; col++) {
-      String? name;
-      String? link;
-      String? description;
-      List<String> content = [];
-
-      // Read all rows for this column
-      for (int r = startRow; r < lines.length &&
-          lines[r][0].toString() != '-'; r++) {
-        if (lines[r].length > col && lines[r][col] != null && lines[r][col]
-            .toString()
-            .isNotEmpty) {
-          final value = lines[r][col].toString().trim();
-
-          if (r == startRow) {
-            // First row is the name
-            name = value;
-          } else if (r == startRow + 1) {
-            // Second row is the link (if exists)
-            link = value;
-          } else if (r == startRow + 2) {
-            // Third row is the description
-            description = value;
-          } else {
-            // Rest are content items
-            if (value.isNotEmpty) {
-              content.add(value);
+          // Row 1: link
+          if (rows.length > 1 && rows[1].length > col && rows[1][col] != null) {
+            final value = rows[1][col].toString().trim();
+            if (value.startsWith('http')) {
+              link = value;
+            } else if (value.isNotEmpty) {
+              description = value;
             }
           }
-        }
-      }
 
-      // Create item if we have a name
-      if (name != null && name.isNotEmpty) {
-        final item = ItemModel(
-          id: '${category.name}_${DateTime
-              .now()
-              .millisecondsSinceEpoch}_${items.length}',
-          name: name,
-          description: description,
-          link: link,
-          content: content,
-          category: category.name,
-        );
-        items.add(item);
-        print('Added item from column format: $name with ${content
-            .length} content items');
+          // Row 2: description (if not already set)
+          if (description == null && rows.length > 2 && rows[2].length > col &&
+              rows[2][col] != null) {
+            description = rows[2][col].toString().trim();
+          }
+
+          // Rest: content
+          for (int row = 3; row < rows.length; row++) {
+            if (rows[row].length > col && rows[row][col] != null) {
+              final value = rows[row][col].toString().trim();
+              if (value.isNotEmpty) {
+                content.add(value);
+              }
+            }
+          }
+
+          items.add(ItemModel(
+            id: 'games_${DateTime
+                .now()
+                .millisecondsSinceEpoch}_${items.length}',
+            name: name,
+            description: description,
+            link: link,
+            content: content,
+            category: CategoryType.games.name,
+          ));
+          print('Added game from column format: $name with ${content
+              .length} items');
+        }
       }
     }
 
-    print('Total ${category.name} items: ${items.length}');
     return items;
   }
 
-  List<ItemModel> _parseTexts(List<List<dynamic>> lines, int startRow) {
+  List<ItemModel> _parseActivitiesSection(List<List<dynamic>> rows,
+      int startCol, int endCol) {
     List<ItemModel> items = [];
-    int currentRow = startRow;
 
-    print('Parsing texts from row $startRow');
+    // Part 1: First 4 columns (list format)
+    for (int row = 1; row < rows.length; row++) {
+      if (rows[row].length > startCol &&
+          rows[row][startCol] != null &&
+          rows[row][startCol]
+              .toString()
+              .trim()
+              .isNotEmpty) {
+        final name = rows[row][startCol].toString().trim();
+        final description = (rows[row].length > startCol + 1 &&
+            rows[row][startCol + 1] != null)
+            ? rows[row][startCol + 1].toString().trim()
+            : '';
+        final link = (rows[row].length > startCol + 2 &&
+            rows[row][startCol + 2] != null)
+            ? rows[row][startCol + 2].toString().trim()
+            : '';
+        final classification = (rows[row].length > startCol + 3 &&
+            rows[row][startCol + 3] != null)
+            ? rows[row][startCol + 3].toString().trim()
+            : '';
 
-    // Texts are simple: column 0 = name, column 1 = description
-    while (currentRow < lines.length &&
-        lines[currentRow][0].toString().trim() != '-') {
-      final row = lines[currentRow];
+        if (name.isNotEmpty) {
+          items.add(ItemModel(
+            id: 'activities_${DateTime
+                .now()
+                .millisecondsSinceEpoch}_${items.length}',
+            name: name,
+            description: description.isNotEmpty ? description : null,
+            link: link.isNotEmpty ? link : null,
+            classification: classification.isNotEmpty ? classification : null,
+            content: [],
+            category: CategoryType.activities.name,
+          ));
+          print('Added activity from list format: $name');
+        }
+      }
+    }
 
-      if (row.length >= 2) {
-        final name = row[0]?.toString().trim() ?? '';
-        final description = row[1]?.toString().trim() ?? '';
+    // Part 2: Column format activities (if any)
+    for (int col = startCol + 4; col < endCol; col++) {
+      if (rows[0].length > col && rows[0][col] != null) {
+        final name = rows[0][col].toString().trim();
 
         if (name.isNotEmpty && name != '-') {
-          final item = ItemModel(
-            id: '${CategoryType.texts.name}_${DateTime
+          String? link;
+          String? description;
+          List<String> content = [];
+
+          // Similar parsing as games
+          if (rows.length > 1 && rows[1].length > col && rows[1][col] != null) {
+            final value = rows[1][col].toString().trim();
+            if (value.startsWith('http')) {
+              link = value;
+            } else if (value.isNotEmpty) {
+              description = value;
+            }
+          }
+
+          if (description == null && rows.length > 2 && rows[2].length > col &&
+              rows[2][col] != null) {
+            description = rows[2][col].toString().trim();
+          }
+
+          for (int row = 3; row < rows.length; row++) {
+            if (rows[row].length > col && rows[row][col] != null) {
+              final value = rows[row][col].toString().trim();
+              if (value.isNotEmpty) {
+                content.add(value);
+              }
+            }
+          }
+
+          items.add(ItemModel(
+            id: 'activities_${DateTime
+                .now()
+                .millisecondsSinceEpoch}_${items.length}',
+            name: name,
+            description: description,
+            link: link,
+            content: content,
+            category: CategoryType.activities.name,
+          ));
+          print('Added activity from column format: $name');
+        }
+      }
+    }
+
+    return items;
+  }
+
+  List<ItemModel> _parseTextsSection(List<List<dynamic>> rows, int startCol,
+      int endCol) {
+    List<ItemModel> items = [];
+
+    // Texts: 2 columns - name and description
+    for (int row = 1; row < rows.length; row++) {
+      if (rows[row].length > startCol &&
+          rows[row][startCol] != null &&
+          rows[row][startCol]
+              .toString()
+              .trim()
+              .isNotEmpty) {
+        final name = rows[row][startCol].toString().trim();
+        final description = (rows[row].length > startCol + 1 &&
+            rows[row][startCol + 1] != null)
+            ? rows[row][startCol + 1].toString().trim()
+            : '';
+
+        if (name.isNotEmpty) {
+          items.add(ItemModel(
+            id: 'texts_${DateTime
                 .now()
                 .millisecondsSinceEpoch}_${items.length}',
             name: name,
             description: description,
             content: [description],
-            // Store description also in content for consistency
             category: CategoryType.texts.name,
-          );
-          items.add(item);
+          ));
           print('Added text: $name');
         }
       }
-      currentRow++;
     }
 
-    print('Total texts: ${items.length}');
     return items;
   }
 
-  List<ItemModel> _parseRiddles(List<List<dynamic>> lines, int startRow) {
+  List<ItemModel> _parseRiddlesSection(List<List<dynamic>> rows, int startCol,
+      int endCol) {
     List<ItemModel> items = [];
 
-    print('Parsing riddles from row $startRow');
-
-    // Get max columns
-    int maxColumns = 0;
-    for (int r = startRow; r < lines.length; r++) {
-      if (lines[r].length > maxColumns) {
-        maxColumns = lines[r].length;
-      }
-    }
-
     // Each column is a riddle topic
-    for (int col = 0; col < maxColumns; col++) {
-      String? riddleName;
-      List<String> riddles = [];
+    for (int col = startCol; col < endCol && col < rows[0].length; col++) {
+      if (rows[0][col] != null) {
+        final riddleName = rows[0][col].toString().trim();
 
-      // Read all rows for this column
-      for (int r = startRow; r < lines.length; r++) {
-        if (lines[r].length > col && lines[r][col] != null && lines[r][col]
-            .toString()
-            .isNotEmpty) {
-          final value = lines[r][col].toString().trim();
+        if (riddleName.isNotEmpty && riddleName != '-' &&
+            riddleName != 'null') {
+          List<String> riddles = [];
 
-          if (r == startRow) {
-            // First row is the riddle topic name
-            riddleName = value;
-          } else {
-            // Rest are individual riddles
-            if (value.isNotEmpty && value != '-') {
-              riddles.add(value);
+          // Collect riddles from rows
+          for (int row = 1; row < rows.length; row++) {
+            if (rows[row].length > col && rows[row][col] != null) {
+              final riddle = rows[row][col].toString().trim();
+              if (riddle.isNotEmpty && riddle != 'null') {
+                riddles.add(riddle);
+              }
             }
+          }
+
+          if (riddles.isNotEmpty) {
+            items.add(ItemModel(
+              id: 'riddles_${DateTime
+                  .now()
+                  .millisecondsSinceEpoch}_${items.length}',
+              name: riddleName,
+              content: riddles,
+              category: CategoryType.riddles.name,
+            ));
+            print('Added riddle topic: $riddleName with ${riddles
+                .length} riddles');
           }
         }
       }
-
-      // Create item if we have a name and riddles
-      if (riddleName != null && riddleName.isNotEmpty && riddles.isNotEmpty) {
-        final item = ItemModel(
-          id: '${CategoryType.riddles.name}_${DateTime
-              .now()
-              .millisecondsSinceEpoch}_$col',
-          name: riddleName,
-          content: riddles,
-          category: CategoryType.riddles.name,
-        );
-        items.add(item);
-        print('Added riddle topic: $riddleName with ${riddles.length} riddles');
-      }
     }
 
-    print('Total riddle topics: ${items.length}');
     return items;
   }
-
-  int _findNextSeparator(List<List<dynamic>> lines, int startRow) {
-    for (int i = startRow; i < lines.length; i++) {
-      if (lines[i].isNotEmpty && lines[i][0].toString().trim() == '-') {
-        return i;
-      }
-    }
-    return lines.length;
-  }
-
-  // lib/services/csv_service.dart - CONTINUATION
 
   Future<void> mergeWithUserData(List<ItemModel> newItems) async {
     // Save new app data
@@ -401,79 +454,103 @@ class CsvService {
     final userItems = storageService.getUserAdditions();
     if (userItems.isEmpty) return '';
 
+    // Create CSV in similar format to the original
     List<List<dynamic>> csvData = [];
 
-    // Add version and URL rows (empty for user export)
-    csvData.add(['User Export Version 1.0']);
-    csvData.add(['']);
-
     // Group items by category
-    final Map<String, List<ItemModel>> groupedItems = {};
+    final Map<CategoryType, List<ItemModel>> groupedItems = {};
     for (var item in userItems) {
-      groupedItems.putIfAbsent(item.category, () => []).add(item);
+      final category = CategoryType.values.firstWhere(
+            (c) => c.name == item.category,
+        orElse: () => CategoryType.games,
+      );
+      groupedItems.putIfAbsent(category, () => []).add(item);
     }
 
-    // Process each category in order
+    // Determine max rows needed
+    int maxRows = 1; // At least header row
+    for (var items in groupedItems.values) {
+      for (var item in items) {
+        maxRows = maxRows > item.content.length + 4 ? maxRows : item.content.length + 4;
+      }
+    }
+
+    // Initialize rows
+    for (int i = 0; i < maxRows; i++) {
+      csvData.add([]);
+    }
+
+    int currentCol = 0;
+
+    // Export each category
     for (var category in CategoryType.values) {
-      final items = groupedItems[category.name] ?? [];
+      final items = groupedItems[category] ?? [];
       if (items.isEmpty) continue;
 
-      // Add separator
-      csvData.add(['-']);
+      // Add separator if not first category
+      if (currentCol > 0) {
+        for (int row = 0; row < maxRows; row++) {
+          csvData[row].add('-');
+        }
+        currentCol++;
+      }
 
-      // Export based on category type
-      if (category == CategoryType.games ||
-          category == CategoryType.activities) {
-        // Export in 4-column format for simplicity
-        for (var item in items) {
-          csvData.add([
+      // Add category items
+      if (category == CategoryType.games || category == CategoryType.activities) {
+        // Add header row
+        csvData[0].addAll([
+          category == CategoryType.games ? 'משחק' : 'פעילות',
+          'הסבר',
+          'קישור',
+          'סיווג'
+        ]);
+
+        // Add items in list format
+        for (int i = 0; i < items.length && i < maxRows - 1; i++) {
+          final item = items[i];
+          csvData[i + 1].addAll([
             item.name,
             item.description ?? '',
             item.link ?? '',
-            item.classification ?? '',
+            item.classification ?? ''
           ]);
-
-          // If there's content, add it as additional rows
-          if (item.content.isNotEmpty) {
-            for (var content in item.content) {
-              csvData.add(['', '', '', '', content]);
-            }
-          }
         }
+        currentCol += 4;
+
       } else if (category == CategoryType.texts) {
-        // Export texts in 2-column format
-        for (var item in items) {
-          csvData.add([
+        // Add texts
+        csvData[0].addAll(['שם הפתק', 'פירוט הפתק']);
+
+        for (int i = 0; i < items.length && i < maxRows - 1; i++) {
+          final item = items[i];
+          csvData[i + 1].addAll([
             item.name,
-            item.description ?? item.content.firstOrNull ?? '',
+            item.description ?? item.content.firstOrNull ?? ''
           ]);
         }
+        currentCol += 2;
+
       } else if (category == CategoryType.riddles) {
-        // Export riddles in column format
-        List<List<String>> riddleColumns = [];
-
+        // Add riddles as columns
         for (var item in items) {
-          List<String> column = [item.name];
-          column.addAll(item.content);
-          riddleColumns.add(column);
-        }
+          // Header
+          csvData[0].add(item.name);
 
-        // Transpose to rows
-        if (riddleColumns.isNotEmpty) {
-          int maxLength = riddleColumns.map((c) => c.length).reduce((a,
-              b) => a > b ? a : b);
-
-          for (int i = 0; i < maxLength; i++) {
-            List<dynamic> row = [];
-            for (var column in riddleColumns) {
-              row.add(i < column.length ? column[i] : '');
-            }
-            csvData.add(row);
+          // Riddles
+          for (int i = 0; i < item.content.length && i < maxRows - 1; i++) {
+            csvData[i + 1].add(item.content[i]);
           }
+
+          // Fill empty cells
+          for (int i = item.content.length + 1; i < maxRows; i++) {
+            csvData[i].add('');
+          }
+          currentCol++;
         }
       }
     }
 
+    // Convert to CSV string
     return const ListToCsvConverter().convert(csvData);
   }
 
@@ -481,58 +558,48 @@ class CsvService {
     try {
       print('Starting CSV import...');
 
-      final lines = const CsvToListConverter().convert(csvContent);
-      if (lines.length < 3) {
-        print('CSV too short for import');
+      // Use the same parsing logic as main CSV
+      final List<List<dynamic>> rows = const CsvToListConverter().convert(csvContent);
+
+      if (rows.isEmpty) {
+        print('Import CSV is empty');
         return;
       }
 
       List<ItemModel> importedItems = [];
 
-      // Skip first 2 rows (version and URL)
-      int currentRow = 2;
-      CategoryType? currentCategory;
+      // Find separator positions
+      List<int> separatorPositions = [];
+      for (int col = 0; col < rows[0].length; col++) {
+        if (rows[0][col]?.toString().trim() == '-') {
+          separatorPositions.add(col);
+        }
+      }
 
-      // Parse each section (similar to main parsing)
-      while (currentRow < lines.length) {
-        final row = lines[currentRow];
+      // Parse sections
+      int startCol = 0;
 
-        // Check for category separator
-        if (row.isNotEmpty && row[0].toString().trim() == '-') {
-          // Determine next category
-          if (currentCategory == null) {
-            currentCategory = CategoryType.games;
-          } else if (currentCategory == CategoryType.games) {
-            currentCategory = CategoryType.activities;
-          } else if (currentCategory == CategoryType.activities) {
-            currentCategory = CategoryType.texts;
-          } else if (currentCategory == CategoryType.texts) {
-            currentCategory = CategoryType.riddles;
-          } else {
-            break;
+      for (int sepIndex = 0; sepIndex <= separatorPositions.length; sepIndex++) {
+        int endCol = sepIndex < separatorPositions.length
+            ? separatorPositions[sepIndex]
+            : rows[0].length;
+
+        // Determine category based on content
+        if (startCol < rows[0].length) {
+          final header = rows[0][startCol]?.toString().toLowerCase() ?? '';
+
+          if (header.contains('משחק')) {
+            importedItems.addAll(_parseGamesSection(rows, startCol, endCol));
+          } else if (header.contains('פעילות')) {
+            importedItems.addAll(_parseActivitiesSection(rows, startCol, endCol));
+          } else if (header.contains('פתק')) {
+            importedItems.addAll(_parseTextsSection(rows, startCol, endCol));
+          } else if (header.contains('חידות')) {
+            importedItems.addAll(_parseRiddlesSection(rows, startCol, endCol));
           }
-
-          currentRow++;
-          continue;
         }
 
-        if (currentCategory == null) {
-          currentCategory = CategoryType.games;
-        }
-
-        // Parse based on category
-        if (currentCategory == CategoryType.games ||
-            currentCategory == CategoryType.activities) {
-          importedItems.addAll(
-              _parseGamesOrActivities(lines, currentRow, currentCategory));
-          currentRow = _findNextSeparator(lines, currentRow);
-        } else if (currentCategory == CategoryType.texts) {
-          importedItems.addAll(_parseTexts(lines, currentRow));
-          currentRow = _findNextSeparator(lines, currentRow);
-        } else if (currentCategory == CategoryType.riddles) {
-          importedItems.addAll(_parseRiddles(lines, currentRow));
-          break;
-        }
+        startCol = endCol + 1;
       }
 
       print('Imported ${importedItems.length} items');
