@@ -1,13 +1,16 @@
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/category.dart';
 import '../models/item_model.dart';
 import '../models/sorting_method.dart';
 import '../services/storage_service.dart';
+import '../services/lists_service.dart';
 import '../providers/app_provider.dart';
 import '../widgets/item_card.dart';
 import '../screens/item_detail_screen.dart';
 import '../screens/add_item_screen.dart';
+import '../dialogs/add_to_lists_dialog.dart';
 
 class CategoryScreen extends StatefulWidget {
   final CategoryType category;
@@ -26,10 +29,12 @@ class _CategoryScreenState extends State<CategoryScreen> {
   late List<ItemModel> _favoriteItems;
   late List<ItemModel> _regularItems;
   bool _isSelectionMode = false;
+  late ListsService _listsService;
 
   @override
   void initState() {
     super.initState();
+    _listsService = context.read<ListsService>();
     _loadItems();
   }
 
@@ -40,11 +45,11 @@ class _CategoryScreenState extends State<CategoryScreen> {
     // Get all items for this category
     _items = storageService.getAllItems(category: widget.category);
 
-    // Separate favorites and regular items
+    // Separate favorites and regular items using ListsService
     _favoriteItems = _items.where((item) =>
-        storageService.isFavorite(item.id)).toList();
+        _listsService.isFavorite(item.id)).toList();
     _regularItems = _items.where((item) =>
-        !storageService.isFavorite(item.id)).toList();
+    !_listsService.isFavorite(item.id)).toList();
 
     // Apply sorting
     final sortingMethod = appProvider.getSortingMethod(widget.category);
@@ -75,7 +80,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
         });
         break;
       case SortingMethod.original:
-        // Keep original order
+      // Keep original order
         break;
     }
   }
@@ -89,19 +94,41 @@ class _CategoryScreenState extends State<CategoryScreen> {
     });
   }
 
-  void _toggleFavorites() async {
+  void _addToLists() async {
     final appProvider = context.read<AppProvider>();
-    final storageService = context.read<StorageService>();
+    final selectedItems = appProvider.selectedItems.toList();
 
-    for (var itemId in appProvider.selectedItems) {
-      await storageService.toggleFavorite(itemId);
+    if (selectedItems.isEmpty) return;
+
+    // Show dialog for single or multiple items
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AddToListsDialog(
+        itemIds: selectedItems,
+        itemName: selectedItems.length == 1
+            ? _items.firstWhere((i) => i.id == selectedItems.first).name
+            : null,
+      ),
+    );
+
+    if (result == true) {
+      appProvider.clearSelection();
+      setState(() {
+        _isSelectionMode = false;
+        _loadItems();
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            selectedItems.length == 1
+                ? 'הפריט נוסף לרשימות'
+                : '${selectedItems.length} פריטים נוספו לרשימות',
+          ),
+          backgroundColor: Colors.green,
+        ),
+      );
     }
-
-    appProvider.clearSelection();
-    setState(() {
-      _isSelectionMode = false;
-      _loadItems();
-    });
   }
 
   @override
@@ -123,17 +150,18 @@ class _CategoryScreenState extends State<CategoryScreen> {
           centerTitle: true,
           leading: _isSelectionMode
               ? IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: _toggleSelectionMode,
-                )
+            icon: const Icon(Icons.close),
+            onPressed: _toggleSelectionMode,
+          )
               : null,
           actions: [
             if (!_isSelectionMode) ...[
               IconButton(
-                icon: const Icon(Icons.favorite_border),
+                icon: const Icon(Icons.bookmark_border),
                 onPressed: _toggleSelectionMode,
-                tooltip: 'הוסף למועדפים',
+                tooltip: 'הוסף לרשימה',
               ),
+              // lib/screens/category_screen.dart - CONTINUATION
               PopupMenuButton<SortingMethod>(
                 icon: const Icon(Icons.sort),
                 onSelected: (method) {
@@ -144,18 +172,18 @@ class _CategoryScreenState extends State<CategoryScreen> {
                 },
                 itemBuilder: (context) => SortingMethod.values
                     .map((method) => PopupMenuItem(
-                          value: method,
-                          child: Row(
-                            children: [
-                              Radio<SortingMethod>(
-                                value: method,
-                                groupValue: appProvider.getSortingMethod(widget.category),
-                                onChanged: null,
-                              ),
-                              Text(method.displayName),
-                            ],
-                          ),
-                        ))
+                  value: method,
+                  child: Row(
+                    children: [
+                      Radio<SortingMethod>(
+                        value: method,
+                        groupValue: appProvider.getSortingMethod(widget.category),
+                        onChanged: null,
+                      ),
+                      Text(method.displayName),
+                    ],
+                  ),
+                ))
                     .toList(),
               ),
             ],
@@ -214,19 +242,18 @@ class _CategoryScreenState extends State<CategoryScreen> {
         ),
         floatingActionButton: FloatingActionButton(
           onPressed: _isSelectionMode
-              ? _toggleFavorites
+              ? _addToLists
               : () => _addNewItem(),
           child: Icon(
             _isSelectionMode
-                ? Icons.favorite
+                ? Icons.bookmark_add
                 : Icons.add,
           ),
           backgroundColor: _isSelectionMode
-              ? Colors.red
+              ? Colors.blue
               : Theme.of(context).primaryColor,
         ),
         floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-        //floatingActionButtonAnimator: FloatingActionButtonAnimator.scaling,
       ),
     );
   }
@@ -257,6 +284,3 @@ class _CategoryScreenState extends State<CategoryScreen> {
     });
   }
 }
-
-
-

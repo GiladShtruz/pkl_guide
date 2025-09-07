@@ -25,8 +25,8 @@ class CustomBottomNav extends StatelessWidget {
           label: 'חיפוש',
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.favorite),
-          label: 'מועדפים',
+          icon: Icon(Icons.bookmark),
+          label: 'רשימות',
         ),
       ],
       selectedItemColor: Theme.of(context).primaryColor,
@@ -34,4 +34,3 @@ class CustomBottomNav extends StatelessWidget {
     );
   }
 }
-

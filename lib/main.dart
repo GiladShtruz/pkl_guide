@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'screens/home_screen.dart';
 import 'services/storage_service.dart';
 import 'services/csv_service.dart';
+import 'services/lists_service.dart';
 import 'providers/app_provider.dart';
 
 void main() async {
@@ -17,6 +18,9 @@ void main() async {
   final storageService = StorageService();
   await storageService.init();
 
+  final listsService = ListsService(storageService);
+  await listsService.init();
+
   final csvService = CsvService(storageService);
   // Don't load data here - let HomeScreen handle it with loading state
 
@@ -25,6 +29,7 @@ void main() async {
       providers: [
         Provider<StorageService>.value(value: storageService),
         Provider<CsvService>.value(value: csvService),
+        Provider<ListsService>.value(value: listsService),
         ChangeNotifierProvider(create: (_) => AppProvider()),
       ],
       child: const MyApp(),

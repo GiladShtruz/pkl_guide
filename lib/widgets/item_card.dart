@@ -68,8 +68,30 @@ class ItemCard extends StatelessWidget {
                             ),
                           ),
                         ),
+                        // Show riddles count
+                        if (item.category == 'riddles' && item.content.isNotEmpty)
+                          Container(
+                            margin: const EdgeInsets.only(left: 8),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.orange[100],
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              '${item.content.length}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.orange[800],
+                              ),
+                            ),
+                          ),
                         if (item.isUserAdded)
                           Container(
+                            margin: const EdgeInsets.only(left: 8),
                             padding: const EdgeInsets.symmetric(
                               horizontal: 8,
                               vertical: 2,
@@ -125,4 +147,3 @@ class ItemCard extends StatelessWidget {
     );
   }
 }
-

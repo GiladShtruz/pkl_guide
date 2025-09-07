@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/item_model.dart';
 import '../services/storage_service.dart';
+import '../services/lists_service.dart';
 import '../screens/edit_item_screen.dart';
 import '../screens/pantomime_game_screen.dart';
 
@@ -20,18 +21,21 @@ class ItemDetailScreen extends StatefulWidget {
 
 class _ItemDetailScreenState extends State<ItemDetailScreen> {
   late bool _isFavorite;
+  late ListsService _listsService;
 
   @override
   void initState() {
     super.initState();
+    _listsService = context.read<ListsService>();
     final storageService = context.read<StorageService>();
-    _isFavorite = storageService.isFavorite(widget.item.id);
+
+    // Use ListsService for favorites check
+    _isFavorite = _listsService.isFavorite(widget.item.id);
     storageService.updateItemAccess(widget.item.id);
   }
 
   void _toggleFavorite() async {
-    final storageService = context.read<StorageService>();
-    await storageService.toggleFavorite(widget.item.id);
+    await _listsService.toggleFavorite(widget.item.id);
     setState(() {
       _isFavorite = !_isFavorite;
     });
@@ -136,12 +140,37 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          _getContentTitle(),
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              _getContentTitle(),
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            // Show count for riddles
+                            if (widget.item.category == 'riddles')
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.orange.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  '${widget.item.content.length} חידות',
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.orange,
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
                         const SizedBox(height: 12),
                         // Numbered list

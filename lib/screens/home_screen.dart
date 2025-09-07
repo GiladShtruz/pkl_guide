@@ -8,7 +8,7 @@ import '../widgets/category_card.dart';
 import '../widgets/bottom_nav.dart';
 import '../screens/category_screen.dart';
 import '../screens/search_screen.dart';
-import '../screens/favorites_screen.dart';
+import '../screens/lists_screen.dart';
 import '../dialogs/update_dialog.dart';
 import '../dialogs/about_dialog.dart';
 
@@ -232,7 +232,7 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           _buildHomeGrid(),
           const SearchScreen(),
-          const FavoritesScreen(),
+          const ListsScreen(),
         ],
       ),
       bottomNavigationBar: CustomBottomNav(

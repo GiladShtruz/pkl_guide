@@ -61,20 +61,6 @@ class StorageService {
     return deletedByUserBox.values.contains(itemId);
   }
 
-  // Favorites Methods
-  Future<void> toggleFavorite(String itemId) async {
-    if (favoritesBox.values.contains(itemId)) {
-      final index = favoritesBox.values.toList().indexOf(itemId);
-      await favoritesBox.deleteAt(index);
-    } else {
-      await favoritesBox.add(itemId);
-    }
-  }
-
-  bool isFavorite(String itemId) {
-    return favoritesBox.values.contains(itemId);
-  }
-
   // Settings Methods
   Future<void> saveSortingMethod(CategoryType category, SortingMethod method) async {
     await settingsBox.put('sorting_${category.name}', method.name);
@@ -84,7 +70,7 @@ class StorageService {
     final methodName = settingsBox.get('sorting_${category.name}');
     if (methodName != null) {
       return SortingMethod.values.firstWhere(
-        (m) => m.name == methodName,
+            (m) => m.name == methodName,
         orElse: () => SortingMethod.original,
       );
     }
@@ -128,5 +114,9 @@ class StorageService {
       await item.save();
     }
   }
-}
 
+  // Get item by ID
+  ItemModel? getItemById(String itemId) {
+    return appDataBox.get(itemId) ?? userAdditionsBox.get(itemId);
+  }
+}

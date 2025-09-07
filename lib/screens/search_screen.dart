@@ -14,12 +14,23 @@ class SearchScreen extends StatefulWidget {
 
 class _SearchScreenState extends State<SearchScreen> {
   final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
   List<SearchResult> _searchResults = [];
   bool _isSearching = false;
 
   @override
+  void initState() {
+    super.initState();
+    // Auto-focus on search field when screen opens
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _searchFocusNode.requestFocus();
+    });
+  }
+
+  @override
   void dispose() {
     _searchController.dispose();
+    _searchFocusNode.dispose();
     super.dispose();
   }
 
@@ -49,8 +60,8 @@ class _SearchScreenState extends State<SearchScreen> {
           matchedText: item.description?.isNotEmpty == true
               ? item.description!.substring(0, item.description!.length.clamp(0, 100))
               : item.content.isNotEmpty
-                  ? item.content.first.substring(0, item.content.first.length.clamp(0, 100))
-                  : '',
+              ? item.content.first.substring(0, item.content.first.length.clamp(0, 100))
+              : '',
         ));
       } else {
         // Check if query matches content
@@ -87,27 +98,55 @@ class _SearchScreenState extends State<SearchScreen> {
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: TextField(
-          controller: _searchController,
-          autofocus: true,
-          decoration: InputDecoration(
-            hintText: 'חיפוש משחקים, חידות, פעילויות...',
-            border: InputBorder.none,
-            suffixIcon: _searchController.text.isNotEmpty
-                ? IconButton(
-                    icon: const Icon(Icons.clear),
-                    onPressed: () {
-                      _searchController.clear();
-                      _performSearch('');
-                    },
-                  )
-                : null,
-          ),
-          onChanged: _performSearch,
-        ),
+        title: const Text('חיפוש'),
+        centerTitle: true,
         automaticallyImplyLeading: false,
       ),
-      body: _buildBody(),
+      body: Column(
+        children: [
+          Expanded(
+            child: _buildBody(),
+          ),
+          // Search bar at bottom
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  offset: const Offset(0, -1),
+                  blurRadius: 4,
+                ),
+              ],
+            ),
+            child: TextField(
+              controller: _searchController,
+              focusNode: _searchFocusNode,
+              decoration: InputDecoration(
+                hintText: 'חיפוש משחקים, חידות, פעילויות...',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: _searchController.text.isNotEmpty
+                    ? IconButton(
+                  icon: const Icon(Icons.clear),
+                  onPressed: () {
+                    _searchController.clear();
+                    _performSearch('');
+                    _searchFocusNode.requestFocus();
+                  },
+                )
+                    : null,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(30),
+                ),
+                filled: true,
+                fillColor: Colors.grey[100],
+              ),
+              onChanged: _performSearch,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -190,10 +229,10 @@ class _SearchScreenState extends State<SearchScreen> {
             ),
             trailing: result.matchType == MatchType.title
                 ? const Chip(
-                    label: Text('כותרת'),
-                    backgroundColor: Colors.green,
-                    labelStyle: TextStyle(color: Colors.white, fontSize: 12),
-                  )
+              label: Text('כותרת'),
+              backgroundColor: Colors.green,
+              labelStyle: TextStyle(color: Colors.white, fontSize: 12),
+            )
                 : null,
             onTap: () {
               Navigator.push(
@@ -253,4 +292,3 @@ class SearchResult {
     required this.matchedText,
   });
 }
-

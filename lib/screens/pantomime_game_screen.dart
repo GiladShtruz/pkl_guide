@@ -456,8 +456,8 @@ class _PantomimeGameScreenState extends State<PantomimeGameScreen>
                                   child: Center(
                                     child: Icon(
                                       properties.swipeProgress > 0
-                                          ? Icons.check_circle
-                                          : Icons.cancel,
+                                          ? Icons.check_circle  // Right swipe = success
+                                          : Icons.cancel,       // Left swipe = skip
                                       size: 100,
                                       color: Colors.white,
                                     ),
@@ -465,6 +465,7 @@ class _PantomimeGameScreenState extends State<PantomimeGameScreen>
                                 ),
                               ),
                             ),
+
                         ],
                       );
                     },
@@ -598,7 +599,7 @@ class _PantomimeGameScreenState extends State<PantomimeGameScreen>
   }
 
   Widget _buildTeamScore(int team, int score) {
-    final isActive = _currentTeam == team && !_isPlaying;
+    final isActive = _currentTeam == team; // Always show which team is active
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
@@ -608,29 +609,44 @@ class _PantomimeGameScreenState extends State<PantomimeGameScreen>
         border: isActive
             ? Border.all(color: Colors.blue[300]!, width: 2)
             : null,
+        boxShadow: isActive && _isPlaying
+            ? [BoxShadow(
+          color: Colors.blue.withOpacity(0.4),
+          blurRadius: 8,
+          spreadRadius: 2,
+        )]
+            : null,
       ),
       child: Column(
         children: [
           Text(
             'קבוצה $team',
             style: TextStyle(
-              color: Colors.grey[300],
+              color: isActive ? Colors.white : Colors.grey[300],
               fontSize: 14,
+              fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
             ),
           ),
           Text(
             '$score',
-            style: const TextStyle(
+            style: TextStyle(
               color: Colors.white,
               fontSize: 28,
               fontWeight: FontWeight.bold,
             ),
           ),
-          Icon(
-            Icons.edit,
-            size: 16,
-            color: Colors.grey[400],
-          ),
+          if (isActive && _isPlaying)
+            Icon(
+              Icons.play_arrow,
+              size: 16,
+              color: Colors.white,
+            ),
+          if (!_isPlaying)
+            Icon(
+              Icons.edit,
+              size: 16,
+              color: Colors.grey[400],
+            ),
         ],
       ),
     );
