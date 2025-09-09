@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../models/item_model.dart';
 import '../models/category.dart';
@@ -23,7 +24,11 @@ class _SearchScreenState extends State<SearchScreen> {
     super.initState();
     // Auto-focus on search field when screen opens
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _searchFocusNode.requestFocus();
+      if (mounted) {
+        _searchFocusNode.requestFocus();
+        // Force keyboard to show
+        SystemChannels.textInput.invokeMethod('TextInput.show');
+      }
     });
   }
 

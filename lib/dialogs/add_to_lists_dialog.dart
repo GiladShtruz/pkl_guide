@@ -35,6 +35,18 @@ class _AddToListsDialogState extends State<AddToListsDialog> {
 
   void _loadLists() {
     _lists = _listsService.getAllLists();
+
+    // Pre-select lists that already contain ALL items
+    // Only pre-select if we're dealing with a single item
+    if (widget.itemIds.length == 1) {
+      final itemId = widget.itemIds.first;
+      for (var list in _lists) {
+        if (list.itemIds.contains(itemId)) {
+          _selectedLists.add(list.id);
+        }
+      }
+    }
+
     setState(() {});
   }
 

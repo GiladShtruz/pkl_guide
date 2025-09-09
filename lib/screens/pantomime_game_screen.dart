@@ -449,15 +449,15 @@ class _PantomimeGameScreenState extends State<PantomimeGameScreen>
                                 child: Container(
                                   decoration: BoxDecoration(
                                     borderRadius: BorderRadius.circular(20),
-                                    color: properties.swipeProgress > 0
-                                        ? Colors.green.withOpacity(0.5)
-                                        : Colors.red.withOpacity(0.5),
+                                    color: properties.swipeProgress > 0  // Positive = right swipe
+                                        ? Colors.green.withOpacity(0.5)  // Right = Success
+                                        : Colors.red.withOpacity(0.5),   // Left = Skip
                                   ),
                                   child: Center(
                                     child: Icon(
-                                      properties.swipeProgress > 0
-                                          ? Icons.check_circle  // Right swipe = success
-                                          : Icons.cancel,       // Left swipe = skip
+                                      properties.swipeProgress > 0  // Positive = right swipe
+                                          ? Icons.check_circle     // Right swipe = ✓
+                                          : Icons.cancel,          // Left swipe = ✗
                                       size: 100,
                                       color: Colors.white,
                                     ),

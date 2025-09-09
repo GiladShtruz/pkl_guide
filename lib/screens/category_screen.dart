@@ -14,10 +14,13 @@ import '../dialogs/add_to_lists_dialog.dart';
 
 class CategoryScreen extends StatefulWidget {
   final CategoryType category;
+  final String? classification;
+
 
   const CategoryScreen({
     super.key,
     required this.category,
+    this.classification, // ADD THIS
   });
 
   @override
@@ -44,6 +47,14 @@ class _CategoryScreenState extends State<CategoryScreen> {
 
     // Get all items for this category
     _items = storageService.getAllItems(category: widget.category);
+
+
+    // Filter by classification if provided
+    if (widget.classification != null) {
+      _items = _items.where((item) =>
+      item.classification == widget.classification
+      ).toList();
+    }
 
     // Separate favorites and regular items using ListsService
     _favoriteItems = _items.where((item) =>
@@ -122,16 +133,14 @@ class _CategoryScreenState extends State<CategoryScreen> {
         SnackBar(
           content: Text(
             selectedItems.length == 1
-                ? 'הפריט נוסף לרשימות'
-                : '${selectedItems.length} פריטים נוספו לרשימות',
+                ? 'הפריט עודכן ברשימות'
+                : '${selectedItems.length} פריטים עודכנו ברשימות',
           ),
           backgroundColor: Colors.green,
         ),
       );
     }
-  }
-
-  @override
+  }  @override
   Widget build(BuildContext context) {
     final appProvider = context.watch<AppProvider>();
 
@@ -146,7 +155,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
       child: Scaffold(
         backgroundColor: Colors.grey[50],
         appBar: AppBar(
-          title: Text(widget.category.displayName),
+          title: Text(widget.classification ?? widget.category.displayName),
           centerTitle: true,
           leading: _isSelectionMode
               ? IconButton(

@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/list_model.dart';
-import '../models/item_model.dart';
 import '../services/lists_service.dart';
-import '../services/storage_service.dart';
 import '../screens/list_detail_screen.dart';
 import '../dialogs/create_list_dialog.dart';
+
+enum ListSortMethod {
+  original('סדר מקורי'),
+  lastModified('עריכה אחרונה');
+
+  final String displayName;
+  const ListSortMethod(this.displayName);
+}
 
 class ListsScreen extends StatefulWidget {
   const ListsScreen({super.key});
@@ -18,6 +24,7 @@ class _ListsScreenState extends State<ListsScreen> {
   bool _isEditMode = false;
   final Set<String> _selectedLists = {};
   late ListsService _listsService;
+  ListSortMethod _sortMethod = ListSortMethod.original;
 
   @override
   void initState() {
@@ -35,7 +42,7 @@ class _ListsScreenState extends State<ListsScreen> {
   }
 
   void _createNewList() async {
-    final result = await showDialog<Map<String, String?>>(  // Changed to String?
+    final result = await showDialog<Map<String, String?>>(
       context: context,
       builder: (context) => const CreateListDialog(),
     );
@@ -43,11 +50,12 @@ class _ListsScreenState extends State<ListsScreen> {
     if (result != null && result['name'] != null) {
       await _listsService.createList(
         result['name']!,
-        description: result['description'],  // Can be null
+        description: result['description'],
       );
       setState(() {});
     }
   }
+
   void _deleteSelectedLists() async {
     if (_selectedLists.isEmpty) return;
 
@@ -78,182 +86,253 @@ class _ListsScreenState extends State<ListsScreen> {
     }
   }
 
+  List<ListModel> _getSortedLists() {
+    var lists = _listsService.getAllLists();
+
+    // Separate favorites from other lists
+    final favoritesList = lists.firstWhere((l) => l.isDefault);
+    final otherLists = lists.where((l) => !l.isDefault).toList();
+
+    // Sort non-favorite lists
+    switch (_sortMethod) {
+      case ListSortMethod.lastModified:
+        otherLists.sort((a, b) {
+          final aDate = a.lastModified ?? a.createdAt;
+          final bDate = b.lastModified ?? b.createdAt;
+          return bDate.compareTo(aDate);
+        });
+        break;
+      case ListSortMethod.original:
+      // Keep original order (by creation date)
+        otherLists.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        break;
+    }
+
+    // Favorites always first
+    return [favoritesList, ...otherLists];
+  }
+
   @override
   Widget build(BuildContext context) {
-    final lists = _listsService.getAllLists();
+    final lists = _getSortedLists();
 
-    return Scaffold(
-      backgroundColor: Colors.grey[50],
-      appBar: AppBar(
-        title: const Text('רשימות'),
-        centerTitle: true,
-        automaticallyImplyLeading: false,
-        actions: [
-          if (lists.length > 1) // Only show if there are custom lists
-            IconButton(
-              icon: Icon(_isEditMode ? Icons.close : Icons.delete_outline),
-              onPressed: _toggleEditMode,
-            ),
-        ],
-      ),
-      body: lists.isEmpty
-          ? Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.bookmark_border,
-              size: 80,
-              color: Colors.grey[400],
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'אין רשימות',
-              style: TextStyle(
-                fontSize: 18,
-                color: Colors.grey[600],
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'לחץ על + כדי ליצור רשימה חדשה',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[500],
-              ),
-            ),
-          ],
-        ),
-      )
-          : ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: lists.length,
-        itemBuilder: (context, index) {
-          final list = lists[index];
-          final itemCount = list.itemIds.length;
-          final isSelected = _selectedLists.contains(list.id);
-          final canSelect = !list.isDefault; // Can't select favorites
-
-          return Card(
-            margin: const EdgeInsets.only(bottom: 12),
-            elevation: list.isDefault ? 4 : 2,
-            color: list.isDefault ? Colors.red[50] : null,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-              side: isSelected
-                  ? BorderSide(color: Theme.of(context).primaryColor, width: 2)
-                  : BorderSide.none,
-            ),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(12),
-              onTap: _isEditMode && canSelect
-                  ? () {
+    return WillPopScope(
+      onWillPop: () async {
+        if (_isEditMode) {
+          _toggleEditMode();
+          return false;
+        }
+        return true;
+      },
+      child: Scaffold(
+        backgroundColor: Colors.grey[50],
+        appBar: AppBar(
+          title: const Text('רשימות'),
+          centerTitle: true,
+          automaticallyImplyLeading: false,
+          actions: [
+            // Sort button
+            PopupMenuButton<ListSortMethod>(
+              icon: const Icon(Icons.sort),
+              onSelected: (method) {
                 setState(() {
-                  if (_selectedLists.contains(list.id)) {
-                    _selectedLists.remove(list.id);
-                  } else {
-                    _selectedLists.add(list.id);
-                  }
+                  _sortMethod = method;
                 });
-              }
-                  : () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => ListDetailScreen(list: list),
-                  ),
-                ).then((_) => setState(() {}));
               },
-              child: Padding(
-                padding: const EdgeInsets.all(16),
+              itemBuilder: (context) => ListSortMethod.values
+                  .map((method) => PopupMenuItem(
+                value: method,
                 child: Row(
                   children: [
-                    if (_isEditMode && canSelect)
-                      Checkbox(
-                        value: isSelected,
-                        onChanged: (_) {
-                          setState(() {
-                            if (_selectedLists.contains(list.id)) {
-                              _selectedLists.remove(list.id);
-                            } else {
-                              _selectedLists.add(list.id);
-                            }
-                          });
-                        },
-                      ),
-                    Icon(
-                      list.isDefault ? Icons.favorite : Icons.bookmark,
-                      color: list.isDefault ? Colors.red : Colors.blue,
-                      size: 32,
+                    Radio<ListSortMethod>(
+                      value: method,
+                      groupValue: _sortMethod,
+                      onChanged: null,
                     ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            list.name,
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          // Don't show description for favorites list
-                          if (!list.isDefault && list.description != null && list.description!.isNotEmpty)
-                            Text(
-                              list.description!,
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey[600],
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                        ],
-                      ),
-                    ),
-                    Column(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).primaryColor.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            '$itemCount',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Theme.of(context).primaryColor,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        const Icon(Icons.arrow_forward_ios, size: 16),
-                      ],
-                    ),
+                    Text(method.displayName),
                   ],
                 ),
-              ),
+              ))
+                  .toList(),
             ),
-          );
-        },
+            if (lists.length > 1) // Only show if there are custom lists
+              IconButton(
+                icon: Icon(_isEditMode ? Icons.close : Icons.delete_outline),
+                onPressed: _toggleEditMode,
+              ),
+          ],
+        ),
+        body: lists.isEmpty
+            ? Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.bookmark_border,
+                size: 80,
+                color: Colors.grey[400],
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'אין רשימות',
+                style: TextStyle(
+                  fontSize: 18,
+                  color: Colors.grey[600],
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'לחץ על + כדי ליצור רשימה חדשה',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey[500],
+                ),
+              ),
+            ],
+          ),
+        )
+            : ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: lists.length,
+          itemBuilder: (context, index) {
+            final list = lists[index];
+            final itemCount = list.itemIds.length;
+            final isSelected = _selectedLists.contains(list.id);
+            final canSelect = !list.isDefault; // Can't select favorites
+
+            return Card(
+              margin: const EdgeInsets.only(bottom: 12),
+              elevation: list.isDefault ? 4 : 2,
+              color: list.isDefault ? Colors.red[50] : null,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: isSelected
+                    ? BorderSide(color: Theme.of(context).primaryColor, width: 2)
+                    : BorderSide.none,
+              ),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onLongPress: canSelect && !_isEditMode
+                    ? () {
+                  setState(() {
+                    _isEditMode = true;
+                    _selectedLists.add(list.id);
+                  });
+                }
+                    : null,
+                onTap: () {
+                  if (_isEditMode) {
+                    if (canSelect) {
+                      setState(() {
+                        if (_selectedLists.contains(list.id)) {
+                          _selectedLists.remove(list.id);
+                        } else {
+                          _selectedLists.add(list.id);
+                        }
+                      });
+                    }
+                    // Do nothing if it's favorites in edit mode
+                  } else {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ListDetailScreen(list: list),
+                      ),
+                    ).then((_) => setState(() {}));
+                  }
+                },
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      if (_isEditMode && canSelect)
+                        Checkbox(
+                          value: isSelected,
+                          onChanged: (_) {
+                            setState(() {
+                              if (_selectedLists.contains(list.id)) {
+                                _selectedLists.remove(list.id);
+                              } else {
+                                _selectedLists.add(list.id);
+                              }
+                            });
+                          },
+                        ),
+                      Icon(
+                        list.isDefault ? Icons.favorite : Icons.bookmark,
+                        color: list.isDefault ? Colors.red : Colors.blue,
+                        size: 32,
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              list.name,
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            // Don't show description for favorites list
+                            if (!list.isDefault && list.description != null && list.description!.isNotEmpty)
+                              Text(
+                                list.description!,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey[600],
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                          ],
+                        ),
+                      ),
+                      Column(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).primaryColor.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              '$itemCount',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context).primaryColor,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          if (!_isEditMode)
+                            const Icon(Icons.arrow_forward_ios, size: 16),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+        floatingActionButton: _isEditMode
+            ? FloatingActionButton(
+          onPressed: _selectedLists.isNotEmpty ? _deleteSelectedLists : null,
+          backgroundColor: _selectedLists.isNotEmpty ? Colors.red : Colors.grey,
+          child: const Icon(Icons.delete),
+        )
+            : FloatingActionButton(
+          onPressed: _createNewList,
+          child: const Icon(Icons.add),
+        ),
+        floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       ),
-      floatingActionButton: _isEditMode
-          ? FloatingActionButton(
-        onPressed: _selectedLists.isNotEmpty ? _deleteSelectedLists : null,
-        backgroundColor: _selectedLists.isNotEmpty ? Colors.red : Colors.grey,
-        child: const Icon(Icons.delete),
-      )
-          : FloatingActionButton(
-        onPressed: _createNewList,
-        child: const Icon(Icons.add),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
   }
 }

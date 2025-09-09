@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../models/category.dart';
 import '../services/storage_service.dart';
@@ -11,6 +12,7 @@ import '../screens/search_screen.dart';
 import '../screens/lists_screen.dart';
 import '../dialogs/update_dialog.dart';
 import '../dialogs/about_dialog.dart';
+import 'games_categories_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -235,14 +237,20 @@ class _HomeScreenState extends State<HomeScreen> {
           const ListsScreen(),
         ],
       ),
-      bottomNavigationBar: CustomBottomNav(
-        currentIndex: _currentIndex,
-        onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
-      ),
+        bottomNavigationBar: CustomBottomNav(
+          currentIndex: _currentIndex,
+          onTap: (index) {
+            setState(() {
+              _currentIndex = index;
+            });
+            // Force keyboard when switching to search
+            if (index == 1) { // Search tab index
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                SystemChannels.textInput.invokeMethod('TextInput.show');
+              });
+            }
+          },
+        ),
     );
   }
 
@@ -250,38 +258,60 @@ class _HomeScreenState extends State<HomeScreen> {
     final storageService = context.read<StorageService>();
 
     return RefreshIndicator(
-      onRefresh: () async {
-        await _forceReloadData();
-      },
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: GridView.builder(
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            childAspectRatio: 1.2,
-            crossAxisSpacing: 16,
-            mainAxisSpacing: 16,
-          ),
-          itemCount: CategoryType.values.length,
-          itemBuilder: (context, index) {
-            final category = CategoryType.values[index];
-            final itemCount = storageService.getAllItems(category: category).length;
+      onRefresh: _forceReloadData,
+      child: Center( // ADD CENTER
+        child: Align( // ADD ALIGN
+          alignment: Alignment.bottomCenter, // ALIGN TO BOTTOM
+          child: Padding(
+            padding: const EdgeInsets.only(
+              left: 16.0,
+              right: 16.0,
+              bottom: 32.0, // MORE BOTTOM PADDING
+              top: 16.0,
+            ),
+            child: GridView.builder(
+              shrinkWrap: true, // ADD THIS
+              physics: const NeverScrollableScrollPhysics(), // ADD THIS
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                childAspectRatio: 1.2,
+                crossAxisSpacing: 16,
+                mainAxisSpacing: 16,
+              ),
+              itemCount: CategoryType.values.length,
+              itemBuilder: (context, index) {
+                final category = CategoryType.values[index];
+                final itemCount = storageService.getAllItems(category: category).length;
 
-            return CategoryCard(
-              category: category,
-              itemCount: itemCount,
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => CategoryScreen(category: category),
-                  ),
-                ).then((_) {
-                  setState(() {}); // Refresh counts
-                });
+                return CategoryCard(
+                  category: category,
+                  itemCount: itemCount,
+                  onTap: () {
+                    // Navigate to GamesCategoriesScreen for games, regular for others
+                    if (category == CategoryType.games) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const GamesCategoriesScreen(),
+                        ),
+                      ).then((_) {
+                        setState(() {}); // Refresh counts
+                      });
+                    } else {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => CategoryScreen(category: category),
+                        ),
+                      ).then((_) {
+                        setState(() {}); // Refresh counts
+                      });
+                    }
+                  },
+                );
               },
-            );
-          },
+            ),
+          ),
         ),
       ),
     );

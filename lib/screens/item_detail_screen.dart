@@ -6,6 +6,8 @@ import '../services/storage_service.dart';
 import '../services/lists_service.dart';
 import '../screens/edit_item_screen.dart';
 import '../screens/pantomime_game_screen.dart';
+import '../dialogs/add_to_lists_dialog.dart';
+import '../services/lists_service.dart';
 
 class ItemDetailScreen extends StatefulWidget {
   final ItemModel item;
@@ -61,11 +63,25 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
         centerTitle: true,
         actions: [
           IconButton(
-            icon: Icon(
-              _isFavorite ? Icons.favorite : Icons.favorite_border,
-              color: _isFavorite ? Colors.red : null,
-            ),
-            onPressed: _toggleFavorite,
+            icon: const Icon(Icons.bookmark_border),
+            onPressed: () async {
+              final result = await showDialog<bool>(
+                context: context,
+                builder: (context) => AddToListsDialog(
+                  itemIds: [widget.item.id],
+                  itemName: widget.item.name,
+                ),
+              );
+
+              if (result == true) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('עודכן ברשימות'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              }
+            },
           ),
           if (widget.item.link != null && widget.item.link!.isNotEmpty)
             IconButton(
