@@ -3,7 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 // import 'package:vibration/vibration.dart';
-// import 'package:flutter_swipable_stack/flutter_swipable_stack.dart';
+
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:swipable_stack/swipable_stack.dart';
 import '../models/item_model.dart';
@@ -406,6 +406,12 @@ class _PantomimeGameScreenState extends State<PantomimeGameScreen>
                     builder: (context, properties) {
                       final itemIndex = properties.index % _words.length;
                       final word = _words[itemIndex];
+                      print("=========");
+                      print(properties.swipeProgress);
+                      print(properties.direction);
+                      print('index: ' + properties.index.toString());
+                      print(itemIndex);
+                      print("=========");
 
                       return Stack(
                         children: [
@@ -441,28 +447,17 @@ class _PantomimeGameScreenState extends State<PantomimeGameScreen>
                           ),
 
                           // Swipe indicators - FIXED
-                          if (properties.swipeProgress != 0 && _canSwipe)
-                            Positioned.fill(
-                              child: AnimatedOpacity(
-                                duration: const Duration(milliseconds: 200),
-                                opacity: min(properties.swipeProgress.abs(), 0.5),
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(20),
-                                    color: properties.swipeProgress > 0  // Positive = right swipe
-                                        ? Colors.green.withOpacity(0.5)  // Right = Success
-                                        : Colors.red.withOpacity(0.5),   // Left = Skip
-                                  ),
-                                  child: Center(
-                                    child: Icon(
-                                      properties.swipeProgress > 0  // Positive = right swipe
-                                          ? Icons.check_circle     // Right swipe = ✓
-                                          : Icons.cancel,          // Left swipe = ✗
-                                      size: 100,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ),
+                          if (properties.swipeProgress > 0.1 && _canSwipe && properties.index == _controller.currentIndex)
+                            Positioned(
+                              top: 20,
+                              right: properties.direction == SwipeDirection.left ? 10 : null,
+                              left: properties.direction == SwipeDirection.right ? 10 : null,
+                              child: Icon(
+                                properties.direction == SwipeDirection.right
+                                    ? Icons.check_circle  // Right swipe = success
+                                    : Icons.cancel,       // Left swipe = skip
+                                size: 100,
+                                color: properties.direction == SwipeDirection.right ? Colors.green : Colors.red,
                               ),
                             ),
 
@@ -571,22 +566,24 @@ class _PantomimeGameScreenState extends State<PantomimeGameScreen>
                         const SizedBox(height: 20),
                         ElevatedButton.icon(
                           onPressed: _startTimer,
-                          icon: const Icon(Icons.play_arrow, size: 32),
+                          icon: const Icon(Icons.play_arrow, size: 32, color: Colors.black),
                           label: const Text(
                             'התחל סיבוב',
-                            style: TextStyle(fontSize: 20),
+                            style: TextStyle(fontSize: 20, color: Colors.black),
                           ),
                           style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 40,
-                              vertical: 15,
-                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(30),
                             ),
-                            backgroundColor: Colors.green,
+                            backgroundColor: Colors.amber[300], // רקע
+                            foregroundColor: Colors.black,      // טקסט/אייקון
+
+
+
                           ),
                         ),
+
                       ],
                     ),
                 ],
@@ -641,12 +638,12 @@ class _PantomimeGameScreenState extends State<PantomimeGameScreen>
               size: 16,
               color: Colors.white,
             ),
-          if (!_isPlaying)
-            Icon(
-              Icons.edit,
-              size: 16,
-              color: Colors.grey[400],
-            ),
+          // if (!_isPlaying)
+            // Icon(
+            //   Icons.edit,
+            //   size: 16,
+            //   color: Colors.grey[400],
+            // ),
         ],
       ),
     );

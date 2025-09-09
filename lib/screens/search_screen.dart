@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../models/item_model.dart';
-import '../models/category.dart';
 import '../services/storage_service.dart';
 import '../screens/item_detail_screen.dart';
 
@@ -26,7 +25,6 @@ class _SearchScreenState extends State<SearchScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _searchFocusNode.requestFocus();
-        // Force keyboard to show
         SystemChannels.textInput.invokeMethod('TextInput.show');
       }
     });
@@ -57,7 +55,6 @@ class _SearchScreenState extends State<SearchScreen> {
     final results = <SearchResult>[];
 
     for (var item in allItems) {
-      // Check if query matches title
       if (item.name.toLowerCase().contains(query.toLowerCase())) {
         results.add(SearchResult(
           item: item,
@@ -69,7 +66,6 @@ class _SearchScreenState extends State<SearchScreen> {
               : '',
         ));
       } else {
-        // Check if query matches content
         for (var content in item.content) {
           if (content.toLowerCase().contains(query.toLowerCase())) {
             results.add(SearchResult(
@@ -81,7 +77,6 @@ class _SearchScreenState extends State<SearchScreen> {
           }
         }
 
-        // Check if query matches description
         if (item.description?.toLowerCase().contains(query.toLowerCase()) == true) {
           results.add(SearchResult(
             item: item,
@@ -103,55 +98,28 @@ class _SearchScreenState extends State<SearchScreen> {
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: const Text('חיפוש'),
-        centerTitle: true,
+        title: TextField(
+          controller: _searchController,
+          focusNode: _searchFocusNode,
+          decoration: InputDecoration(
+            hintText: 'חיפוש משחקים, חידות, פעילויות...',
+            border: InputBorder.none,
+            suffixIcon: _searchController.text.isNotEmpty
+                ? IconButton(
+              icon: const Icon(Icons.clear),
+              onPressed: () {
+                _searchController.clear();
+                _performSearch('');
+                _searchFocusNode.requestFocus();
+              },
+            )
+                : null,
+          ),
+          onChanged: _performSearch,
+        ),
         automaticallyImplyLeading: false,
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: _buildBody(),
-          ),
-          // Search bar at bottom
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  offset: const Offset(0, -1),
-                  blurRadius: 4,
-                ),
-              ],
-            ),
-            child: TextField(
-              controller: _searchController,
-              focusNode: _searchFocusNode,
-              decoration: InputDecoration(
-                hintText: 'חיפוש משחקים, חידות, פעילויות...',
-                prefixIcon: const Icon(Icons.search),
-                suffixIcon: _searchController.text.isNotEmpty
-                    ? IconButton(
-                  icon: const Icon(Icons.clear),
-                  onPressed: () {
-                    _searchController.clear();
-                    _performSearch('');
-                    _searchFocusNode.requestFocus();
-                  },
-                )
-                    : null,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(30),
-                ),
-                filled: true,
-                fillColor: Colors.grey[100],
-              ),
-              onChanged: _performSearch,
-            ),
-          ),
-        ],
-      ),
+      body: _buildBody(),
     );
   }
 
@@ -232,6 +200,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 color: Colors.white,
               ),
             ),
+            // lib/screens/search_screen.dart - CONTINUATION
             trailing: result.matchType == MatchType.title
                 ? const Chip(
               label: Text('כותרת'),

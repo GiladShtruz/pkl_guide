@@ -68,6 +68,7 @@ flutter:
   assets:
     - assets/pkl.csv
     - assets/sounds/timer_end.aac
+    - assets/data.json
 
 
 fonts:

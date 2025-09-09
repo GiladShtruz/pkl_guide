@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../models/category.dart';
 import '../services/storage_service.dart';
-import '../services/csv_service.dart';
+import '../services/json_service.dart';
+import '../services/lists_service.dart';
 import '../services/import_export_service.dart';
 import '../widgets/category_card.dart';
 import '../widgets/bottom_nav.dart';
 import '../screens/category_screen.dart';
+import '../screens/games_categories_screen.dart';
 import '../screens/search_screen.dart';
 import '../screens/lists_screen.dart';
 import '../dialogs/update_dialog.dart';
 import '../dialogs/about_dialog.dart';
-import 'games_categories_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -24,7 +24,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
   bool _hasUpdate = false;
-  Map<String, String>? _updateInfo;
+  Map<String, dynamic>? _updateInfo;
   bool _isInitialLoad = true;
 
   @override
@@ -39,13 +39,13 @@ class _HomeScreenState extends State<HomeScreen> {
     final hasData = storageService.getAppData().isNotEmpty;
 
     if (!hasData) {
-      // First time - need to load CSV
+      // First time - need to load JSON
       setState(() {
         _isInitialLoad = true;
       });
 
-      final csvService = context.read<CsvService>();
-      await csvService.loadFromLocalCSV();
+      final jsonService = context.read<JsonService>();
+      await jsonService.loadFromLocalJson();
     }
 
     // Data is ready - show UI immediately
@@ -66,8 +66,8 @@ class _HomeScreenState extends State<HomeScreen> {
     if (!mounted) return;
 
     try {
-      final csvService = context.read<CsvService>();
-      final updateInfo = await csvService.checkForUpdates();
+      final jsonService = context.read<JsonService>();
+      final updateInfo = await jsonService.checkForUpdates();
 
       if (updateInfo != null && mounted) {
         setState(() {
@@ -87,10 +87,10 @@ class _HomeScreenState extends State<HomeScreen> {
       context: context,
       builder: (context) => UpdateDialog(
         onConfirm: () async {
-          final csvService = context.read<CsvService>();
-          await csvService.updateFromOnline(
-            _updateInfo!['csv']!,
-            _updateInfo!['version']!,
+          final jsonService = context.read<JsonService>();
+          await jsonService.updateFromOnline(
+            _updateInfo!['data'],
+            _updateInfo!['version'],
           );
           setState(() {
             _hasUpdate = false;
@@ -108,11 +108,10 @@ class _HomeScreenState extends State<HomeScreen> {
     // Clear all data
     final storageService = context.read<StorageService>();
     await storageService.appDataBox.clear();
-    await storageService.userAdditionsBox.clear();
 
-    // Reload from CSV
-    final csvService = context.read<CsvService>();
-    await csvService.loadFromLocalCSV();
+    // Reload from JSON
+    final jsonService = context.read<JsonService>();
+    await jsonService.loadFromLocalJson();
 
     // Refresh UI
     setState(() {});
@@ -123,6 +122,43 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: Colors.green,
       ),
     );
+  }
+
+  Future<void> _handleReset() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('איפוס לנתונים מקוריים'),
+        content: const Text(
+          'פעולה זו תמחק את כל השינויים שביצעת ותחזיר את הנתונים למצב המקורי.\n'
+              'הרשימות האישיות שלך יישמרו.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('ביטול'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('אפס', style: TextStyle(color: Colors.orange)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      final jsonService = context.read<JsonService>();
+      await jsonService.resetToOriginal(null);
+
+      setState(() {});
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('הנתונים אופסו למצב המקורי'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+    }
   }
 
   @override
@@ -168,6 +204,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   break;
                 case 'reload':
                   await _forceReloadData();
+                  break;
+                case 'reset':
+                  await _handleReset();
                   break;
                 case 'about':
                   _showAbout();
@@ -216,6 +255,16 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               const PopupMenuItem(
+                value: 'reset',
+                child: Row(
+                  children: [
+                    Icon(Icons.restore, color: Colors.orange),
+                    SizedBox(width: 8),
+                    Text('אפס לנתונים מקוריים'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
                 value: 'about',
                 child: Row(
                   children: [
@@ -237,20 +286,14 @@ class _HomeScreenState extends State<HomeScreen> {
           const ListsScreen(),
         ],
       ),
-        bottomNavigationBar: CustomBottomNav(
-          currentIndex: _currentIndex,
-          onTap: (index) {
-            setState(() {
-              _currentIndex = index;
-            });
-            // Force keyboard when switching to search
-            if (index == 1) { // Search tab index
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                SystemChannels.textInput.invokeMethod('TextInput.show');
-              });
-            }
-          },
-        ),
+      bottomNavigationBar: CustomBottomNav(
+        currentIndex: _currentIndex,
+        onTap: (index) {
+          setState(() {
+            _currentIndex = index;
+          });
+        },
+      ),
     );
   }
 
@@ -259,90 +302,79 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return RefreshIndicator(
       onRefresh: _forceReloadData,
-      child: Center( // ADD CENTER
-        child: Align( // ADD ALIGN
-          alignment: Alignment.bottomCenter, // ALIGN TO BOTTOM
-          child: Padding(
-            padding: const EdgeInsets.only(
-              left: 16.0,
-              right: 16.0,
-              bottom: 32.0, // MORE BOTTOM PADDING
-              top: 16.0,
-            ),
-            child: GridView.builder(
-              shrinkWrap: true, // ADD THIS
-              physics: const NeverScrollableScrollPhysics(), // ADD THIS
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                childAspectRatio: 1.2,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-              ),
-              itemCount: CategoryType.values.length,
-              itemBuilder: (context, index) {
-                final category = CategoryType.values[index];
-                final itemCount = storageService.getAllItems(category: category).length;
-
-                return CategoryCard(
-                  category: category,
-                  itemCount: itemCount,
-                  onTap: () {
-                    // Navigate to GamesCategoriesScreen for games, regular for others
-                    if (category == CategoryType.games) {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const GamesCategoriesScreen(),
-                        ),
-                      ).then((_) {
-                        setState(() {}); // Refresh counts
-                      });
-                    } else {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => CategoryScreen(category: category),
-                        ),
-                      ).then((_) {
-                        setState(() {}); // Refresh counts
-                      });
-                    }
-                  },
-                );
-              },
-            ),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: GridView.builder(
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            childAspectRatio: 1.2,
+            crossAxisSpacing: 16,
+            mainAxisSpacing: 16,
           ),
+          itemCount: CategoryType.values.length,
+          itemBuilder: (context, index) {
+            final category = CategoryType.values[index];
+            final itemCount = storageService.getAllItems(category: category).length;
+
+            return CategoryCard(
+              category: category,
+              itemCount: itemCount,
+              onTap: () {
+                if (category == CategoryType.games) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const GamesCategoriesScreen(),
+                    ),
+                  ).then((_) {
+                    setState(() {});
+                  });
+                } else {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => CategoryScreen(category: category),
+                    ),
+                  ).then((_) {
+                    setState(() {});
+                  });
+                }
+              },
+            );
+          },
         ),
       ),
     );
   }
 
   void _handleImport() async {
-    final importExportService = ImportExportService(
-      csvService: context.read<CsvService>(),
-      storageService: context.read<StorageService>(),
+    // TODO: Update ImportExportService to handle JSON format
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('ייבוא JSON בפיתוח'),
+        backgroundColor: Colors.orange,
+      ),
     );
-
-    await importExportService.importCSV(context);
-    setState(() {}); // Refresh UI
   }
 
   void _handleExport() async {
-    final importExportService = ImportExportService(
-      csvService: context.read<CsvService>(),
-      storageService: context.read<StorageService>(),
+    // TODO: Update ImportExportService to export as JSON
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('ייצוא JSON בפיתוח'),
+        backgroundColor: Colors.orange,
+      ),
     );
-
-    await importExportService.exportCSV(context);
   }
 
   void _handleShare() async {
-    final importExportService = ImportExportService(
-      csvService: context.read<CsvService>(),
-      storageService: context.read<StorageService>(),
+    // TODO: Update sharing to use JSON format
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('שיתוף JSON בפיתוח'),
+        backgroundColor: Colors.orange,
+      ),
     );
-
-    await importExportService.shareAdditions(context);
   }
 
   void _showAbout() {

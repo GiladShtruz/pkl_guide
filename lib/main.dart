@@ -4,7 +4,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:provider/provider.dart';
 import 'screens/home_screen.dart';
 import 'services/storage_service.dart';
-import 'services/csv_service.dart';
+import 'services/json_service.dart';
 import 'services/lists_service.dart';
 import 'providers/app_provider.dart';
 
@@ -21,14 +21,14 @@ void main() async {
   final listsService = ListsService(storageService);
   await listsService.init();
 
-  final csvService = CsvService(storageService);
+  final jsonService = JsonService(storageService);
   // Don't load data here - let HomeScreen handle it with loading state
 
   runApp(
     MultiProvider(
       providers: [
         Provider<StorageService>.value(value: storageService),
-        Provider<CsvService>.value(value: csvService),
+        Provider<JsonService>.value(value: jsonService),
         Provider<ListsService>.value(value: listsService),
         ChangeNotifierProvider(create: (_) => AppProvider()),
       ],
