@@ -1,11 +1,13 @@
+// lib/screens/item_detail_screen.dart
 import 'package:flutter/material.dart';
+import 'package:pkl_guide/screens/switch_card_game_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/item_model.dart';
 import '../services/storage_service.dart';
 import '../services/lists_service.dart';
 import '../screens/edit_item_screen.dart';
-import '../screens/pantomime_game_screen.dart';
+
 import '../dialogs/add_to_lists_dialog.dart';
 
 class ItemDetailScreen extends StatefulWidget {
@@ -19,15 +21,16 @@ class ItemDetailScreen extends StatefulWidget {
 
 class _ItemDetailScreenState extends State<ItemDetailScreen> {
   late ListsService _listsService;
+  late StorageService _storageService;
 
   @override
   void initState() {
     super.initState();
     _listsService = context.read<ListsService>();
-    final storageService = context.read<StorageService>();
+    _storageService = context.read<StorageService>();
 
     // Update access count
-    storageService.updateItemAccess(widget.item.id);
+    _storageService.updateItemAccess(widget.item.id);
   }
 
   void _openLink() async {
@@ -61,11 +64,24 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final isPantomime = widget.item.name.toLowerCase().contains('פנטומימה');
+    final hasModifications = widget.item.hasUserModifications;
+    final originalCount = widget.item.originalItems.length;
+    final userAddedCount = widget.item.userAddedItems.length;
+    final totalItems = widget.item.items.length;
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: Text(widget.item.name),
+        title: Column(
+          children: [
+            Text(widget.item.name),
+            if (hasModifications)
+              const Text(
+                'עודכן',
+                style: TextStyle(fontSize: 12, color: Colors.blue),
+              ),
+          ],
+        ),
         centerTitle: true,
         actions: [
           IconButton(
@@ -106,184 +122,134 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-
-            children: [
-              // detail card
-              if (widget.item.detail != null &&
-                  widget.item.detail!.isNotEmpty) ...[
-                SizedBox(
-                  width: double.infinity,
-                  child: Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+      body: CustomScrollView(
+        slivers: [
+          // Fixed header content
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  // User-created badge
+                  if (widget.item.isUserCreated)
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 16),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.blue[100],
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                              Text(
-                              _getContentDetail(),
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          const SizedBox(height: 8),
+                          Icon(Icons.person, size: 16, color: Colors.blue),
+                          SizedBox(width: 4),
                           Text(
-                            widget.item.detail!,
-                            // style: const TextStyle(fontSize: 16),
+                            'נוצר על ידך',
+                            style: TextStyle(
+                              color: Colors.blue,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ],
                       ),
                     ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-              ],
-
-              // Classification
-              if (widget.item.classification != null &&
-                  widget.item.classification!.isNotEmpty) ...[
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.location_on, color: Colors.grey),
-                        const SizedBox(width: 8),
-                        const Text(
-                          'מיקום: ',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
+                  // Detail card
+                  if (widget.item.detail != null &&
+                      widget.item.detail!.isNotEmpty) ...[
+                    SizedBox(
+                      width: double.infinity,
+                      child: Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    _getContentDetail(),
+                                    style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  if (widget.item.userDetail != null)
+                                    const Chip(
+                                      label: Text(
+                                        'עודכן',
+                                        style: TextStyle(fontSize: 10),
+                                      ),
+                                      backgroundColor: Colors.blue,
+                                      labelStyle: TextStyle(
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                widget.item.detail!,
+                                style: const TextStyle(fontSize: 16),
+                              ),
+                            ],
                           ),
                         ),
-                        Text(
-                          widget.item.classification!,
-                          style: const TextStyle(fontSize: 16),
-                        ),
-                      ],
+                      ),
                     ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-              ],
+                    const SizedBox(height: 16),
+                  ],
 
-              // Content section - different display based on category
-              if (widget.item.items.isNotEmpty) ...[
-                if (widget.item.category == 'riddles') ...[
-                  // Riddles display with special design
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
+                  // Classification
+                  if (widget.item.classification != null &&
+                      widget.item.classification!.isNotEmpty) ...[
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.location_on, color: Colors.grey),
+                            const SizedBox(width: 8),
+                            const Text(
+                              'מיקום: ',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              widget.item.classification!,
+                              style: const TextStyle(fontSize: 16),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+
+                  // Items count header
+                  if (totalItems > 0) ...[
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text(
-                            'חידות',
-                            style: TextStyle(
+                          Text(
+                            _getContentTitle(),
+                            style: const TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.orange.withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              '${widget.item.items.length} חידות',
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.orange,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      // Simple list of riddles with special design
-                      ...widget.item.items.asMap().entries.map((entry) {
-                        final index = entry.key;
-                        final riddle = entry.value;
-
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 12),
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.orange[50],
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: Colors.orange[200]!,
-                              width: 1,
-                            ),
-                          ),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Riddle number
-                              Container(
-                                width: 32,
-                                height: 32,
-                                decoration: BoxDecoration(
-                                  color: Colors.orange,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    '${index + 1}',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              // Riddle text
-                              Expanded(
-                                child: Text(
-                                  riddle,
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    height: 1.4,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      }),
-                    ],
-                  ),
-                ] else if ((widget.item.category == 'games' ||
-                        widget.item.category == 'activities') ) ...[
-                  // Scrollable list for games and activities with many items
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
                           Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(
-                                _getContentTitle(),
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
                               Container(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 12,
@@ -294,7 +260,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Text(
-                                  '${widget.item.items.length} פריטים',
+                                  '$originalCount מקוריים',
                                   style: TextStyle(
                                     fontSize: 14,
                                     fontWeight: FontWeight.bold,
@@ -302,85 +268,166 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                                   ),
                                 ),
                               ),
+                              if (userAddedCount > 0) ...[
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.blue.withOpacity(0.2),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    '+$userAddedCount נוספו',
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.blue,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ],
-                          ),
-                          const SizedBox(height: 16),
-                          // Scrollable list container
-                          Container(
-                            height: 300,
-                            decoration: BoxDecoration(
-                              color: Colors.grey[100],
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: Colors.grey[300]!,
-                                width: 1,
-                              ),
-                            ),
-                            child: Scrollbar(
-                              thumbVisibility: true,
-                              child: ListView.separated(
-                                padding: const EdgeInsets.all(12),
-                                itemCount: widget.item.items.length,
-                                separatorBuilder: (context, index) =>
-                                    Divider(color: Colors.grey[300], height: 1),
-                                itemBuilder: (context, index) {
-                                  return Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 12,
-                                      vertical: 10,
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        // Item number with colored background
-                                        Container(
-                                          width: 36,
-                                          height: 36,
-                                          decoration: BoxDecoration(
-                                            color: _getCategoryColor()
-                                                .withOpacity(0.15),
-                                            borderRadius: BorderRadius.circular(
-                                              8,
-                                            ),
-                                          ),
-                                          child: Center(
-                                            child: Text(
-                                              '${index + 1}',
-                                              style: TextStyle(
-                                                color: _getCategoryColor(),
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 14,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 12),
-                                        // Item text
-                                        Expanded(
-                                          child: Text(
-                                            widget.item.items[index],
-                                            style: const TextStyle(
-                                              fontSize: 16,
-                                              height: 1.3,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
                           ),
                         ],
                       ),
                     ),
-                  ),
-                ]
-              ],
-              const SizedBox(height: 80),
-            ],
+                    const Divider(),
+                  ],
+                ],
+              ),
+            ),
           ),
-        ),
+          // Items list - using SliverList.builder for performance
+          if (totalItems > 0)
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              sliver: SliverList.builder(
+                itemCount: totalItems,
+                itemBuilder: (context, index) {
+                  final item = widget.item.items[index];
+                  final isUserAdded = index >= originalCount;
+
+                  if (widget.item.category == 'riddles') {
+                    // Riddles display
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: isUserAdded
+                            ? Colors.blue[50]
+                            : Colors.orange[50],
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isUserAdded
+                              ? Colors.blue[200]!
+                              : Colors.orange[200]!,
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(
+                              color: isUserAdded ? Colors.blue : Colors.orange,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Center(
+                              child: Text(
+                                '${index + 1}',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              item,
+                              style: const TextStyle(fontSize: 16, height: 1.4),
+                            ),
+                          ),
+                          if (isUserAdded)
+                            Container(
+                              margin: const EdgeInsets.only(left: 8),
+                              child: const Icon(
+                                Icons.person,
+                                size: 16,
+                                color: Colors.blue,
+                              ),
+                            ),
+                        ],
+                      ),
+                    );
+                  } else {
+                    // Games and activities display
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 36,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                color: isUserAdded
+                                    ? Colors.blue.withOpacity(0.15)
+                                    : _getCategoryColor().withOpacity(0.15),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  '${index + 1}',
+                                  style: TextStyle(
+                                    color: isUserAdded
+                                        ? Colors.blue
+                                        : _getCategoryColor(),
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                item,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  height: 1.3,
+                                ),
+                              ),
+                            ),
+                            if (isUserAdded)
+                              const Icon(
+                                Icons.person,
+                                size: 16,
+                                color: Colors.blue,
+                              ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
+                },
+              ),
+            ),
+
+          // Bottom padding
+          const SliverToBoxAdapter(child: SizedBox(height: 80)),
+        ],
       ),
       floatingActionButton: isPantomime
           ? FloatingActionButton.extended(
@@ -389,7 +436,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                   context,
                   MaterialPageRoute(
                     builder: (context) =>
-                        PantomimeGameScreen(item: widget.item),
+                        SwitchCardGameScreen(item: widget.item),
                   ),
                 );
               },
@@ -443,19 +490,3 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     }
   }
 }
-
-
-//  Color _getCategoryColor() {
-//     switch (widget.item.category) {
-//       case 'games':
-//         return Colors.green;
-//       case 'activities':
-//         return Colors.blue;
-//       case 'riddles':
-//         return Colors.purple;
-//       case 'texts':
-//         return Colors.orange;
-//       default:
-//         return Colors.grey;
-//     }
-//   }

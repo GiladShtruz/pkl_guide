@@ -1,3 +1,4 @@
+// lib/screens/search_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -18,20 +19,20 @@ class SearchScreenState extends State<SearchScreen> {
   List<SearchResult> _searchResults = [];
   bool _isSearching = false;
 
-  // מתודה שנקראת מההורה
+  // Methods called from parent
   void focusSearch() {
-    print("parent");
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _searchFocusNode.requestFocus();
-        // Force keyboard to show
         SystemChannels.textInput.invokeMethod('TextInput.show');
       }
     });
   }
+
   void unfocusSearch() {
     _searchFocusNode.unfocus();
   }
+
   @override
   void initState() {
     super.initState();
@@ -39,13 +40,10 @@ class SearchScreenState extends State<SearchScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _searchFocusNode.requestFocus();
-        // Force keyboard to show
         SystemChannels.textInput.invokeMethod('TextInput.show');
       }
     });
   }
-
-
 
   @override
   void dispose() {
@@ -72,6 +70,7 @@ class SearchScreenState extends State<SearchScreen> {
     final results = <SearchResult>[];
 
     for (var categoryItem in allCategoryItems) {
+      // Search in name (use current name which includes user modifications)
       if (categoryItem.name.toLowerCase().contains(query.toLowerCase())) {
         results.add(SearchResult(
           item: categoryItem,
@@ -83,6 +82,7 @@ class SearchScreenState extends State<SearchScreen> {
               : '',
         ));
       } else {
+        // Search in items (includes both original and user-added)
         for (var item in categoryItem.items) {
           if (item.toLowerCase().contains(query.toLowerCase())) {
             results.add(SearchResult(
@@ -94,6 +94,7 @@ class SearchScreenState extends State<SearchScreen> {
           }
         }
 
+        // Search in detail
         if (categoryItem.detail?.toLowerCase().contains(query.toLowerCase()) == true) {
           results.add(SearchResult(
             item: categoryItem,
@@ -202,9 +203,30 @@ class SearchScreenState extends State<SearchScreen> {
         return Card(
           margin: const EdgeInsets.only(bottom: 12),
           child: ListTile(
-            title: Text(
-              result.item.name,
-              style: const TextStyle(fontWeight: FontWeight.bold),
+            title: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    result.item.name,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                // Show modification indicators
+                if (result.item.hasUserModifications && !result.item.isUserCreated)
+                  const Icon(Icons.edit, size: 14, color: Colors.orange),
+                if (result.item.isUserCreated)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.blue[100],
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Text(
+                      'נוסף',
+                      style: TextStyle(fontSize: 10, color: Colors.blue),
+                    ),
+                  ),
+              ],
             ),
             subtitle: Text(
               result.matchedText,
@@ -218,7 +240,6 @@ class SearchScreenState extends State<SearchScreen> {
                 color: Colors.white,
               ),
             ),
-            // lib/screens/search_screen.dart - CONTINUATION
             trailing: result.matchType == MatchType.title
                 ? const Chip(
               label: Text('כותרת'),

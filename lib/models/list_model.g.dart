@@ -1,5 +1,10 @@
+// GENERATED CODE - DO NOT MODIFY BY HAND
 
 part of 'list_model.dart';
+
+// **************************************************************************
+// TypeAdapterGenerator
+// **************************************************************************
 
 class ListModelAdapter extends TypeAdapter<ListModel> {
   @override
@@ -48,7 +53,7 @@ class ListModelAdapter extends TypeAdapter<ListModel> {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-          other is ListModelAdapter &&
-              runtimeType == other.runtimeType &&
-              typeId == other.typeId;
+      other is ListModelAdapter &&
+          runtimeType == other.runtimeType &&
+          typeId == other.typeId;
 }

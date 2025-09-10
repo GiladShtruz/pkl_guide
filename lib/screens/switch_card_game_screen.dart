@@ -8,19 +8,19 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:swipable_stack/swipable_stack.dart';
 import '../models/item_model.dart';
 
-class PantomimeGameScreen extends StatefulWidget {
+class SwitchCardGameScreen extends StatefulWidget {
   final ItemModel item;
 
-  const PantomimeGameScreen({
+  const SwitchCardGameScreen({
     super.key,
     required this.item,
   });
 
   @override
-  State<PantomimeGameScreen> createState() => _PantomimeGameScreenState();
+  State<SwitchCardGameScreen> createState() => _SwitchCardGameScreenState();
 }
 
-class _PantomimeGameScreenState extends State<PantomimeGameScreen>
+class _SwitchCardGameScreenState extends State<SwitchCardGameScreen>
     with TickerProviderStateMixin {
   late SwipableStackController _controller;
   late List<String> _words;
@@ -70,7 +70,7 @@ class _PantomimeGameScreenState extends State<PantomimeGameScreen>
 
   void _checkShowRules() async {
     final prefs = await SharedPreferences.getInstance();
-    final dontShowAgain = prefs.getBool('pantomime_rules_dont_show') ?? false;
+    final dontShowAgain = prefs.getBool('card_game_rules_dont_show') ?? false;
 
     if (!dontShowAgain && mounted) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -84,7 +84,7 @@ class _PantomimeGameScreenState extends State<PantomimeGameScreen>
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        title: const Text('חוקי המשחק - פנטומימה'),
+        title: Text('חוקי המשחק - ${widget.item.name}'),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -96,15 +96,7 @@ class _PantomimeGameScreenState extends State<PantomimeGameScreen>
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
-              const Text(
-                '1. בחר איזו קבוצה משחקת כעת\n'
-                    '2. לחץ על כפתור ההפעלה להתחלת הסיבוב\n'
-                    '3. שחקן מהקבוצה מציג את המילה בפנטומימה\n'
-                    '4. החלק ימינה - אם הקבוצה ניחשה נכון ✓\n'
-                    '5. החלק שמאלה - לעבור למילה הבאה ✗\n'
-                    '6. כל סיבוב נמשך דקה\n\n'
-                    'הקבוצה עם הכי הרבה ניחושים מנצחת!',
-              ),
+               Text( widget.item.userDetail ?? ""),
             ],
           ),
         ),
@@ -117,7 +109,7 @@ class _PantomimeGameScreenState extends State<PantomimeGameScreen>
                   onChanged: (value) async {
                     if (value == true) {
                       final prefs = await SharedPreferences.getInstance();
-                      await prefs.setBool('pantomime_rules_dont_show', true);
+                      await prefs.setBool('card_game_rules_dont_show', true);
                     }
                     Navigator.pop(context);
                   },
@@ -291,6 +283,8 @@ class _PantomimeGameScreenState extends State<PantomimeGameScreen>
   void _handleSwipe(SwipeDirection direction) {
     if (!_isPlaying || _isPaused || !_canSwipe) return;
 
+
+    direction == SwipeDirection.right ? _currentRoundScore++ : _currentRoundScore--;
     if (direction == SwipeDirection.right) {
       setState(() {
         _currentRoundScore++;
@@ -324,6 +318,7 @@ class _PantomimeGameScreenState extends State<PantomimeGameScreen>
       _shuffleWords();
       setState(() {
         _controller.currentIndex = 0;
+
       });
     }
   }
@@ -333,7 +328,7 @@ class _PantomimeGameScreenState extends State<PantomimeGameScreen>
     return Scaffold(
       backgroundColor: Colors.grey[900],
       appBar: AppBar(
-        title: const Text('פנטומימה'),
+        title: Text(widget.item.name),
         centerTitle: true,
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -406,12 +401,7 @@ class _PantomimeGameScreenState extends State<PantomimeGameScreen>
                     builder: (context, properties) {
                       final itemIndex = properties.index % _words.length;
                       final word = _words[itemIndex];
-                      print("=========");
-                      print(properties.swipeProgress);
-                      print(properties.direction);
-                      print('index: ' + properties.index.toString());
-                      print(itemIndex);
-                      print("=========");
+
 
                       return Stack(
                         children: [

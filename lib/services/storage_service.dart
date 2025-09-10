@@ -6,14 +6,10 @@ import '../models/category.dart';
 class StorageService {
   static const String appDataBoxName = 'appDataBox';
   static const String userBoxName = 'userBox';
-  static const String deletedByUserBoxName = 'deletedByUserBox';
-  // static const String favoritesBoxName = 'favoritesBox';
   static const String settingsBoxName = 'settingsBox';
 
   late Box<ItemModel> appDataBox;
   late Box<ItemModel> userBox;
-  late Box<String> deletedByUserBox;
-  // late Box<String> favoritesBox;
   late Box settingsBox;
 
   Future<void> init() async {
@@ -25,8 +21,6 @@ class StorageService {
     // Open boxes
     appDataBox = await Hive.openBox<ItemModel>(appDataBoxName);
     userBox = await Hive.openBox<ItemModel>(userBoxName);
-    deletedByUserBox = await Hive.openBox<String>(deletedByUserBoxName);
-    // favoritesBox = await Hive.openBox<String>(favoritesBoxName);
     settingsBox = await Hive.openBox(settingsBoxName);
   }
 
@@ -42,23 +36,88 @@ class StorageService {
     return appDataBox.values.toList();
   }
 
-  // User Additions Methods
-  Future<void> addUserItem(ItemModel item) async {
-    item.isUserAdded = true;
+  // User Created Items
+  Future<void> addUserCreatedItem(ItemModel item) async {
+    item.isUserCreated = true;
     await userBox.put(item.id, item);
   }
 
-  List<ItemModel> getUserAdditions() {
+  Future<void> deleteUserCreatedItem(String itemId) async {
+    await userBox.delete(itemId);
+  }
+
+  List<ItemModel> getUserCreatedItems() {
     return userBox.values.toList();
   }
 
-  // Deleted Items Methods
-  Future<void> markAsDeleted(String itemId) async {
-    await deletedByUserBox.add(itemId);
+  // Update methods for existing items
+  Future<void> updateItemTitle(String itemId, String newTitle) async {
+    final item = appDataBox.get(itemId);
+    if (item != null) {
+      item.userTitle = newTitle;
+      await item.save();
+    }
   }
 
-  bool isDeleted(String itemId) {
-    return deletedByUserBox.values.contains(itemId);
+  Future<void> updateItemDetail(String itemId, String? newDetail) async {
+    final item = appDataBox.get(itemId);
+    print("--");
+    print(itemId);
+    print(item != null);
+    if (item != null) {
+      print("get in updateItemDetail");
+      item.userDetail = newDetail;
+      await item.save();
+    }
+  }
+
+  Future<void> addUserItemToExisting(String itemId, String newItem) async {
+    final item = appDataBox.get(itemId);
+    if (item != null) {
+      item.userAddedItems.add(newItem);
+      await item.save();
+    }
+  }
+
+  Future<void> removeUserItem(String itemId, String itemToRemove) async {
+    final item = appDataBox.get(itemId);
+    if (item != null) {
+      item.userAddedItems.remove(itemToRemove);
+      await item.save();
+    }
+  }
+
+  // Reset methods
+  Future<void> resetItemTitle(String itemId) async {
+    final item = appDataBox.get(itemId);
+    if (item != null) {
+      item.resetTitle();
+      await item.save();
+    }
+  }
+
+  Future<void> resetItemDetail(String itemId) async {
+    final item = appDataBox.get(itemId);
+    if (item != null) {
+      item.resetDetail();
+      await item.save();
+    }
+  }
+
+  Future<void> resetItemUserItems(String itemId) async {
+    final item = appDataBox.get(itemId);
+    if (item != null) {
+      item.resetItems();
+      await item.save();
+    }
+  }
+
+  Future<void> resetItem(String itemId) async {
+    final item = appDataBox.get(itemId);
+    if (item != null) {
+      item.resetAll();
+      await item.save();
+    }
   }
 
   // Settings Methods
@@ -87,30 +146,21 @@ class StorageService {
 
   // Get all items (merged)
   List<ItemModel> getAllCategoryItems({CategoryType? category}) {
-    final List<ItemModel> allCategoryItems = [];
+    final List<ItemModel> allItems = [];
 
-    // Add app data
-    allCategoryItems.addAll(appDataBox.values.where((categoryItem) {
-      if (isDeleted(categoryItem.id)) return false;
-      if (category != null && categoryItem.category != category.name) return false;
+    // Add app data items
+    allItems.addAll(appDataBox.values.where((item) {
+      if (category != null && item.category != category.name) return false;
       return true;
     }));
 
-    // Add user additions
-    allCategoryItems.addAll(userBox.values.where((categoryItem) {
-      if (category != null && categoryItem.category != category.name) return false;
+    // Add user created items
+    allItems.addAll(userBox.values.where((item) {
+      if (category != null && item.category != category.name) return false;
       return true;
     }));
 
-
-
-    return allCategoryItems;
-  }
-
-  void giladDebug(){
-    print("gilad");
-
-    print(userBox.values);
+    return allItems;
   }
 
   // Update item access

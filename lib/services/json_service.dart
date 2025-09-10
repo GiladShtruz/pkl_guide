@@ -1,4 +1,4 @@
-// lib/services/json_service.dart - UPDATED FOR NEW JSON STRUCTURE
+// lib/services/json_service.dart
 import 'dart:convert';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
@@ -17,7 +17,6 @@ class JsonService {
     try {
       // Check if we have local data
       final hasLocalData = storageService.getAppData().isNotEmpty;
-      final currentVersion = storageService.getVersion();
 
       if (!hasLocalData) {
         // First time - load from local JSON file
@@ -73,8 +72,6 @@ class JsonService {
     // Parse and save new data
     await parseAndSaveJson(jsonData, isUpdate: true);
     await storageService.saveVersion(version);
-
-    // Merge with user data happens automatically in StorageService.getAllItems()
   }
 
   Future<void> parseAndSaveJson(Map<String, dynamic> jsonData, {required bool isUpdate}) async {
@@ -95,7 +92,7 @@ class JsonService {
             final item = _parseItem(itemData, category);
             if (item != null) {
               items.add(item);
-              print('Added item: ${item.name}');
+              print('Added item: ${item.name} with ID: ${item.id}');
             }
           }
         }
@@ -108,7 +105,9 @@ class JsonService {
       await storageService.saveVersion(version.toString());
 
       if (isUpdate) {
-        print('Update completed, merging with user data');
+        print('Update completed');
+        // When updating, preserve user modifications
+        // User modifications are already stored in the ItemModel itself
       }
 
     } catch (e) {
@@ -119,58 +118,39 @@ class JsonService {
 
   ItemModel? _parseItem(Map<String, dynamic> data, CategoryType category) {
     try {
-      String? name;
-      String? detail;
-      String? link;
-      String? classification;
-      List<String> items = [];
-
-      // Common fields
-      name = data['title'];
-      detail = data['detail'];
-      link = data['link']; // null for riddle
-
-      // Category-specific fields
-      switch (category) {
-        case CategoryType.games:
-        case CategoryType.activities:
-          classification = data['classification'];
-          final dataItems = data['items'];
-          if (dataItems is List) {
-            items = dataItems.map((e) => e.toString()).toList();
-          }
-          break;
-
-        case CategoryType.riddles:
-          final dataItems = data['items'];
-          if (dataItems is List) {
-            items = dataItems.map((e) => e.toString()).toList();
-          }
-          break;
-
-        case CategoryType.texts:
-          classification = data['classification'];
-          detail = data['detail'];
-          // For texts, store detail as content if no items
-          // if (detail != null && detail.isNotEmpty) {
-          //   items = [detail];
-          // }
-          break;
+      // Extract ID from JSON
+      String? id = data['id'];
+      if (id == null || id.isEmpty) {
+        // Generate ID if not provided
+        id = 'ID-${DateTime.now().millisecondsSinceEpoch}-${data['title']?.hashCode ?? 0}';
       }
 
-      if (name == null || name.isEmpty) {
-        print('Skipping item with no name');
+      String? title = data['title'];
+      String? detail = data['detail'];
+      String? link = data['link'];
+      String? classification = data['classification'];
+      List<String> items = [];
+
+      // Parse items array
+      final dataItems = data['items'];
+      if (dataItems is List) {
+        items = dataItems.map((e) => e.toString()).toList();
+      }
+
+      if (title == null || title.isEmpty) {
+        print('Skipping item with no title');
         return null;
       }
 
       final item = ItemModel(
-        id: '${category.name}_${DateTime.now().millisecondsSinceEpoch}_${name.hashCode}',
-        name: name,
-        detail: detail,
+        id: id,
+        originalTitle: title,
+        originalDetail: detail,
         link: link,
         classification: classification,
-        items: items,
+        originalItems: items,
         category: category.name,
+        isUserCreated: false,
       );
 
       print('Created item: ${item.name} with ${items.length} content items');
@@ -205,33 +185,34 @@ class JsonService {
 
   Future<void> resetToOriginal(CategoryType? category) async {
     if (category != null) {
-      // Remove user modifications for specific category
-      final userItems = storageService.getUserAdditions()
+      // Remove user created items for specific category
+      final userItems = storageService.getUserCreatedItems()
           .where((item) => item.category == category.name)
           .toList();
 
       for (var item in userItems) {
-        await item.delete();
+        await storageService.deleteUserCreatedItem(item.id);
       }
 
-      // Clear deleted items for this category
-      final deletedItems = storageService.deletedByUserBox.values
-          .where((id) => id.startsWith(category.name))
+      // Reset modifications in app data items for this category
+      final appItems = storageService.getAppData()
+          .where((item) => item.category == category.name)
           .toList();
 
-      for (var id in deletedItems) {
-        final index = storageService.deletedByUserBox.values.toList().indexOf(id);
-        if (index != -1) {
-          await storageService.deletedByUserBox.deleteAt(index);
-        }
+      for (var item in appItems) {
+        await storageService.resetItem(item.id);
       }
     } else {
       // Reset all user modifications
       await storageService.userBox.clear();
-      await storageService.deletedByUserBox.clear();
+
+      // Reset all modifications in app data
+      for (var item in storageService.getAppData()) {
+        await storageService.resetItem(item.id);
+      }
     }
 
-    // Reload from original data
-    await loadFromLocalJson();
+    // Optionally reload from original data
+    // await loadFromLocalJson();
   }
 }

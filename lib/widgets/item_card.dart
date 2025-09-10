@@ -1,7 +1,9 @@
+// lib/widgets/item_card.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/item_model.dart';
 import '../providers/app_provider.dart';
+import '../services/lists_service.dart';
 
 class ItemCard extends StatelessWidget {
   final ItemModel item;
@@ -20,7 +22,9 @@ class ItemCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final appProvider = context.watch<AppProvider>();
+    final listsService = context.read<ListsService>();
     final isSelected = appProvider.selectedItems.contains(item.id);
+    final isFavorite = listsService.isFavorite(item.id);
 
     return Card(
       elevation: 2,
@@ -52,13 +56,13 @@ class ItemCard extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        if (item.isFavorite)
+                        if (isFavorite)
                           const Icon(
                             Icons.favorite,
                             size: 16,
                             color: Colors.red,
                           ),
-                        if (item.isFavorite) const SizedBox(width: 4),
+                        if (isFavorite) const SizedBox(width: 4),
                         Expanded(
                           child: Text(
                             item.name,
@@ -68,7 +72,25 @@ class ItemCard extends StatelessWidget {
                             ),
                           ),
                         ),
-                        // Show riddles count
+                        // Show modification indicator
+                        if (item.hasUserModifications && !item.isUserCreated)
+                          Container(
+                            margin: const EdgeInsets.only(left: 8),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.orange[100],
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(
+                              Icons.edit,
+                              size: 12,
+                              color: Colors.orange,
+                            ),
+                          ),
+                        // Show items count for riddles
                         if (item.category == 'riddles' && item.items.isNotEmpty)
                           Container(
                             margin: const EdgeInsets.only(left: 8),
@@ -89,7 +111,29 @@ class ItemCard extends StatelessWidget {
                               ),
                             ),
                           ),
-                        if (item.isUserAdded)
+                        // Show user added items count
+                        if (item.userAddedItems.isNotEmpty)
+                          Container(
+                            margin: const EdgeInsets.only(left: 4),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.blue[100],
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              '+${item.userAddedItems.length}',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.blue,
+                              ),
+                            ),
+                          ),
+                        // Show if entirely user created
+                        if (item.isUserCreated)
                           Container(
                             margin: const EdgeInsets.only(left: 8),
                             padding: const EdgeInsets.symmetric(
@@ -113,14 +157,29 @@ class ItemCard extends StatelessWidget {
                     if (item.detail != null && item.detail!.isNotEmpty)
                       Padding(
                         padding: const EdgeInsets.only(top: 4),
-                        child: Text(
-                          item.detail!,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[600],
-                          ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                item.detail!,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                            ),
+                            if (item.userDetail != null)
+                              Padding(
+                                padding: const EdgeInsets.only(left: 4),
+                                child: Icon(
+                                  Icons.edit,
+                                  size: 12,
+                                  color: Colors.grey[500],
+                                ),
+                              ),
+                          ],
                         ),
                       ),
                     if (item.classification != null)

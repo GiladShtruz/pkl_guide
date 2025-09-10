@@ -1,3 +1,4 @@
+// lib/screens/add_item_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/category.dart';
@@ -21,6 +22,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
   final _nameController = TextEditingController();
   final _detailController = TextEditingController();
   final _linkController = TextEditingController();
+  final _classificationController = TextEditingController();
   final _contentController = TextEditingController();
   final List<String> _contentList = [];
 
@@ -29,6 +31,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
     _nameController.dispose();
     _detailController.dispose();
     _linkController.dispose();
+    _classificationController.dispose();
     _contentController.dispose();
     super.dispose();
   }
@@ -52,21 +55,27 @@ class _AddItemScreenState extends State<AddItemScreen> {
     if (_formKey.currentState!.validate()) {
       final storageService = context.read<StorageService>();
 
+      // Generate unique ID for user-created item
+      final id = 'USER-${widget.category.name}-${DateTime.now().millisecondsSinceEpoch}';
+
       final newItem = ItemModel(
-        id: '${widget.category.name}_${DateTime.now().millisecondsSinceEpoch}',
-        name: _nameController.text,
-        detail: _detailController.text.isNotEmpty
+        id: id,
+        originalTitle: _nameController.text,
+        originalDetail: _detailController.text.isNotEmpty
             ? _detailController.text
             : null,
         link: _linkController.text.isNotEmpty
             ? _linkController.text
             : null,
-        items: _contentList,
+        classification: _classificationController.text.isNotEmpty
+            ? _classificationController.text
+            : null,
+        originalItems: _contentList,
         category: widget.category.name,
-        isUserAdded: true,
+        isUserCreated: true,
       );
 
-      await storageService.addUserItem(newItem);
+      await storageService.addUserCreatedItem(newItem);
 
       if (mounted) {
         Navigator.pop(context);
@@ -102,6 +111,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
                 },
               ),
               const SizedBox(height: 16),
+
               TextFormField(
                 controller: _detailController,
                 decoration: const InputDecoration(
@@ -111,6 +121,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
                 maxLines: 3,
               ),
               const SizedBox(height: 16),
+
               TextFormField(
                 controller: _linkController,
                 decoration: const InputDecoration(
@@ -119,7 +130,22 @@ class _AddItemScreenState extends State<AddItemScreen> {
                   prefixIcon: Icon(Icons.link),
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
+
+              // Add classification field for games and activities
+              if (widget.category == CategoryType.games ||
+                  widget.category == CategoryType.activities) ...[
+                TextFormField(
+                  controller: _classificationController,
+                  decoration: const InputDecoration(
+                    labelText: 'סיווג (אופציונלי)',
+                    border: OutlineInputBorder(),
+                    hintText: 'לדוגמא: כיתה, בחוץ, שטח',
+                  ),
+                ),
+                const SizedBox(height: 24),
+              ],
+
               Text(
                 _getContentLabel(),
                 style: const TextStyle(
@@ -128,6 +154,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
                 ),
               ),
               const SizedBox(height: 8),
+
               Row(
                 children: [
                   Expanded(
@@ -150,6 +177,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
                 ],
               ),
               const SizedBox(height: 16),
+
               if (_contentList.isNotEmpty)
                 Card(
                   child: ListView.separated(
@@ -160,6 +188,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
                     itemBuilder: (context, index) {
                       return ListTile(
                         leading: CircleAvatar(
+                          backgroundColor: Colors.blue[100],
                           child: Text('${index + 1}'),
                         ),
                         title: Text(_contentList[index]),
@@ -210,6 +239,3 @@ class _AddItemScreenState extends State<AddItemScreen> {
     }
   }
 }
-
-
-
