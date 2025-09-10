@@ -78,31 +78,31 @@ class StorageService {
   }
 
   Future<void> saveVersion(String version) async {
-    await settingsBox.put('csv_version', version);
+    await settingsBox.put('json_version', version);
   }
 
   String? getVersion() {
-    return settingsBox.get('csv_version');
+    return settingsBox.get('json_version');
   }
 
   // Get all items (merged)
-  List<ItemModel> getAllItems({CategoryType? category}) {
-    final List<ItemModel> allItems = [];
+  List<ItemModel> getAllCategoryItems({CategoryType? category}) {
+    final List<ItemModel> allCategoryItems = [];
 
     // Add app data
-    allItems.addAll(appDataBox.values.where((item) {
-      if (isDeleted(item.id)) return false;
-      if (category != null && item.category != category.name) return false;
+    allCategoryItems.addAll(appDataBox.values.where((categoryItem) {
+      if (isDeleted(categoryItem.id)) return false;
+      if (category != null && categoryItem.category != category.name) return false;
       return true;
     }));
 
     // Add user additions
-    allItems.addAll(userAdditionsBox.values.where((item) {
-      if (category != null && item.category != category.name) return false;
+    allCategoryItems.addAll(userAdditionsBox.values.where((categoryItem) {
+      if (category != null && categoryItem.category != category.name) return false;
       return true;
     }));
 
-    return allItems;
+    return allCategoryItems;
   }
 
   // Update item access

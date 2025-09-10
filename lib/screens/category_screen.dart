@@ -46,7 +46,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
     final appProvider = context.read<AppProvider>();
 
     // Get all items for this category
-    _items = storageService.getAllItems(category: widget.category);
+    _items = storageService.getAllCategoryItems(category: widget.category);
 
 
     // Filter by classification if provided

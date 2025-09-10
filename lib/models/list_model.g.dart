@@ -14,7 +14,7 @@ class ListModelAdapter extends TypeAdapter<ListModel> {
     return ListModel(
       id: fields[0] as String,
       name: fields[1] as String,
-      description: fields[2] as String?,
+      detail: fields[2] as String?,
       itemIds: (fields[3] as List).cast<String>(),
       createdAt: fields[4] as DateTime,
       lastModified: fields[5] as DateTime?,
@@ -31,7 +31,7 @@ class ListModelAdapter extends TypeAdapter<ListModel> {
       ..writeByte(1)
       ..write(obj.name)
       ..writeByte(2)
-      ..write(obj.description)
+      ..write(obj.detail)
       ..writeByte(3)
       ..write(obj.itemIds)
       ..writeByte(4)

@@ -59,7 +59,7 @@ class _AddToListsDialogState extends State<AddToListsDialog> {
     if (result != null && result['name'] != null) {
       final newList = await _listsService.createList(
         result['name']!,
-        description: result['description'],  // Can be null
+        detail: result['detail'],  // Can be null
       );
       // Add items to new list
       for (var itemId in widget.itemIds) {
@@ -143,9 +143,9 @@ class _AddToListsDialogState extends State<AddToListsDialog> {
 
                   return CheckboxListTile(
                     title: Text(list.name),
-                    subtitle: list.description != null && list.description!.isNotEmpty
+                    subtitle: list.detail != null && list.detail!.isNotEmpty
                         ? Text(
-                      list.description!,
+                      list.detail!,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     )

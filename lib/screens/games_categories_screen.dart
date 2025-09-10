@@ -24,7 +24,7 @@ class _GamesCategoriesScreenState extends State<GamesCategoriesScreen> {
 
   void _loadGames() {
     final storageService = context.read<StorageService>();
-    final allGames = storageService.getAllItems(category: CategoryType.games);
+    final allGames = storageService.getAllCategoryItems(category: CategoryType.games);
 
     _categorizedGames = {'all': allGames};
     _classifications = {'all'};

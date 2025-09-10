@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../models/category.dart';
 import '../services/storage_service.dart';
@@ -26,6 +27,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _hasUpdate = false;
   Map<String, dynamic>? _updateInfo;
   bool _isInitialLoad = true;
+  final GlobalKey<SearchScreenState> _searchKey = GlobalKey<SearchScreenState>();
 
   @override
   void initState() {
@@ -282,7 +284,7 @@ class _HomeScreenState extends State<HomeScreen> {
         index: _currentIndex,
         children: [
           _buildHomeGrid(),
-          const SearchScreen(),
+          SearchScreen(key: _searchKey),
           const ListsScreen(),
         ],
       ),
@@ -292,6 +294,15 @@ class _HomeScreenState extends State<HomeScreen> {
           setState(() {
             _currentIndex = index;
           });
+          if (index == 1) { // Search tab index
+            print("object");
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              _searchKey.currentState?.focusSearch();
+            });
+          }
+          else{
+            _searchKey.currentState?.unfocusSearch();
+          }
         },
       ),
     );
@@ -314,7 +325,7 @@ class _HomeScreenState extends State<HomeScreen> {
           itemCount: CategoryType.values.length,
           itemBuilder: (context, index) {
             final category = CategoryType.values[index];
-            final itemCount = storageService.getAllItems(category: category).length;
+            final itemCount = storageService.getAllCategoryItems(category: category).length;
 
             return CategoryCard(
               category: category,

@@ -69,7 +69,7 @@ class ItemCard extends StatelessWidget {
                           ),
                         ),
                         // Show riddles count
-                        if (item.category == 'riddles' && item.content.isNotEmpty)
+                        if (item.category == 'riddles' && item.items.isNotEmpty)
                           Container(
                             margin: const EdgeInsets.only(left: 8),
                             padding: const EdgeInsets.symmetric(
@@ -81,7 +81,7 @@ class ItemCard extends StatelessWidget {
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
-                              '${item.content.length}',
+                              '${item.items.length}',
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
@@ -110,11 +110,11 @@ class ItemCard extends StatelessWidget {
                           ),
                       ],
                     ),
-                    if (item.description != null && item.description!.isNotEmpty)
+                    if (item.detail != null && item.detail!.isNotEmpty)
                       Padding(
                         padding: const EdgeInsets.only(top: 4),
                         child: Text(
-                          item.description!,
+                          item.detail!,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(

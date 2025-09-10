@@ -30,7 +30,7 @@ class ListsService {
       final favoritesList = ListModel(
         id: 'favorites_default',
         name: 'מועדפים',
-        description: 'רשימת המועדפים שלי',
+        detail: 'רשימת המועדפים שלי',
         itemIds: [],
         createdAt: DateTime.now(),
         isDefault: true,
@@ -68,11 +68,11 @@ class ListsService {
   }
 
   // Create new list
-  Future<ListModel> createList(String name, {String? description}) async {
+  Future<ListModel> createList(String name, {String? detail}) async {
     final newList = ListModel(
       id: 'list_${DateTime.now().millisecondsSinceEpoch}',
       name: name,
-      description: description,
+      detail: detail,
       itemIds: [],
       createdAt: DateTime.now(),
     );
@@ -110,7 +110,7 @@ class ListsService {
   Future<void> updateListDescription(String listId, String? description) async {
     final list = listsBox.get(listId);
     if (list != null) {
-      list.description = description;
+      list.detail = description;
       list.lastModified = DateTime.now();
       await list.save();
     }

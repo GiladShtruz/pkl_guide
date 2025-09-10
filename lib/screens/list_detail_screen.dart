@@ -187,7 +187,7 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
           children: [
             // List description card - clickable to edit
             if (!widget.list.isDefault &&
-                (widget.list.description != null && widget.list.description!.isNotEmpty))
+                (widget.list.detail != null && widget.list.detail!.isNotEmpty))
               GestureDetector(
                 onTap: _openListEditScreen,
                 child: Card(
@@ -219,7 +219,7 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
                               ),
                               const SizedBox(height: 8),
                               Text(
-                                widget.list.description!,
+                                widget.list.detail!,
                                 style: const TextStyle(fontSize: 14),
                               ),
                             ],
@@ -255,9 +255,9 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
                     child: ListTile(
                       leading: const Icon(Icons.drag_handle),
                       title: Text(item.name),
-                      subtitle: item.description != null
+                      subtitle: item.detail != null
                           ? Text(
-                        item.description!,
+                        item.detail!,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       )
@@ -312,9 +312,9 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
                         ),
                       ),
                       title: Text(item.name),
-                      subtitle: item.description != null
+                      subtitle: item.detail != null
                           ? Text(
-                        item.description!,
+                        item.detail!,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       )

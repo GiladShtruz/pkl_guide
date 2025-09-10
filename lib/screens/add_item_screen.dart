@@ -19,7 +19,7 @@ class AddItemScreen extends StatefulWidget {
 class _AddItemScreenState extends State<AddItemScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
-  final _descriptionController = TextEditingController();
+  final _detailController = TextEditingController();
   final _linkController = TextEditingController();
   final _contentController = TextEditingController();
   final List<String> _contentList = [];
@@ -27,7 +27,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
   @override
   void dispose() {
     _nameController.dispose();
-    _descriptionController.dispose();
+    _detailController.dispose();
     _linkController.dispose();
     _contentController.dispose();
     super.dispose();
@@ -55,13 +55,13 @@ class _AddItemScreenState extends State<AddItemScreen> {
       final newItem = ItemModel(
         id: '${widget.category.name}_${DateTime.now().millisecondsSinceEpoch}',
         name: _nameController.text,
-        description: _descriptionController.text.isNotEmpty
-            ? _descriptionController.text
+        detail: _detailController.text.isNotEmpty
+            ? _detailController.text
             : null,
         link: _linkController.text.isNotEmpty
             ? _linkController.text
             : null,
-        content: _contentList,
+        items: _contentList,
         category: widget.category.name,
         isUserAdded: true,
       );
@@ -103,7 +103,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
               ),
               const SizedBox(height: 16),
               TextFormField(
-                controller: _descriptionController,
+                controller: _detailController,
                 decoration: const InputDecoration(
                   labelText: 'תיאור (אופציונלי)',
                   border: OutlineInputBorder(),

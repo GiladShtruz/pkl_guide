@@ -6,10 +6,7 @@ import '../services/storage_service.dart';
 class EditItemScreen extends StatefulWidget {
   final ItemModel item;
 
-  const EditItemScreen({
-    super.key,
-    required this.item,
-  });
+  const EditItemScreen({super.key, required this.item});
 
   @override
   State<EditItemScreen> createState() => _EditItemScreenState();
@@ -17,7 +14,7 @@ class EditItemScreen extends StatefulWidget {
 
 class _EditItemScreenState extends State<EditItemScreen> {
   late TextEditingController _nameController;
-  late TextEditingController _descriptionController;
+  late TextEditingController _detailController;
   late TextEditingController _linkController;
   late TextEditingController _newContentController;
   late List<String> _content;
@@ -30,10 +27,10 @@ class _EditItemScreenState extends State<EditItemScreen> {
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.item.name);
-    _descriptionController = TextEditingController(text: widget.item.description ?? '');
+    _detailController = TextEditingController(text: widget.item.detail ?? '');
     _linkController = TextEditingController(text: widget.item.link ?? '');
     _newContentController = TextEditingController();
-    _content = List.from(widget.item.content);
+    _content = List.from(widget.item.items);
 
     // Track which content items are user-added
     _isUserAdded = List.generate(_content.length, (index) => false);
@@ -45,7 +42,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
 
     // Add listeners for changes
     _nameController.addListener(_markChanged);
-    _descriptionController.addListener(_markChanged);
+    _detailController.addListener(_markChanged);
     _linkController.addListener(_markChanged);
   }
 
@@ -60,7 +57,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
   @override
   void dispose() {
     _nameController.dispose();
-    _descriptionController.dispose();
+    _detailController.dispose();
     _linkController.dispose();
     _newContentController.dispose();
     super.dispose();
@@ -78,9 +75,9 @@ class _EditItemScreenState extends State<EditItemScreen> {
 
     // Update item properties
     widget.item.name = _nameController.text;
-    widget.item.description = _descriptionController.text;
+    widget.item.detail = _detailController.text;
     widget.item.link = _linkController.text;
-    widget.item.content = _content;
+    widget.item.items = _content;
 
     await widget.item.save();
   }
@@ -143,11 +140,14 @@ class _EditItemScreenState extends State<EditItemScreen> {
               final storageService = context.read<StorageService>();
 
               // Remove items in reverse order to maintain indices
-              final sortedIndices = _selectedIndices.toList()..sort((a, b) => b.compareTo(a));
+              final sortedIndices = _selectedIndices.toList()
+                ..sort((a, b) => b.compareTo(a));
               for (int index in sortedIndices) {
                 if (!_isUserAdded[index]) {
                   // Mark original content as deleted
-                  await storageService.markAsDeleted('${widget.item.id}_content_$index');
+                  await storageService.markAsDeleted(
+                    '${widget.item.id}_content_$index',
+                  );
                 }
                 _content.removeAt(index);
                 _isUserAdded.removeAt(index);
@@ -178,23 +178,23 @@ class _EditItemScreenState extends State<EditItemScreen> {
           centerTitle: true,
           leading: _isSelectionMode
               ? IconButton(
-            icon: const Icon(Icons.close),
-            onPressed: () {
-              setState(() {
-                _isSelectionMode = false;
-                _selectedIndices.clear();
-              });
-            },
-          )
+                  icon: const Icon(Icons.close),
+                  onPressed: () {
+                    setState(() {
+                      _isSelectionMode = false;
+                      _selectedIndices.clear();
+                    });
+                  },
+                )
               : IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () async {
-              if (_hasChanges) {
-                await _saveChanges();
-              }
-              Navigator.pop(context);
-            },
-          ),
+                  icon: const Icon(Icons.arrow_back),
+                  onPressed: () async {
+                    if (_hasChanges) {
+                      await _saveChanges();
+                    }
+                    Navigator.pop(context);
+                  },
+                ),
           actions: [
             if (!_isSelectionMode) ...[
               if (widget.item.isUserAdded)
@@ -226,7 +226,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
               ),
               const SizedBox(height: 16),
               TextField(
-                controller: _descriptionController,
+                controller: _detailController,
                 decoration: const InputDecoration(
                   labelText: 'תיאור',
                   border: OutlineInputBorder(),
@@ -244,147 +244,163 @@ class _EditItemScreenState extends State<EditItemScreen> {
               ),
               const SizedBox(height: 24),
 
-
               // Add new content section
-              Row(
-                children: [
-                  const Text(
-                    'הוסף תוכן:',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: TextField(
-                      controller: _newContentController,
-                      decoration: InputDecoration(
-                        hintText: _getAddContentHint(),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        border: const OutlineInputBorder(),
-                      ),
-                      onSubmitted: (_) => _addContent(),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  ElevatedButton(
-                    onPressed: _addContent,
-                    child: const Text('הוסף'),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    _getContentSectionTitle(),
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  if (_content.isNotEmpty)
-                    TextButton.icon(
-                      onPressed: () {
-                        setState(() {
-                          _isSelectionMode = !_isSelectionMode;
-                          if (!_isSelectionMode) {
-                            _selectedIndices.clear();
-                          }
-                        });
-                      },
-                      icon: Icon(_isSelectionMode ? Icons.close : Icons.delete),
-                      label: Text(_isSelectionMode ? 'ביטול' : 'מחיקה מרובה'),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Card(
-                child: _content.isEmpty
-                    ? Padding(
-                  padding: const EdgeInsets.all(32),
-                  child: Center(
-                    child: Text(
-                      'אין תוכן',
-                      style: TextStyle(color: Colors.grey[600]),
-                    ),
-                  ),
-                )
-                    : ListView.separated(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: _content.length,
-                  separatorBuilder: (context, index) => const Divider(height: 1),
-                  itemBuilder: (context, index) {
-                    final isSelected = _selectedIndices.contains(index);
-
-                    return ListTile(
-                      leading: _isSelectionMode
-                          ? Checkbox(
-                        value: isSelected,
-                        onChanged: (value) {
-                          setState(() {
-                            if (value == true) {
-                              _selectedIndices.add(index);
-                            } else {
-                              _selectedIndices.remove(index);
-                            }
-                          });
-                        },
-                      )
-                          : CircleAvatar(
-                        backgroundColor: _isUserAdded[index]
-                            ? Colors.blue[100]
-                            : Colors.grey[200],
-                        child: Text(
-                          '${index + 1}',
-                          style: TextStyle(
-                            color: _isUserAdded[index]
-                                ? Colors.blue
-                                : Colors.grey[700],
-                          ),
-                        ),
-                      ),
-                      title: Text('${index + 1}. ${_content[index]}'),
-                      trailing: _isUserAdded[index]
-                          ? const Chip(
-                        label: Text('נוסף', style: TextStyle(fontSize: 12)),
-                        backgroundColor: Colors.blue,
-                        labelStyle: TextStyle(color: Colors.white),
-                      )
-                          : null,
-                      onTap: _isSelectionMode
-                          ? () {
-                        setState(() {
-                          if (_selectedIndices.contains(index)) {
-                            _selectedIndices.remove(index);
-                          } else {
-                            _selectedIndices.add(index);
-                          }
-                        });
-                      }
-                          : null,
-                    );
-                  },
-                ),
-              ),
+              if (widget.item.category != 'texts')
+                ...addSection(),
               const SizedBox(height: 80),
             ],
           ),
         ),
         floatingActionButton: _isSelectionMode
             ? FloatingActionButton(
-          onPressed: _selectedIndices.isNotEmpty ? _deleteSelected : null,
-          backgroundColor: _selectedIndices.isNotEmpty ? Colors.red : Colors.grey,
-          child: const Icon(Icons.delete),
-        )
+                onPressed: _selectedIndices.isNotEmpty ? _deleteSelected : null,
+                backgroundColor: _selectedIndices.isNotEmpty
+                    ? Colors.red
+                    : Colors.grey,
+                child: const Icon(Icons.delete),
+              )
             : null,
         floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       ),
     );
+  }
+
+  List<Widget> addSection(){
+    return [
+      Row(
+        children: [
+          const Text(
+            'הוסף תוכן:',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: TextField(
+              controller: _newContentController,
+              decoration: InputDecoration(
+                hintText: _getAddContentHint(),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+                border: const OutlineInputBorder(),
+              ),
+              onSubmitted: (_) => _addContent(),
+            ),
+          ),
+          const SizedBox(width: 8),
+          ElevatedButton(
+            onPressed: _addContent,
+            child: const Text('הוסף'),
+          ),
+        ],
+      ),
+      const SizedBox(height: 16),
+
+      Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            _getContentSectionTitle(),
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          if (_content.isNotEmpty)
+            TextButton.icon(
+              onPressed: () {
+                setState(() {
+                  _isSelectionMode = !_isSelectionMode;
+                  if (!_isSelectionMode) {
+                    _selectedIndices.clear();
+                  }
+                });
+              },
+              icon: Icon(_isSelectionMode ? Icons.close : Icons.delete),
+              label: Text(_isSelectionMode ? 'ביטול' : 'מחיקה מרובה'),
+            ),
+        ],
+      ),
+      const SizedBox(height: 8),
+      Card(
+        child: _content.isEmpty
+            ? Padding(
+          padding: const EdgeInsets.all(32),
+          child: Center(
+            child: Text(
+              'אין תוכן',
+              style: TextStyle(color: Colors.grey[600]),
+            ),
+          ),
+        )
+            : ListView.separated(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: _content.length,
+          separatorBuilder: (context, index) =>
+          const Divider(height: 1),
+          itemBuilder: (context, index) {
+            final isSelected = _selectedIndices.contains(index);
+
+            return ListTile(
+              leading: _isSelectionMode
+                  ? Checkbox(
+                value: isSelected,
+                onChanged: (value) {
+                  setState(() {
+                    if (value == true) {
+                      _selectedIndices.add(index);
+                    } else {
+                      _selectedIndices.remove(index);
+                    }
+                  });
+                },
+              )
+                  : CircleAvatar(
+                backgroundColor: _isUserAdded[index]
+                    ? Colors.blue[100]
+                    : Colors.grey[200],
+                child: Text(
+                  '${index + 1}',
+                  style: TextStyle(
+                    color: _isUserAdded[index]
+                        ? Colors.blue
+                        : Colors.grey[700],
+                  ),
+                ),
+              ),
+              title: Text('${index + 1}. ${_content[index]}'),
+              trailing: _isUserAdded[index]
+                  ? const Chip(
+                label: Text(
+                  'נוסף',
+                  style: TextStyle(fontSize: 12),
+                ),
+                backgroundColor: Colors.blue,
+                labelStyle: TextStyle(color: Colors.white),
+              )
+                  : null,
+              onTap: _isSelectionMode
+                  ? () {
+                setState(() {
+                  if (_selectedIndices.contains(index)) {
+                    _selectedIndices.remove(index);
+                  } else {
+                    _selectedIndices.add(index);
+                  }
+                });
+              }
+                  : null,
+            );
+          },
+        ),
+      ),
+
+    ];
   }
 
   String _getContentSectionTitle() {

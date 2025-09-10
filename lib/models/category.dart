@@ -2,8 +2,8 @@
 import 'package:flutter/material.dart';
 
 enum CategoryType {
-  games('משחקים', Icons.sports_esports),
-  activities('פעילויות', Icons.assignment),
+  games('משחקים', Icons.casino),
+  activities('פעילויות', Icons.group),
   riddles('חידות', Icons.psychology),
   texts('קטעים', Icons.description);
 

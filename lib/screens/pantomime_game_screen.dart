@@ -43,7 +43,7 @@ class _PantomimeGameScreenState extends State<PantomimeGameScreen>
   void initState() {
     super.initState();
     _controller = SwipableStackController();
-    _words = List.from(widget.item.content);
+    _words = List.from(widget.item.items);
     _usedWords = [];
     _shuffleWords();
 

@@ -17,9 +17,9 @@ class ItemModelAdapter extends TypeAdapter<ItemModel> {
     return ItemModel(
       id: fields[0] as String,
       name: fields[1] as String,
-      description: fields[2] as String?,
+      detail: fields[2] as String?,
       link: fields[3] as String?,
-      content: (fields[4] as List).cast<String>(),
+      items: (fields[4] as List).cast<String>(),
       category: fields[5] as String,
       isUserAdded: fields[6] as bool,
       lastAccessed: fields[7] as DateTime?,
@@ -38,11 +38,11 @@ class ItemModelAdapter extends TypeAdapter<ItemModel> {
       ..writeByte(1)
       ..write(obj.name)
       ..writeByte(2)
-      ..write(obj.description)
+      ..write(obj.detail)
       ..writeByte(3)
       ..write(obj.link)
       ..writeByte(4)
-      ..write(obj.content)
+      ..write(obj.items)
       ..writeByte(5)
       ..write(obj.category)
       ..writeByte(6)

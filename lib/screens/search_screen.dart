@@ -9,15 +9,29 @@ class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
 
   @override
-  State<SearchScreen> createState() => _SearchScreenState();
+  State<SearchScreen> createState() => SearchScreenState();
 }
 
-class _SearchScreenState extends State<SearchScreen> {
+class SearchScreenState extends State<SearchScreen> {
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
   List<SearchResult> _searchResults = [];
   bool _isSearching = false;
 
+  // מתודה שנקראת מההורה
+  void focusSearch() {
+    print("parent");
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _searchFocusNode.requestFocus();
+        // Force keyboard to show
+        SystemChannels.textInput.invokeMethod('TextInput.show');
+      }
+    });
+  }
+  void unfocusSearch() {
+    _searchFocusNode.unfocus();
+  }
   @override
   void initState() {
     super.initState();
@@ -25,10 +39,13 @@ class _SearchScreenState extends State<SearchScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _searchFocusNode.requestFocus();
+        // Force keyboard to show
         SystemChannels.textInput.invokeMethod('TextInput.show');
       }
     });
   }
+
+
 
   @override
   void dispose() {
@@ -51,37 +68,37 @@ class _SearchScreenState extends State<SearchScreen> {
     });
 
     final storageService = context.read<StorageService>();
-    final allItems = storageService.getAllItems();
+    final allCategoryItems = storageService.getAllCategoryItems();
     final results = <SearchResult>[];
 
-    for (var item in allItems) {
-      if (item.name.toLowerCase().contains(query.toLowerCase())) {
+    for (var categoryItem in allCategoryItems) {
+      if (categoryItem.name.toLowerCase().contains(query.toLowerCase())) {
         results.add(SearchResult(
-          item: item,
+          item: categoryItem,
           matchType: MatchType.title,
-          matchedText: item.description?.isNotEmpty == true
-              ? item.description!.substring(0, item.description!.length.clamp(0, 100))
-              : item.content.isNotEmpty
-              ? item.content.first.substring(0, item.content.first.length.clamp(0, 100))
+          matchedText: categoryItem.detail?.isNotEmpty == true
+              ? categoryItem.detail!.substring(0, categoryItem.detail!.length.clamp(0, 100))
+              : categoryItem.items.isNotEmpty
+              ? categoryItem.items.first.substring(0, categoryItem.items.first.length.clamp(0, 100))
               : '',
         ));
       } else {
-        for (var content in item.content) {
-          if (content.toLowerCase().contains(query.toLowerCase())) {
+        for (var item in categoryItem.items) {
+          if (item.toLowerCase().contains(query.toLowerCase())) {
             results.add(SearchResult(
-              item: item,
-              matchType: MatchType.content,
-              matchedText: content,
+              item: categoryItem,
+              matchType: MatchType.items,
+              matchedText: item,
             ));
             break;
           }
         }
 
-        if (item.description?.toLowerCase().contains(query.toLowerCase()) == true) {
+        if (categoryItem.detail?.toLowerCase().contains(query.toLowerCase()) == true) {
           results.add(SearchResult(
-            item: item,
-            matchType: MatchType.description,
-            matchedText: item.description!,
+            item: categoryItem,
+            matchType: MatchType.detail,
+            matchedText: categoryItem.detail!,
           ));
         }
       }
@@ -101,6 +118,7 @@ class _SearchScreenState extends State<SearchScreen> {
         title: TextField(
           controller: _searchController,
           focusNode: _searchFocusNode,
+          autofocus: true,
           decoration: InputDecoration(
             hintText: 'חיפוש משחקים, חידות, פעילויות...',
             border: InputBorder.none,
@@ -253,7 +271,7 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 }
 
-enum MatchType { title, content, description }
+enum MatchType { title, items, detail }
 
 class SearchResult {
   final ItemModel item;

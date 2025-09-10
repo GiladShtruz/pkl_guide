@@ -33,14 +33,14 @@ class _DebugScreenState extends State<DebugScreen> {
 
     // Count items per category
     for (var category in CategoryType.values) {
-      final items = storageService.getAllItems(category: category);
+      final items = storageService.getAllCategoryItems(category: category);
       info += '${category.displayName}: ${items.length} items\n';
 
       // List first 3 items
       for (int i = 0; i < items.length && i < 3; i++) {
         info += '  - ${items[i].name}\n';
-        if (items[i].content.isNotEmpty) {
-          info += '    Content items: ${items[i].content.length}\n';
+        if (items[i].items.isNotEmpty) {
+          info += '    Content items: ${items[i].items.length}\n';
         }
       }
       if (items.length > 3) {

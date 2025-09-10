@@ -9,13 +9,13 @@ class CreateListDialog extends StatefulWidget {
 
 class _CreateListDialogState extends State<CreateListDialog> {
   final _nameController = TextEditingController();
-  final _descriptionController = TextEditingController();
+  final _detailController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
   @override
   void dispose() {
     _nameController.dispose();
-    _descriptionController.dispose();
+    _detailController.dispose();
     super.dispose();
   }
 
@@ -44,7 +44,7 @@ class _CreateListDialogState extends State<CreateListDialog> {
             ),
             const SizedBox(height: 16),
             TextFormField(
-              controller: _descriptionController,
+              controller: _detailController,
               decoration: const InputDecoration(
                 labelText: 'תיאור (אופציונלי)',
                 border: OutlineInputBorder(),
@@ -65,8 +65,8 @@ class _CreateListDialogState extends State<CreateListDialog> {
               // Return Map<String, String?> instead of Map<String, String>
               final result = <String, String?>{
                 'name': _nameController.text,
-                'description': _descriptionController.text.isNotEmpty
-                    ? _descriptionController.text
+                'detail': _detailController.text.isNotEmpty
+                    ? _detailController.text
                     : null,
               };
               Navigator.pop(context, result);

@@ -50,7 +50,7 @@ class _ListsScreenState extends State<ListsScreen> {
     if (result != null && result['name'] != null) {
       await _listsService.createList(
         result['name']!,
-        description: result['description'],
+        detail: result['detail'],
       );
       setState(() {});
     }
@@ -276,9 +276,9 @@ class _ListsScreenState extends State<ListsScreen> {
                               ),
                             ),
                             // Don't show description for favorites list
-                            if (!list.isDefault && list.description != null && list.description!.isNotEmpty)
+                            if (!list.isDefault && list.detail != null && list.detail!.isNotEmpty)
                               Text(
-                                list.description!,
+                                list.detail!,
                                 style: TextStyle(
                                   fontSize: 14,
                                   color: Colors.grey[600],

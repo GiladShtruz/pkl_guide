@@ -28,7 +28,7 @@ class _ListEditScreenState extends State<ListEditScreen> {
     super.initState();
     _listsService = context.read<ListsService>();
     _nameController = TextEditingController(text: widget.list.name);
-    _descriptionController = TextEditingController(text: widget.list.description ?? '');
+    _descriptionController = TextEditingController(text: widget.list.detail ?? '');
   }
 
   @override
@@ -54,7 +54,7 @@ class _ListEditScreenState extends State<ListEditScreen> {
       widget.list.id,
       _descriptionController.text.isNotEmpty ? _descriptionController.text : null,
     );
-    widget.list.description = _descriptionController.text.isNotEmpty
+    widget.list.detail = _descriptionController.text.isNotEmpty
         ? _descriptionController.text
         : null;
     setState(() {
@@ -204,12 +204,12 @@ class _ListEditScreenState extends State<ListEditScreen> {
                           width: double.infinity,
                           constraints: const BoxConstraints(minHeight: 50),
                           child: Text(
-                            widget.list.description?.isNotEmpty == true
-                                ? widget.list.description!
+                            widget.list.detail?.isNotEmpty == true
+                                ? widget.list.detail!
                                 : 'אין תיאור',
                             style: TextStyle(
                               fontSize: 16,
-                              color: widget.list.description?.isNotEmpty == true
+                              color: widget.list.detail?.isNotEmpty == true
                                   ? Colors.black
                                   : Colors.grey,
                             ),

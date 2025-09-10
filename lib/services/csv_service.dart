@@ -232,10 +232,10 @@ class CsvService {
                 .now()
                 .millisecondsSinceEpoch}_${items.length}',
             name: name,
-            description: description.isNotEmpty ? description : null,
+            detail: description.isNotEmpty ? description : null,
             link: link.isNotEmpty ? link : null,
             classification: classification.isNotEmpty ? classification : null,
-            content: [],
+            items: [],
             category: CategoryType.games.name,
           ));
           print('Added game from list format: $name');
@@ -284,9 +284,9 @@ class CsvService {
                 .now()
                 .millisecondsSinceEpoch}_${items.length}',
             name: name,
-            description: description,
+            detail: description,
             link: link,
-            content: content,
+            items: content,
             category: CategoryType.games.name,
           ));
           print('Added game from column format: $name with ${content
@@ -330,10 +330,10 @@ class CsvService {
                 .now()
                 .millisecondsSinceEpoch}_${items.length}',
             name: name,
-            description: description.isNotEmpty ? description : null,
+            detail: description.isNotEmpty ? description : null,
             link: link.isNotEmpty ? link : null,
             classification: classification.isNotEmpty ? classification : null,
-            content: [],
+            items: [],
             category: CategoryType.activities.name,
           ));
           print('Added activity from list format: $name');
@@ -380,9 +380,9 @@ class CsvService {
                 .now()
                 .millisecondsSinceEpoch}_${items.length}',
             name: name,
-            description: description,
+            detail: description,
             link: link,
-            content: content,
+            items: content,
             category: CategoryType.activities.name,
           ));
           print('Added activity from column format: $name');
@@ -417,8 +417,8 @@ class CsvService {
                 .now()
                 .millisecondsSinceEpoch}_${items.length}',
             name: name,
-            description: description,
-            content: [description],
+            detail: description,
+            items: [description],
             category: CategoryType.texts.name,
           ));
           print('Added text: $name');
@@ -458,7 +458,7 @@ class CsvService {
                   .now()
                   .millisecondsSinceEpoch}_${items.length}',
               name: riddleName,
-              content: riddles,
+              items: riddles,
               category: CategoryType.riddles.name,
             ));
             print('Added riddle topic: $riddleName with ${riddles
@@ -499,7 +499,7 @@ class CsvService {
     int maxRows = 1; // At least header row
     for (var items in groupedItems.values) {
       for (var item in items) {
-        maxRows = maxRows > item.content.length + 4 ? maxRows : item.content.length + 4;
+        maxRows = maxRows > item.items.length + 4 ? maxRows : item.items.length + 4;
       }
     }
 
@@ -538,7 +538,7 @@ class CsvService {
           final item = items[i];
           csvData[i + 1].addAll([
             item.name,
-            item.description ?? '',
+            item.detail ?? '',
             item.link ?? '',
             item.classification ?? ''
           ]);
@@ -553,7 +553,7 @@ class CsvService {
           final item = items[i];
           csvData[i + 1].addAll([
             item.name,
-            item.description ?? item.content.firstOrNull ?? ''
+            item.detail ?? item.items.firstOrNull ?? ''
           ]);
         }
         currentCol += 2;
@@ -565,12 +565,12 @@ class CsvService {
           csvData[0].add(item.name);
 
           // Riddles
-          for (int i = 0; i < item.content.length && i < maxRows - 1; i++) {
-            csvData[i + 1].add(item.content[i]);
+          for (int i = 0; i < item.items.length && i < maxRows - 1; i++) {
+            csvData[i + 1].add(item.items[i]);
           }
 
           // Fill empty cells
-          for (int i = item.content.length + 1; i < maxRows; i++) {
+          for (int i = item.items.length + 1; i < maxRows; i++) {
             csvData[i].add('');
           }
           currentCol++;
@@ -634,15 +634,15 @@ class CsvService {
 
       // Check for duplicates and merge
       for (var item in importedItems) {
-        final existingItems = storageService.getAllItems();
+        final existingItems = storageService.getAllCategoryItems();
 
         bool isDuplicate = false;
         for (var existing in existingItems) {
           if (item.category == CategoryType.riddles.name) {
             // Check 80% similarity for riddles
             if (calculateSimilarity(
-                item.content.join(' '),
-                existing.content.join(' ')) >= 0.8) {
+                item.items.join(' '),
+                existing.items.join(' ')) >= 0.8) {
               isDuplicate = true;
               break;
             }
@@ -656,9 +656,9 @@ class CsvService {
             // For games and activities, check name similarity
             if (calculateSimilarity(item.name, existing.name) >= 0.85) {
               // Merge content instead of replacing
-              for (var content in item.content) {
-                if (!existing.content.contains(content)) {
-                  existing.content.add(content);
+              for (var content in item.items) {
+                if (!existing.items.contains(content)) {
+                  existing.items.add(content);
                 }
               }
               await existing.save();

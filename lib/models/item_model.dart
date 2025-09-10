@@ -11,13 +11,13 @@ class ItemModel extends HiveObject {
   String name;
 
   @HiveField(2)
-  String? description;
+  String? detail;
 
   @HiveField(3)
   String? link;
 
   @HiveField(4)
-  List<String> content;
+  List<String> items;
 
   @HiveField(5)
   String category;
@@ -40,9 +40,9 @@ class ItemModel extends HiveObject {
   ItemModel({
     required this.id,
     required this.name,
-    this.description,
+    this.detail,
     this.link,
-    required this.content,
+    required this.items,
     required this.category,
     this.isUserAdded = false,
     this.lastAccessed,
@@ -55,9 +55,9 @@ class ItemModel extends HiveObject {
     return {
       'id': id,
       'name': name,
-      'description': description,
+      'detail': detail,
       'link': link,
-      'content': content,
+      'items': items,
       'category': category,
       'isUserAdded': isUserAdded,
       'lastAccessed': lastAccessed?.toIso8601String(),
@@ -71,9 +71,9 @@ class ItemModel extends HiveObject {
     return ItemModel(
       id: json['id'],
       name: json['name'],
-      description: json['description'],
+      detail: json['detail'],
       link: json['link'],
-      content: List<String>.from(json['content']),
+      items: List<String>.from(json['items']),
       category: json['category'],
       isUserAdded: json['isUserAdded'] ?? false,
       lastAccessed: json['lastAccessed'] != null
