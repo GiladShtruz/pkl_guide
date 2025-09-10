@@ -31,19 +31,19 @@ class ListsService {
         id: 'favorites_default',
         name: 'מועדפים',
         detail: 'רשימת המועדפים שלי',
-        itemIds: [],
+        categoryItemIds: [],
         createdAt: DateTime.now(),
         isDefault: true,
       );
 
       await listsBox.put(favoritesList.id, favoritesList);
 
-      // Migrate existing favorites
-      final favoriteIds = storageService.favoritesBox.values.toList();
-      if (favoriteIds.isNotEmpty) {
-        favoritesList.itemIds = List<String>.from(favoriteIds);
-        await favoritesList.save();
-      }
+      // // Migrate existing favorites
+      // final favoriteIds = storageService.favoritesBox.values.toList();
+      // if (favoriteIds.isNotEmpty) {
+      //   favoritesList.categoryItemIds = List<String>.from(favoriteIds);
+      //   await favoritesList.save();
+      // }
     }
   }
 
@@ -73,7 +73,7 @@ class ListsService {
       id: 'list_${DateTime.now().millisecondsSinceEpoch}',
       name: name,
       detail: detail,
-      itemIds: [],
+      categoryItemIds: [],
       createdAt: DateTime.now(),
     );
 
@@ -119,8 +119,8 @@ class ListsService {
   // Add item to list
   Future<void> addItemToList(String listId, String itemId) async {
     final list = listsBox.get(listId);
-    if (list != null && !list.itemIds.contains(itemId)) {
-      list.itemIds.add(itemId);
+    if (list != null && !list.categoryItemIds.contains(itemId)) {
+      list.categoryItemIds.add(itemId);
       list.lastModified = DateTime.now();
       await list.save();
     }
@@ -137,7 +137,7 @@ class ListsService {
   Future<void> removeItemFromList(String listId, String itemId) async {
     final list = listsBox.get(listId);
     if (list != null) {
-      list.itemIds.remove(itemId);
+      list.categoryItemIds.remove(itemId);
       list.lastModified = DateTime.now();
       await list.save();
     }
@@ -150,8 +150,8 @@ class ListsService {
       if (newIndex > oldIndex) {
         newIndex -= 1;
       }
-      final item = list.itemIds.removeAt(oldIndex);
-      list.itemIds.insert(newIndex, item);
+      final item = list.categoryItemIds.removeAt(oldIndex);
+      list.categoryItemIds.insert(newIndex, item);
       list.lastModified = DateTime.now();
       await list.save();
     }
@@ -163,9 +163,9 @@ class ListsService {
     if (list == null) return [];
 
     final items = <ItemModel>[];
-    for (final itemId in list.itemIds) {
+    for (final itemId in list.categoryItemIds) {
       final item = storageService.appDataBox.get(itemId) ??
-          storageService.userAdditionsBox.get(itemId);
+          storageService.userBox.get(itemId);
       if (item != null) {
         items.add(item);
       }
@@ -176,13 +176,13 @@ class ListsService {
   // Check if item is in list
   bool isItemInList(String listId, String itemId) {
     final list = listsBox.get(listId);
-    return list?.itemIds.contains(itemId) ?? false;
+    return list?.categoryItemIds.contains(itemId) ?? false;
   }
 
   // Get lists containing item
   List<ListModel> getListsContainingItem(String itemId) {
     return listsBox.values
-        .where((list) => list.itemIds.contains(itemId))
+        .where((list) => list.categoryItemIds.contains(itemId))
         .toList();
   }
 
@@ -190,7 +190,7 @@ class ListsService {
   Future<void> toggleFavorite(String itemId) async {
     final favoritesList = getFavoritesList();
     if (favoritesList != null) {
-      if (favoritesList.itemIds.contains(itemId)) {
+      if (favoritesList.categoryItemIds.contains(itemId)) {
         await removeItemFromList(favoritesList.id, itemId);
       } else {
         await addItemToList(favoritesList.id, itemId);
@@ -201,6 +201,6 @@ class ListsService {
   // Check if item is favorite (compatibility method)
   bool isFavorite(String itemId) {
     final favoritesList = getFavoritesList();
-    return favoritesList?.itemIds.contains(itemId) ?? false;
+    return favoritesList?.categoryItemIds.contains(itemId) ?? false;
   }
 }

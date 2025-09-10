@@ -196,7 +196,7 @@ class _ListsScreenState extends State<ListsScreen> {
           itemCount: lists.length,
           itemBuilder: (context, index) {
             final list = lists[index];
-            final itemCount = list.itemIds.length;
+            final itemCount = list.categoryItemIds.length;
             final isSelected = _selectedLists.contains(list.id);
             final canSelect = !list.isDefault; // Can't select favorites
 

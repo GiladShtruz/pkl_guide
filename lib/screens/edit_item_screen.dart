@@ -16,8 +16,8 @@ class _EditItemScreenState extends State<EditItemScreen> {
   late TextEditingController _nameController;
   late TextEditingController _detailController;
   late TextEditingController _linkController;
-  late TextEditingController _newContentController;
-  late List<String> _content;
+  late TextEditingController _newItemController;
+  late List<String> _items;
   late List<bool> _isUserAdded;
   final Set<int> _selectedIndices = {};
   bool _isSelectionMode = false;
@@ -29,15 +29,15 @@ class _EditItemScreenState extends State<EditItemScreen> {
     _nameController = TextEditingController(text: widget.item.name);
     _detailController = TextEditingController(text: widget.item.detail ?? '');
     _linkController = TextEditingController(text: widget.item.link ?? '');
-    _newContentController = TextEditingController();
-    _content = List.from(widget.item.items);
+    _newItemController = TextEditingController();
+    _items = List.from(widget.item.items);
 
     // Track which content items are user-added
-    _isUserAdded = List.generate(_content.length, (index) => false);
+    _isUserAdded = List.generate(_items.length, (index) => false);
 
     // Check if this is a user-added item
     if (widget.item.isUserAdded) {
-      _isUserAdded = List.filled(_content.length, true);
+      _isUserAdded = List.filled(_items.length, true);
     }
 
     // Add listeners for changes
@@ -59,7 +59,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
     _nameController.dispose();
     _detailController.dispose();
     _linkController.dispose();
-    _newContentController.dispose();
+    _newItemController.dispose();
     super.dispose();
   }
 
@@ -77,19 +77,19 @@ class _EditItemScreenState extends State<EditItemScreen> {
     widget.item.name = _nameController.text;
     widget.item.detail = _detailController.text;
     widget.item.link = _linkController.text;
-    widget.item.items = _content;
+    widget.item.items = _items;
 
     await widget.item.save();
   }
 
   void _addContent() {
-    if (_newContentController.text.isNotEmpty) {
+    if (_newItemController.text.isNotEmpty) {
       setState(() {
-        _content.add(_newContentController.text);
+        _items.add(_newItemController.text);
         _isUserAdded.add(true);
         _hasChanges = true;
       });
-      _newContentController.clear();
+      _newItemController.clear();
       // Keep focus on the text field
       FocusScope.of(context).requestFocus();
     }
@@ -149,7 +149,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
                     '${widget.item.id}_content_$index',
                   );
                 }
-                _content.removeAt(index);
+                _items.removeAt(index);
                 _isUserAdded.removeAt(index);
               }
 
@@ -279,7 +279,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
           const SizedBox(width: 8),
           Expanded(
             child: TextField(
-              controller: _newContentController,
+              controller: _newItemController,
               decoration: InputDecoration(
                 hintText: _getAddContentHint(),
                 contentPadding: const EdgeInsets.symmetric(
@@ -310,7 +310,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
               fontWeight: FontWeight.bold,
             ),
           ),
-          if (_content.isNotEmpty)
+          if (_items.isNotEmpty)
             TextButton.icon(
               onPressed: () {
                 setState(() {
@@ -327,7 +327,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
       ),
       const SizedBox(height: 8),
       Card(
-        child: _content.isEmpty
+        child: _items.isEmpty
             ? Padding(
           padding: const EdgeInsets.all(32),
           child: Center(
@@ -340,7 +340,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
             : ListView.separated(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          itemCount: _content.length,
+          itemCount: _items.length,
           separatorBuilder: (context, index) =>
           const Divider(height: 1),
           itemBuilder: (context, index) {
@@ -373,7 +373,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
                   ),
                 ),
               ),
-              title: Text('${index + 1}. ${_content[index]}'),
+              title: Text('${index + 1}. ${_items[index]}'),
               trailing: _isUserAdded[index]
                   ? const Chip(
                 label: Text(
@@ -423,7 +423,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
       case 'games':
         return 'הכנס מילה חדשה...';
       case 'activities':
-        return 'הכנס תוכן חדש...';
+        return 'הכנס פעילות חדשה...';
       case 'riddles':
         return 'הכנס חידה חדשה...';
       case 'texts':

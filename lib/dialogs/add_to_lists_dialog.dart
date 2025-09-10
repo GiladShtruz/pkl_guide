@@ -41,7 +41,7 @@ class _AddToListsDialogState extends State<AddToListsDialog> {
     if (widget.itemIds.length == 1) {
       final itemId = widget.itemIds.first;
       for (var list in _lists) {
-        if (list.itemIds.contains(itemId)) {
+        if (list.categoryItemIds.contains(itemId)) {
           _selectedLists.add(list.id);
         }
       }

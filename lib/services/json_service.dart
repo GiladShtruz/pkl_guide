@@ -227,7 +227,7 @@ class JsonService {
       }
     } else {
       // Reset all user modifications
-      await storageService.userAdditionsBox.clear();
+      await storageService.userBox.clear();
       await storageService.deletedByUserBox.clear();
     }
 

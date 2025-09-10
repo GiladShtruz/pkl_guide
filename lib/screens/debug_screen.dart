@@ -52,8 +52,8 @@ class _DebugScreenState extends State<DebugScreen> {
     // Storage info
     info += 'Storage Information:\n';
     info += '- App Data Box: ${storageService.appDataBox.length} items\n';
-    info += '- User Additions: ${storageService.userAdditionsBox.length} items\n';
-    info += '- Favorites: ${storageService.favoritesBox.length} items\n';
+    info += '- User Additions: ${storageService.userBox.length} items\n';
+    // info += '- Favorites: ${storageService.favoritesBox.length} items\n';
     info += '- Deleted Items: ${storageService.deletedByUserBox.length} items\n';
 
     setState(() {
@@ -115,8 +115,8 @@ class _DebugScreenState extends State<DebugScreen> {
     if (confirmed == true) {
       final storageService = context.read<StorageService>();
       await storageService.appDataBox.clear();
-      await storageService.userAdditionsBox.clear();
-      await storageService.favoritesBox.clear();
+      await storageService.userBox.clear();
+      // await storageService.favoritesBox.clear();
       await storageService.deletedByUserBox.clear();
 
       ScaffoldMessenger.of(context).showSnackBar(

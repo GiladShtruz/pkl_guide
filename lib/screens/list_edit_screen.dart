@@ -243,7 +243,7 @@ class _ListEditScreenState extends State<ListEditScreen> {
                         children: [
                           const Text('מספר פריטים:'),
                           Text(
-                            '${widget.list.itemIds.length}',
+                            '${widget.list.categoryItemIds.length}',
                             style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
                         ],

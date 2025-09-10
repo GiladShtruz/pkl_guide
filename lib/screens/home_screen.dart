@@ -15,6 +15,10 @@ import '../screens/lists_screen.dart';
 import '../dialogs/update_dialog.dart';
 import '../dialogs/about_dialog.dart';
 
+//
+
+import '../services/storage_service.dart';
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -192,6 +196,15 @@ class _HomeScreenState extends State<HomeScreen> {
               onPressed: _showUpdateDialog,
               tooltip: 'עדכון זמין',
             ),
+          IconButton(
+              icon: Icon(Icons.adb_sharp),
+            onPressed: (){
+                var s = StorageService();
+                s.giladDebug();
+
+
+
+          }, ),
           PopupMenuButton<String>(
             onSelected: (value) async {
               switch (value) {

@@ -14,7 +14,7 @@ class ListModel extends HiveObject {
   String? detail;
 
   @HiveField(3)
-  List<String> itemIds; // References to items
+  List<String> categoryItemIds; // References to items
 
   @HiveField(4)
   DateTime createdAt;
@@ -29,7 +29,7 @@ class ListModel extends HiveObject {
     required this.id,
     required this.name,
     this.detail,
-    required this.itemIds,
+    required this.categoryItemIds,
     required this.createdAt,
     this.lastModified,
     this.isDefault = false,
@@ -40,7 +40,7 @@ class ListModel extends HiveObject {
       'id': id,
       'name': name,
       'detail': detail,
-      'itemIds': itemIds,
+      'categoryItemIds': categoryItemIds,
       'createdAt': createdAt.toIso8601String(),
       'lastModified': lastModified?.toIso8601String(),
       'isDefault': isDefault,
@@ -52,7 +52,7 @@ class ListModel extends HiveObject {
       id: json['id'],
       name: json['name'],
       detail: json['detail'],
-      itemIds: List<String>.from(json['itemIds']),
+      categoryItemIds: List<String>.from(json['categoryItemIds']),
       createdAt: DateTime.parse(json['createdAt']),
       lastModified: json['lastModified'] != null
           ? DateTime.parse(json['lastModified'])
