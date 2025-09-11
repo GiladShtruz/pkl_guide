@@ -164,8 +164,8 @@ class ListsService {
 
     final items = <ItemModel>[];
     for (final itemId in list.categoryItemIds) {
-      final item = storageService.appDataBox.get(itemId) ??
-          storageService.userBox.get(itemId);
+      final item = storageService.appDataBox.get(itemId);
+          // storageService.userBox.get(itemId);
       if (item != null) {
         items.add(item);
       }

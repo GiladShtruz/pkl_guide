@@ -69,7 +69,6 @@ class _EditItemScreenState extends State<EditItemScreen> {
     // Save title changes
     if (_nameController.text != widget.item.originalTitle) {
       await _storageService.updateItemTitle(widget.item.id,
-          widget.item.isUserCreated,
           _nameController.text);
     }
 
@@ -77,7 +76,6 @@ class _EditItemScreenState extends State<EditItemScreen> {
     if (_detailController.text != (widget.item.originalDetail ?? '')) {
       await _storageService.updateItemDetail(
           widget.item.id,
-          widget.item.isUserCreated,
           _detailController.text.isNotEmpty ? _detailController.text : null
       );
     }
@@ -174,7 +172,6 @@ class _EditItemScreenState extends State<EditItemScreen> {
     if (_newItemController.text.isNotEmpty) {
       await _storageService.addUserItemToExisting(
           widget.item.id,
-          widget.item.isUserCreated,
           _newItemController.text
       );
 
@@ -210,7 +207,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
       );
 
       if (confirmed == true) {
-        await _storageService.deleteUserCreatedItem(widget.item.id);
+        // await _storageService.deleteUserCreatedItem(widget.item.id);
         if (mounted) {
           Navigator.pop(context);
         }

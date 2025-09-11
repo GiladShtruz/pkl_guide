@@ -67,48 +67,110 @@ class SearchScreenState extends State<SearchScreen> {
 
     final storageService = context.read<StorageService>();
     final allCategoryItems = storageService.getAllCategoryItems();
-    final results = <SearchResult>[];
+
+    // נתוני חיפוש מסודרים לפי עדיפות
+    final List<SearchResult> titleResults = [];
+    final List<SearchResult> detailResults = [];
+    final List<SearchResult> itemsResults = [];
+
+    final queryLower = query.toLowerCase();
 
     for (var categoryItem in allCategoryItems) {
-      // Search in name (use current name which includes user modifications)
-      if (categoryItem.name.toLowerCase().contains(query.toLowerCase())) {
-        results.add(SearchResult(
+      bool foundInTitle = false;
+      bool foundInDetail = false;
+
+      // 1. חיפוש בכותרת (עדיפות ראשונה)
+      String titleToSearch = categoryItem.userTitle ?? categoryItem.originalTitle;
+      if (titleToSearch.toLowerCase().contains(queryLower)) {
+        titleResults.add(SearchResult(
           item: categoryItem,
           matchType: MatchType.title,
-          matchedText: categoryItem.detail?.isNotEmpty == true
-              ? categoryItem.detail!.substring(0, categoryItem.detail!.length.clamp(0, 100))
-              : categoryItem.items.isNotEmpty
-              ? categoryItem.items.first.substring(0, categoryItem.items.first.length.clamp(0, 100))
-              : '',
+          matchedText: _getDisplayDetail(categoryItem),
+          priority: 1,
         ));
-      } else {
-        // Search in items (includes both original and user-added)
-        for (var item in categoryItem.items) {
-          if (item.toLowerCase().contains(query.toLowerCase())) {
-            results.add(SearchResult(
-              item: categoryItem,
-              matchType: MatchType.items,
-              matchedText: item,
-            ));
-            break;
-          }
-        }
+        foundInTitle = true;
+      }
 
-        // Search in detail
-        if (categoryItem.detail?.toLowerCase().contains(query.toLowerCase()) == true) {
-          results.add(SearchResult(
+      // 2. חיפוש בתיאור (עדיפות שנייה) - רק אם לא נמצא בכותרת
+      if (!foundInTitle) {
+        String? detailToSearch = categoryItem.userDetail ?? categoryItem.originalDetail;
+        if (detailToSearch != null && detailToSearch.toLowerCase().contains(queryLower)) {
+          detailResults.add(SearchResult(
             item: categoryItem,
             matchType: MatchType.detail,
-            matchedText: categoryItem.detail!,
+            matchedText: _truncateText(detailToSearch, 100),
+            priority: 2,
+          ));
+          foundInDetail = true;
+        }
+      }
+
+      // 3. חיפוש ברשימת פריטים (עדיפות שלישית) - רק אם לא נמצא בכותרת או תיאור
+      if (!foundInTitle && !foundInDetail) {
+        // חפש קודם ב-userAddedItems ואז ב-originalItems
+        String? matchedItem = _searchInItems(categoryItem, queryLower);
+        if (matchedItem != null) {
+          itemsResults.add(SearchResult(
+            item: categoryItem,
+            matchType: MatchType.items,
+            matchedText: matchedItem,
+            priority: 3,
           ));
         }
       }
     }
 
+    // איחוד התוצאות לפי סדר עדיפויות
+    final List<SearchResult> combinedResults = [
+      ...titleResults,
+      ...detailResults,
+      ...itemsResults,
+    ];
+
     setState(() {
-      _searchResults = results;
+      _searchResults = combinedResults;
       _isSearching = false;
     });
+  }
+
+  String? _searchInItems(ItemModel categoryItem, String queryLower) {
+    // חפש קודם ב-userAddedItems
+    for (var item in categoryItem.userAddedItems) {
+      if (item.toLowerCase().contains(queryLower)) {
+        return item;
+      }
+    }
+
+    // אם לא נמצא, חפש ב-originalItems
+    for (var item in categoryItem.originalItems) {
+      if (item.toLowerCase().contains(queryLower)) {
+        return item;
+      }
+    }
+
+    return null;
+  }
+
+  String _getDisplayDetail(ItemModel categoryItem) {
+    // מחזיר תיאור או פריט ראשון להצגה
+    String? detail = categoryItem.userDetail ?? categoryItem.originalDetail;
+    if (detail != null && detail.isNotEmpty) {
+      return _truncateText(detail, 100);
+    }
+
+    // אם אין תיאור, הראה פריט ראשון
+    List<String> allItems = [...categoryItem.userAddedItems, ...categoryItem.originalItems];
+    if (allItems.isNotEmpty) {
+      return _truncateText(allItems.first, 100);
+    }
+
+    return '';
+  }
+
+  String _truncateText(String text, int maxLength) {
+    return text.length > maxLength
+        ? '${text.substring(0, maxLength)}...'
+        : text;
   }
 
   @override
@@ -207,12 +269,12 @@ class SearchScreenState extends State<SearchScreen> {
               children: [
                 Expanded(
                   child: Text(
-                    result.item.name,
+                    result.item.userTitle ?? result.item.originalTitle,
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),
                 // Show modification indicators
-                if (result.item.hasUserModifications && !result.item.isUserCreated)
+                if (result.item.isUserChanged && !result.item.isUserCreated)
                   const Icon(Icons.edit, size: 14, color: Colors.orange),
                 if (result.item.isUserCreated)
                   Container(
@@ -228,10 +290,29 @@ class SearchScreenState extends State<SearchScreen> {
                   ),
               ],
             ),
-            subtitle: Text(
-              result.matchedText,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  result.matchedText,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    _getPriorityChip(result.matchType),
+                    const SizedBox(width: 8),
+                    Text(
+                      result.item.category,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
             leading: CircleAvatar(
               backgroundColor: _getCategoryColor(result.item.category),
@@ -240,13 +321,6 @@ class SearchScreenState extends State<SearchScreen> {
                 color: Colors.white,
               ),
             ),
-            trailing: result.matchType == MatchType.title
-                ? const Chip(
-              label: Text('כותרת'),
-              backgroundColor: Colors.green,
-              labelStyle: TextStyle(color: Colors.white, fontSize: 12),
-            )
-                : null,
             onTap: () {
               Navigator.push(
                 context,
@@ -259,6 +333,29 @@ class SearchScreenState extends State<SearchScreen> {
         );
       },
     );
+  }
+
+  Widget _getPriorityChip(MatchType matchType) {
+    switch (matchType) {
+      case MatchType.title:
+        return const Chip(
+          label: Text('כותרת'),
+          backgroundColor: Colors.green,
+          labelStyle: TextStyle(color: Colors.white, fontSize: 10),
+        );
+      case MatchType.detail:
+        return const Chip(
+          label: Text('תיאור'),
+          backgroundColor: Colors.blue,
+          labelStyle: TextStyle(color: Colors.white, fontSize: 10),
+        );
+      case MatchType.items:
+        return const Chip(
+          label: Text('פריטים'),
+          backgroundColor: Colors.orange,
+          labelStyle: TextStyle(color: Colors.white, fontSize: 10),
+        );
+    }
   }
 
   Color _getCategoryColor(String categoryName) {
@@ -292,16 +389,18 @@ class SearchScreenState extends State<SearchScreen> {
   }
 }
 
-enum MatchType { title, items, detail }
+enum MatchType { title, detail, items }
 
 class SearchResult {
   final ItemModel item;
   final MatchType matchType;
   final String matchedText;
+  final int priority;
 
   SearchResult({
     required this.item,
     required this.matchType,
     required this.matchedText,
+    required this.priority,
   });
 }

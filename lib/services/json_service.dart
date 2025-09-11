@@ -146,11 +146,12 @@ class JsonService {
         id: id,
         originalTitle: title,
         originalDetail: detail,
-        link: link,
+        originalLink: link,
         classification: classification,
         originalItems: items,
         category: category.name,
         isUserCreated: false,
+        isUserChanged: false
       );
 
       print('Created item: ${item.name} with ${items.length} content items');
@@ -190,9 +191,9 @@ class JsonService {
           .where((item) => item.category == category.name)
           .toList();
 
-      for (var item in userItems) {
-        await storageService.deleteUserCreatedItem(item.id);
-      }
+      // for (var item in userItems) {
+      //   await storageService.deleteUserCreatedItem(item.id);
+      // }
 
       // Reset modifications in app data items for this category
       final appItems = storageService.getAppData()
@@ -204,7 +205,7 @@ class JsonService {
       }
     } else {
       // Reset all user modifications
-      await storageService.userBox.clear();
+      // await storageService.userBox.clear();
 
       // Reset all modifications in app data
       for (var item in storageService.getAppData()) {

@@ -4,12 +4,10 @@ import '../models/sorting_method.dart';
 import '../models/category.dart';
 
 class StorageService {
-  static const String appDataBoxName = 'appDataBox';
-  static const String userBoxName = 'userBox';
+  static const String appDataBoxName = 'appData';
   static const String settingsBoxName = 'settingsBox';
 
   late Box<ItemModel> appDataBox;
-  late Box<ItemModel> userBox;
   late Box settingsBox;
 
   Future<void> init() async {
@@ -20,7 +18,6 @@ class StorageService {
 
     // Open boxes
     appDataBox = await Hive.openBox<ItemModel>(appDataBoxName);
-    userBox = await Hive.openBox<ItemModel>(userBoxName);
     settingsBox = await Hive.openBox(settingsBoxName);
   }
 
@@ -36,53 +33,57 @@ class StorageService {
     return appDataBox.values.toList();
   }
 
-  // User Created Items
-  Future<void> addUserCreatedItem(ItemModel item) async {
-    item.isUserCreated = true;
-    await userBox.put(item.id, item);
+  // Add new item (can be user created or app data)
+  Future<void> addItem(ItemModel item) async {
+    await appDataBox.put(item.id, item);
   }
 
-  Future<void> deleteUserCreatedItem(String itemId) async {
-    await userBox.delete(itemId);
+  // Delete item
+  Future<void> deleteItem(String itemId) async {
+    await appDataBox.delete(itemId);
   }
 
-  List<ItemModel> getUserCreatedItems() {
-    return userBox.values.toList();
-  }
-
-  // Update methods for existing items
-  Future<void> updateItemTitle(String itemId, bool isUserCreated, String newTitle) async {
-    final item = isUserCreated ? userBox.get(itemId) : appDataBox.get(itemId);
+  // Update item title
+  Future<void> updateItemTitle(String itemId, String newTitle) async {
+    final item = appDataBox.get(itemId);
     if (item != null) {
-      item.userTitle = newTitle;
+      item.updateTitle(newTitle);
       await item.save();
     }
   }
 
-  Future<void> updateItemDetail(String itemId, bool isUserCreated, String? newDetail) async {
-    final item = isUserCreated ? userBox.get(itemId) : appDataBox.get(itemId);
-    print("--");
-    print(itemId);
-    print(item != null);
+  // Update item detail
+  Future<void> updateItemDetail(String itemId, String? newDetail) async {
+    final item = appDataBox.get(itemId);
     if (item != null) {
-      print("get in updateItemDetail");
-      item.userDetail = newDetail;
+      item.updateDetail(newDetail);
       await item.save();
     }
   }
 
-  Future<void> addUserItemToExisting(String itemId, bool isUserCreated, String newItem) async {
-    final item = isUserCreated ? userBox.get(itemId) : appDataBox.get(itemId);
+  // Update item link
+  Future<void> updateItemLink(String itemId, String? newLink) async {
+    final item = appDataBox.get(itemId);
     if (item != null) {
-      item.userAddedItems.add(newItem);
+      item.updateLink(newLink);
       await item.save();
     }
   }
 
+  // Add user item to existing item
+  Future<void> addUserItemToExisting(String itemId, String newItem) async {
+    final item = appDataBox.get(itemId);
+    if (item != null) {
+      item.addUserItem(newItem);
+      await item.save();
+    }
+  }
+
+  // Remove user item from existing item
   Future<void> removeUserItem(String itemId, String itemToRemove) async {
-    final item = userBox.get(itemId);
+    final item = appDataBox.get(itemId);
     if (item != null) {
-      item.userAddedItems.remove(itemToRemove);
+      item.removeUserItem(itemToRemove);
       await item.save();
     }
   }
@@ -100,6 +101,14 @@ class StorageService {
     final item = appDataBox.get(itemId);
     if (item != null) {
       item.resetDetail();
+      await item.save();
+    }
+  }
+
+  Future<void> resetItemLink(String itemId) async {
+    final item = appDataBox.get(itemId);
+    if (item != null) {
+      item.resetLink();
       await item.save();
     }
   }
@@ -144,28 +153,32 @@ class StorageService {
     return settingsBox.get('json_version');
   }
 
-  // Get all items (merged)
+  // Get all items (now from single box)
   List<ItemModel> getAllCategoryItems({CategoryType? category}) {
-    final List<ItemModel> allItems = [];
-
-    // Add app data items
-    allItems.addAll(appDataBox.values.where((item) {
+    return appDataBox.values.where((item) {
       if (category != null && item.category != category.name) return false;
       return true;
-    }));
+    }).toList();
+  }
 
-    // Add user created items
-    allItems.addAll(userBox.values.where((item) {
-      if (category != null && item.category != category.name) return false;
-      return true;
-    }));
+  // Get user created items only
+  List<ItemModel> getUserCreatedItems() {
+    return appDataBox.values.where((item) => item.isUserCreated).toList();
+  }
 
-    return allItems;
+  // Get user modified items only
+  List<ItemModel> getUserModifiedItems() {
+    return appDataBox.values.where((item) => item.isUserChanged).toList();
+  }
+
+  // Get original app data items only (not user created and not modified)
+  List<ItemModel> getOriginalAppDataItems() {
+    return appDataBox.values.where((item) => !item.isUserCreated && !item.isUserChanged).toList();
   }
 
   // Update item access
   Future<void> updateItemAccess(String itemId) async {
-    ItemModel? item = appDataBox.get(itemId) ?? userBox.get(itemId);
+    ItemModel? item = appDataBox.get(itemId);
     if (item != null) {
       item.lastAccessed = DateTime.now();
       item.clickCount++;
@@ -175,6 +188,59 @@ class StorageService {
 
   // Get item by ID
   ItemModel? getItemById(String itemId) {
-    return appDataBox.get(itemId) ?? userBox.get(itemId);
+    return appDataBox.get(itemId);
+  }
+
+  // Check if item exists
+  bool itemExists(String itemId) {
+    return appDataBox.containsKey(itemId);
+  }
+
+  // Get items by category
+  List<ItemModel> getItemsByCategory(String category) {
+    return appDataBox.values.where((item) => item.category == category).toList();
+  }
+
+  // Get items count
+  int getItemsCount() {
+    return appDataBox.length;
+  }
+
+  // Get user created items count
+  int getUserCreatedItemsCount() {
+    return appDataBox.values.where((item) => item.isUserCreated).length;
+  }
+
+  // Get user modified items count
+  int getUserModifiedItemsCount() {
+    return appDataBox.values.where((item) => item.isUserChanged).length;
+  }
+
+  // Clear all data
+  Future<void> clearAllData() async {
+    await appDataBox.clear();
+  }
+
+  // Backup data to JSON
+  Map<String, dynamic> backupToJson() {
+    final items = appDataBox.values.map((item) => item.toJson()).toList();
+    return {
+      'items': items,
+      'timestamp': DateTime.now().toIso8601String(),
+      'version': getVersion(),
+    };
+  }
+
+  // Restore data from JSON
+  Future<void> restoreFromJson(Map<String, dynamic> backup) async {
+    if (backup['items'] != null) {
+      await clearAllData();
+      final items = (backup['items'] as List)
+          .map((json) => ItemModel.fromJson(json))
+          .toList();
+      for (var item in items) {
+        await addItem(item);
+      }
+    }
   }
 }

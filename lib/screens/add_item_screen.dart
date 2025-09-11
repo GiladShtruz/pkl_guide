@@ -64,7 +64,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
         originalDetail: _detailController.text.isNotEmpty
             ? _detailController.text
             : null,
-        link: _linkController.text.isNotEmpty
+        userLink: _linkController.text.isNotEmpty
             ? _linkController.text
             : null,
         classification: _classificationController.text.isNotEmpty
@@ -76,7 +76,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
         isUserCreated: true,
       );
 
-      await storageService.addUserCreatedItem(newItem);
+      // await storageService.addUserCreatedItem(newItem);
 
       if (mounted) {
         Navigator.pop(context);
