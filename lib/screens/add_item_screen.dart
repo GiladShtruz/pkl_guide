@@ -70,7 +70,8 @@ class _AddItemScreenState extends State<AddItemScreen> {
         classification: _classificationController.text.isNotEmpty
             ? _classificationController.text
             : null,
-        originalItems: _contentList,
+        originalItems: [],
+        userAddedItems: _contentList,
         category: widget.category.name,
         isUserCreated: true,
       );

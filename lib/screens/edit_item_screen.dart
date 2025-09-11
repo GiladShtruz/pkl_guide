@@ -68,14 +68,16 @@ class _EditItemScreenState extends State<EditItemScreen> {
   Future<void> _saveChanges() async {
     // Save title changes
     if (_nameController.text != widget.item.originalTitle) {
-      await _storageService.updateItemTitle(widget.item.id, _nameController.text);
+      await _storageService.updateItemTitle(widget.item.id,
+          widget.item.isUserCreated,
+          _nameController.text);
     }
-    print("=====================================");
-    print(_detailController.text.isNotEmpty ? _detailController.text : null);
+
     // Save detail changes
     if (_detailController.text != (widget.item.originalDetail ?? '')) {
       await _storageService.updateItemDetail(
           widget.item.id,
+          widget.item.isUserCreated,
           _detailController.text.isNotEmpty ? _detailController.text : null
       );
     }
@@ -172,6 +174,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
     if (_newItemController.text.isNotEmpty) {
       await _storageService.addUserItemToExisting(
           widget.item.id,
+          widget.item.isUserCreated,
           _newItemController.text
       );
 
@@ -403,8 +406,8 @@ class _EditItemScreenState extends State<EditItemScreen> {
   }
 
   List<Widget> _buildContentSection() {
-    final allItems = widget.item.items;
-    final originalItemsCount = widget.item.originalItems.length;
+    final allItems = widget.item.userAddedItems;
+    final originalItemsCount = widget.item.userAddedItems.length;
 
     return [
       // Add new content
@@ -483,7 +486,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
           padding: const EdgeInsets.all(32),
           child: Center(
             child: Text(
-              'אין תוכן',
+              "אין תוכן. הוסף משלך!",
               style: TextStyle(color: Colors.grey[600]),
             ),
           ),
@@ -582,4 +585,5 @@ class _EditItemScreenState extends State<EditItemScreen> {
         return 'הכנס תוכן חדש...';
     }
   }
+
 }

@@ -51,16 +51,16 @@ class StorageService {
   }
 
   // Update methods for existing items
-  Future<void> updateItemTitle(String itemId, String newTitle) async {
-    final item = appDataBox.get(itemId);
+  Future<void> updateItemTitle(String itemId, bool isUserCreated, String newTitle) async {
+    final item = isUserCreated ? userBox.get(itemId) : appDataBox.get(itemId);
     if (item != null) {
       item.userTitle = newTitle;
       await item.save();
     }
   }
 
-  Future<void> updateItemDetail(String itemId, String? newDetail) async {
-    final item = appDataBox.get(itemId);
+  Future<void> updateItemDetail(String itemId, bool isUserCreated, String? newDetail) async {
+    final item = isUserCreated ? userBox.get(itemId) : appDataBox.get(itemId);
     print("--");
     print(itemId);
     print(item != null);
@@ -71,8 +71,8 @@ class StorageService {
     }
   }
 
-  Future<void> addUserItemToExisting(String itemId, String newItem) async {
-    final item = appDataBox.get(itemId);
+  Future<void> addUserItemToExisting(String itemId, bool isUserCreated, String newItem) async {
+    final item = isUserCreated ? userBox.get(itemId) : appDataBox.get(itemId);
     if (item != null) {
       item.userAddedItems.add(newItem);
       await item.save();
@@ -80,7 +80,7 @@ class StorageService {
   }
 
   Future<void> removeUserItem(String itemId, String itemToRemove) async {
-    final item = appDataBox.get(itemId);
+    final item = userBox.get(itemId);
     if (item != null) {
       item.userAddedItems.remove(itemToRemove);
       await item.save();

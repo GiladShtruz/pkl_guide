@@ -5,16 +5,13 @@ import 'package:flutter/services.dart';
 // import 'package:vibration/vibration.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:swipable_stack/swipable_stack.dart';
+import 'package:flutter_card_swiper/flutter_card_swiper.dart';
 import '../models/item_model.dart';
 
 class SwitchCardGameScreen extends StatefulWidget {
   final ItemModel item;
 
-  const SwitchCardGameScreen({
-    super.key,
-    required this.item,
-  });
+  const SwitchCardGameScreen({super.key, required this.item});
 
   @override
   State<SwitchCardGameScreen> createState() => _SwitchCardGameScreenState();
@@ -22,7 +19,7 @@ class SwitchCardGameScreen extends StatefulWidget {
 
 class _SwitchCardGameScreenState extends State<SwitchCardGameScreen>
     with TickerProviderStateMixin {
-  late SwipableStackController _controller;
+  late CardSwiperController _controller;
   late List<String> _words;
   late List<String> _usedWords;
   int _currentTeam = 1;
@@ -37,12 +34,11 @@ class _SwitchCardGameScreenState extends State<SwitchCardGameScreen>
   bool _wordsRepeating = false;
   late AnimationController _timerAnimationController;
   late Animation<double> _timerAnimation;
-  bool _canSwipe = false;
 
   @override
   void initState() {
     super.initState();
-    _controller = SwipableStackController();
+    _controller = CardSwiperController();
     _words = List.from(widget.item.items);
     _usedWords = [];
     _shuffleWords();
@@ -84,19 +80,18 @@ class _SwitchCardGameScreenState extends State<SwitchCardGameScreen>
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        title: Text('חוקי המשחק - ${widget.item.name}'),
+
+        title: Text('איך משחקים:'),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'המשחק מיועד לשתי קבוצות.\n\n'
-                    'כיצד לשחק:',
+               Text( widget.item.detail ?? "",
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
-               Text( widget.item.userDetail ?? ""),
+              Text(widget.item.userDetail ?? ""),
             ],
           ),
         ),
@@ -111,15 +106,18 @@ class _SwitchCardGameScreenState extends State<SwitchCardGameScreen>
                       final prefs = await SharedPreferences.getInstance();
                       await prefs.setBool('card_game_rules_dont_show', true);
                     }
-                    Navigator.pop(context);
+                    // Navigator.pop(context);
                   },
                 ),
                 const Text('אל תציג שוב'),
               ],
             ),
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('הבנתי'),
+          SizedBox(
+            width: double.infinity,
+            child: TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('הבנתי'),
+            ),
           ),
         ],
       ),
@@ -128,7 +126,8 @@ class _SwitchCardGameScreenState extends State<SwitchCardGameScreen>
 
   void _showEditScoreDialog(int team) {
     final controller = TextEditingController(
-        text: team == 1 ? _team1Score.toString() : _team2Score.toString());
+      text: team == 1 ? _team1Score.toString() : _team2Score.toString(),
+    );
 
     showDialog(
       context: context,
@@ -171,11 +170,10 @@ class _SwitchCardGameScreenState extends State<SwitchCardGameScreen>
     _words.shuffle(Random());
   }
 
-  void _startTimer() {
+  void _startRound() {
     setState(() {
       _isPlaying = true;
       _isPaused = false;
-      _canSwipe = true;
       _remainingSeconds = _totalSeconds;
       _currentRoundScore = 0;
     });
@@ -215,10 +213,8 @@ class _SwitchCardGameScreenState extends State<SwitchCardGameScreen>
     setState(() {
       _isPlaying = false;
       _isPaused = false;
-      _canSwipe = false;
       _remainingSeconds = _totalSeconds;
       _currentRoundScore = 0;
-      _controller.currentIndex = 0;
     });
 
     _shuffleWords();
@@ -231,7 +227,6 @@ class _SwitchCardGameScreenState extends State<SwitchCardGameScreen>
     setState(() {
       _isPlaying = false;
       _isPaused = false;
-      _canSwipe = false;
       if (_currentTeam == 1) {
         _team1Score += _currentRoundScore;
       } else {
@@ -270,7 +265,6 @@ class _SwitchCardGameScreenState extends State<SwitchCardGameScreen>
               Navigator.pop(context);
               setState(() {
                 _currentTeam = _currentTeam == 1 ? 2 : 1;
-                _controller.currentIndex = 0;
               });
             },
             child: const Text('אישור'),
@@ -278,49 +272,6 @@ class _SwitchCardGameScreenState extends State<SwitchCardGameScreen>
         ],
       ),
     );
-  }
-
-  void _handleSwipe(SwipeDirection direction) {
-    if (!_isPlaying || _isPaused || !_canSwipe) return;
-
-
-    direction == SwipeDirection.right ? _currentRoundScore++ : _currentRoundScore--;
-    if (direction == SwipeDirection.right) {
-      setState(() {
-        _currentRoundScore++;
-      });
-
-      // Success animation feedback
-      HapticFeedback.lightImpact();
-    }
-
-    // Mark word as used
-    if (_controller.currentIndex < _words.length) {
-      _usedWords.add(_words[_controller.currentIndex]);
-    }
-
-    // Check if need to recycle words
-    if (_controller.currentIndex >= _words.length - 1) {
-      if (!_wordsRepeating) {
-        setState(() {
-          _wordsRepeating = true;
-        });
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('המילים נגמרו - מתחילים מחזור חדש'),
-            duration: Duration(seconds: 2),
-          ),
-        );
-      }
-
-      // Reshuffle and reset
-      _shuffleWords();
-      setState(() {
-        _controller.currentIndex = 0;
-
-      });
-    }
   }
 
   @override
@@ -364,7 +315,10 @@ class _SwitchCardGameScreenState extends State<SwitchCardGameScreen>
             // Current round score
             if (_isPlaying)
               Container(
-                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 8,
+                  horizontal: 16,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.green,
                   borderRadius: BorderRadius.circular(20),
@@ -385,80 +339,162 @@ class _SwitchCardGameScreenState extends State<SwitchCardGameScreen>
                 child: SizedBox(
                   width: 350,
                   height: 500,
-                  child: SwipableStack(
-                    controller: _controller,
-                    stackClipBehaviour: Clip.none,
-                    allowVerticalSwipe: false,
-                    onSwipeCompleted: _canSwipe ? (index, direction) {
-                      _handleSwipe(direction);
-                    } : null,
-                    horizontalSwipeThreshold: 0.8,
-                    detectableSwipeDirections: _canSwipe ? const {
-                      SwipeDirection.left,
-                      SwipeDirection.right,
-                    } : const {},
-                    itemCount: _words.length,
-                    builder: (context, properties) {
-                      final itemIndex = properties.index % _words.length;
-                      final word = _words[itemIndex];
+                  child: _isPlaying
+                      ? CardSwiper(
+                          controller: _controller,
+                          cardsCount: _words.length,
+                          numberOfCardsDisplayed: 3,
+                          backCardOffset: const Offset(20, 20),
+                          padding: const EdgeInsets.all(24.0),
+                          cardBuilder:
+                              (
+                                context,
+                                index,
+                                horizontalOffsetPercentage,
+                                verticalOffsetPercentage,
+                              ) {
+                                final word = _words[index % _words.length];
+                                final swipeProgress = horizontalOffsetPercentage
+                                    .abs();
+                                final isSwipingRight =
+                                    horizontalOffsetPercentage > 0;
+                                final isSwipingLeft =
+                                    horizontalOffsetPercentage < 0;
+                                final showIndicator = swipeProgress > 0.1;
 
+                                return Stack(
+                                  children: [
+                                    Card(
+                                      elevation: 10,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          borderRadius: BorderRadius.circular(
+                                            20,
+                                          ),
+                                          gradient: LinearGradient(
+                                            begin: Alignment.topLeft,
+                                            end: Alignment.bottomRight,
+                                            colors: [
+                                              Colors.purple[400]!,
+                                              Colors.blue[600]!,
+                                            ],
+                                          ),
+                                        ),
+                                        child: Center(
+                                          child: Text(
+                                            word,
+                                            style: const TextStyle(
+                                              fontSize: 48,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.white,
+                                            ),
+                                            textAlign: TextAlign.center,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
 
-                      return Stack(
-                        children: [
-                          Card(
-                            elevation: 10,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Container(
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(20),
-                                gradient: LinearGradient(
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                  colors: [
-                                    Colors.purple[400]!,
-                                    Colors.blue[600]!,
+                                    // Swipe indicators
+                                    if (showIndicator && isSwipingRight)
+                                      const Positioned(
+                                        top: 20,
+                                        left: 10,
+                                        child: Icon(
+                                          Icons.check_circle,
+                                          size: 100,
+                                          color: Colors.green,
+                                        ),
+                                      ),
+                                    if (showIndicator && isSwipingLeft)
+                                      const Positioned(
+                                        top: 20,
+                                        right: 10,
+                                        child: Icon(
+                                          Icons.cancel,
+                                          size: 100,
+                                          color: Colors.red,
+                                        ),
+                                      ),
                                   ],
+                                );
+                              },
+                          onSwipe: (previousIndex, currentIndex, direction) {
+                            if (direction == CardSwiperDirection.right) {
+                              setState(() {
+                                _currentRoundScore++;
+                              });
+                              HapticFeedback.lightImpact();
+                            } else if (direction == CardSwiperDirection.left) {
+                              setState(() {
+                                if (_currentRoundScore > 0) {
+                                  _currentRoundScore--;
+                                }
+                              });
+                            }
+
+                            // Mark word as used
+                            if (previousIndex < _words.length) {
+                              _usedWords.add(_words[previousIndex]);
+                            }
+
+                            return true;
+                          },
+                          onEnd: () {
+                            if (!_wordsRepeating) {
+                              setState(() {
+                                _wordsRepeating = true;
+                              });
+
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'המילים נגמרו - מתחילים מחזור חדש',
+                                  ),
+                                  duration: Duration(seconds: 2),
                                 ),
-                              ),
-                              child: Center(
-                                child: Text(
-                                  word,
+                              );
+                            }
+                            // Reshuffle words when deck ends
+                            _shuffleWords();
+                          },
+                        )
+                      : Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(20),
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [Colors.purple[400]!, Colors.blue[600]!],
+                            ),
+                          ),
+                          child: Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(
+                                  Icons.theater_comedy,
+                                  size: 80,
+                                  color: Colors.white,
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  'לחץ התחל כדי להתחיל את המשחק',
                                   style: const TextStyle(
-                                    fontSize: 48,
-                                    fontWeight: FontWeight.bold,
+                                    fontSize: 18,
                                     color: Colors.white,
                                   ),
                                   textAlign: TextAlign.center,
                                 ),
-                              ),
+                              ],
                             ),
                           ),
-
-                          // Swipe indicators - FIXED
-                          if (properties.swipeProgress > 0.1 && _canSwipe && properties.index == _controller.currentIndex)
-                            Positioned(
-                              top: 20,
-                              right: properties.direction == SwipeDirection.left ? 10 : null,
-                              left: properties.direction == SwipeDirection.right ? 10 : null,
-                              child: Icon(
-                                properties.direction == SwipeDirection.right
-                                    ? Icons.check_circle  // Right swipe = success
-                                    : Icons.cancel,       // Left swipe = skip
-                                size: 100,
-                                color: properties.direction == SwipeDirection.right ? Colors.green : Colors.red,
-                              ),
-                            ),
-
-                        ],
-                      );
-                    },
-                  ),
+                        ),
                 ),
               ),
             ),
-
 
             // Timer and controls
             Container(
@@ -469,41 +505,8 @@ class _SwitchCardGameScreenState extends State<SwitchCardGameScreen>
                   if (_isPlaying)
                     Column(
                       children: [
-                        AnimatedBuilder(
-                          animation: _timerAnimation,
-                          builder: (context, child) {
-                            return Stack(
-                              alignment: Alignment.center,
-                              children: [
-                                SizedBox(
-                                  width: 80,
-                                  height: 80,
-                                  child: CircularProgressIndicator(
-                                    value: _remainingSeconds / _totalSeconds,
-                                    strokeWidth: 8,
-                                    backgroundColor: Colors.grey[700],
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                      _remainingSeconds <= 10
-                                          ? Colors.red
-                                          : Colors.green,
-                                    ),
-                                  ),
-                                ),
-                                Text(
-                                  '$_remainingSeconds',
-                                  style: TextStyle(
-                                    fontSize: 32,
-                                    fontWeight: FontWeight.bold,
-                                    color: _remainingSeconds <= 10
-                                        ? Colors.red
-                                        : Colors.white,
-                                  ),
-                                ),
-                              ],
-                            );
-                          },
-                        ),
-                        const SizedBox(height: 20),
+
+                        const SizedBox(height: 10),
                         // Control buttons during game
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -519,7 +522,43 @@ class _SwitchCardGameScreenState extends State<SwitchCardGameScreen>
                                 foregroundColor: Colors.white,
                               ),
                             ),
-                            const SizedBox(width: 16),
+                            const SizedBox(width: 24),
+                            AnimatedBuilder(
+                              animation: _timerAnimation,
+                              builder: (context, child) {
+                                return Stack(
+                                  alignment: Alignment.center,
+                                  children: [
+                                    SizedBox(
+                                      width: 80,
+                                      height: 80,
+                                      child: CircularProgressIndicator(
+                                        value: _remainingSeconds / _totalSeconds,
+                                        strokeWidth: 8,
+                                        backgroundColor: Colors.grey[700],
+                                        valueColor: AlwaysStoppedAnimation<Color>(
+                                          _remainingSeconds <= 10
+                                              ? Colors.red
+                                              : Colors.green,
+                                        ),
+                                      ),
+                                    ),
+                                    Text(
+                                      '$_remainingSeconds',
+                                      style: TextStyle(
+                                        fontSize: 32,
+                                        fontWeight: FontWeight.bold,
+                                        color: _remainingSeconds <= 10
+                                            ? Colors.red
+                                            : Colors.white,
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              },
+                            ),
+                            const SizedBox(width: 24),
+
                             IconButton(
                               onPressed: _stopAndReset,
                               icon: const Icon(Icons.stop, size: 32),
@@ -555,25 +594,21 @@ class _SwitchCardGameScreenState extends State<SwitchCardGameScreen>
                         ),
                         const SizedBox(height: 20),
                         ElevatedButton.icon(
-                          onPressed: _startTimer,
-                          icon: const Icon(Icons.play_arrow, size: 32, color: Colors.black),
+                          onPressed: _startRound,
+                          icon: const Icon(Icons.play_arrow, size: 32),
                           label: const Text(
                             'התחל סיבוב',
-                            style: TextStyle(fontSize: 20, color: Colors.black),
+                            style: TextStyle(fontSize: 20),
                           ),
                           style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+                            backgroundColor: Colors.green,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(30),
                             ),
-                            backgroundColor: Colors.amber[300], // רקע
-                            foregroundColor: Colors.black,      // טקסט/אייקון
-
-
-
                           ),
                         ),
-
                       ],
                     ),
                 ],
@@ -586,7 +621,7 @@ class _SwitchCardGameScreenState extends State<SwitchCardGameScreen>
   }
 
   Widget _buildTeamScore(int team, int score) {
-    final isActive = _currentTeam == team; // Always show which team is active
+    final isActive = _currentTeam == team;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
@@ -597,11 +632,13 @@ class _SwitchCardGameScreenState extends State<SwitchCardGameScreen>
             ? Border.all(color: Colors.blue[300]!, width: 2)
             : null,
         boxShadow: isActive && _isPlaying
-            ? [BoxShadow(
-          color: Colors.blue.withOpacity(0.4),
-          blurRadius: 8,
-          spreadRadius: 2,
-        )]
+            ? [
+                BoxShadow(
+                  color: Colors.blue.withOpacity(0.4),
+                  blurRadius: 8,
+                  spreadRadius: 2,
+                ),
+              ]
             : null,
       ),
       child: Column(
@@ -616,24 +653,14 @@ class _SwitchCardGameScreenState extends State<SwitchCardGameScreen>
           ),
           Text(
             '$score',
-            style: TextStyle(
+            style: const TextStyle(
               color: Colors.white,
               fontSize: 28,
               fontWeight: FontWeight.bold,
             ),
           ),
           if (isActive && _isPlaying)
-            Icon(
-              Icons.play_arrow,
-              size: 16,
-              color: Colors.white,
-            ),
-          // if (!_isPlaying)
-            // Icon(
-            //   Icons.edit,
-            //   size: 16,
-            //   color: Colors.grey[400],
-            // ),
+            const Icon(Icons.play_arrow, size: 16, color: Colors.white),
         ],
       ),
     );

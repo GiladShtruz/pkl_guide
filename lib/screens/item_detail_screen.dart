@@ -1,6 +1,6 @@
 // lib/screens/item_detail_screen.dart
 import 'package:flutter/material.dart';
-import 'package:pkl_guide/screens/switch_card_game_screen.dart';
+import 'package:pkl_guide/screens/card_swiper_game_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/item_model.dart';
@@ -9,6 +9,7 @@ import '../services/lists_service.dart';
 import '../screens/edit_item_screen.dart';
 
 import '../dialogs/add_to_lists_dialog.dart';
+import 'game_play.dart';
 
 class ItemDetailScreen extends StatefulWidget {
   final ItemModel item;
@@ -437,6 +438,12 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                   MaterialPageRoute(
                     builder: (context) =>
                         SwitchCardGameScreen(item: widget.item),
+                    // CardSwiperGameScreen(item: widget.item),
+                        // PantomimeGameScreen(wordGame: WordGame(
+                        //   name: widget.item.name,
+                        //   description: widget.item.detail!,
+                        //   words: widget.item.items,
+                        // ),),
                   ),
                 );
               },
