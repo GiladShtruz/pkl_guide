@@ -26,7 +26,7 @@ class ItemModelAdapter extends TypeAdapter<ItemModel> {
       originalLink: fields[6] as String?,
       userLink: fields[7] as String?,
       classification: fields[8] as String?,
-      originalItems: (fields[9] as List).cast<String>(),
+      originalElements: (fields[9] as List).cast<String>(),
       userAddedItems: (fields[10] as List?)?.cast<String>(),
       lastAccessed: fields[11] as DateTime?,
       clickCount: fields[12] as int,
@@ -58,9 +58,9 @@ class ItemModelAdapter extends TypeAdapter<ItemModel> {
       ..writeByte(8)
       ..write(obj.classification)
       ..writeByte(9)
-      ..write(obj.originalItems)
+      ..write(obj.originalElements)
       ..writeByte(10)
-      ..write(obj.userAddedItems)
+      ..write(obj.userAddedElements)
       ..writeByte(11)
       ..write(obj.lastAccessed)
       ..writeByte(12)

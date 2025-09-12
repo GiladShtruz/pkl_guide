@@ -5,14 +5,14 @@ import '../models/item_model.dart';
 import '../services/storage_service.dart';
 import '../screens/category_screen.dart';
 
-class GamesCategoriesScreen extends StatefulWidget {
-  const GamesCategoriesScreen({super.key});
+class GamesClassificationScreen extends StatefulWidget {
+  const GamesClassificationScreen({super.key});
 
   @override
-  State<GamesCategoriesScreen> createState() => _GamesCategoriesScreenState();
+  State<GamesClassificationScreen> createState() => _GamesClassificationScreenState();
 }
 
-class _GamesCategoriesScreenState extends State<GamesCategoriesScreen> {
+class _GamesClassificationScreenState extends State<GamesClassificationScreen> {
   Map<String, List<ItemModel>> _categorizedGames = {};
   Set<String> _classifications = {};
 
@@ -31,10 +31,15 @@ class _GamesCategoriesScreenState extends State<GamesCategoriesScreen> {
 
     // Group games by classification
     for (var game in allGames) {
+      print(game.originalTitle);
+      print(game.classification);
       final classification = game.classification ?? 'אחר';
       _classifications.add(classification);
+
       _categorizedGames.putIfAbsent(classification, () => []).add(game);
     }
+    print(allGames);
+    print(_classifications);
 
     setState(() {});
   }

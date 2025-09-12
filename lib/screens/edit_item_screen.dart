@@ -142,13 +142,13 @@ class _EditItemScreenState extends State<EditItemScreen> {
   }
 
   void _resetUserItems() async {
-    if (widget.item.userAddedItems.isEmpty) return;
+    if (widget.item.userAddedElements.isEmpty) return;
 
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('שחזר תוכן'),
-        content: Text('האם למחוק את כל ${widget.item.userAddedItems.length} הפריטים שנוספו?'),
+        content: Text('האם למחוק את כל ${widget.item.userAddedElements.length} הפריטים שנוספו?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -163,14 +163,14 @@ class _EditItemScreenState extends State<EditItemScreen> {
     );
 
     if (confirmed == true) {
-      await _storageService.resetItemUserItems(widget.item.id);
+      await _storageService.resetElements(widget.item.id);
       setState(() {});
     }
   }
 
   void _addContent() async {
     if (_newItemController.text.isNotEmpty) {
-      await _storageService.addUserItemToExisting(
+      await _storageService.addUserElements(
           widget.item.id,
           _newItemController.text
       );
@@ -192,7 +192,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('מחיקת פריט'),
-          content: const Text('האם למחוק את הפריט לצמיתות?'),
+          content: const Text('האם למחוק את הפריט?'),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
@@ -219,7 +219,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
     if (_selectedIndices.isEmpty) return;
 
     // Get indices of user added items
-    final userItemsStartIndex = widget.item.originalItems.length;
+    final userItemsStartIndex = widget.item.originalElements.length;
     final selectedUserIndices = _selectedIndices
         .where((index) => index >= userItemsStartIndex)
         .map((index) => index - userItemsStartIndex)
@@ -257,9 +257,9 @@ class _EditItemScreenState extends State<EditItemScreen> {
       // Remove items in reverse order to maintain indices
       selectedUserIndices.sort((a, b) => b.compareTo(a));
       for (int index in selectedUserIndices) {
-        if (index < widget.item.userAddedItems.length) {
-          final itemToRemove = widget.item.userAddedItems[index];
-          await _storageService.removeUserItem(widget.item.id, itemToRemove);
+        if (index < widget.item.userAddedElements.length) {
+          final itemToRemove = widget.item.userAddedElements[index];
+          await _storageService.removeUserElement(widget.item.id, itemToRemove);
         }
       }
 
@@ -403,8 +403,8 @@ class _EditItemScreenState extends State<EditItemScreen> {
   }
 
   List<Widget> _buildContentSection() {
-    final allItems = widget.item.userAddedItems;
-    final originalItemsCount = widget.item.userAddedItems.length;
+    final allItems = widget.item.userAddedElements;
+    final originalItemsCount = widget.item.userAddedElements.length;
 
     return [
       // Add new content
@@ -448,11 +448,11 @@ class _EditItemScreenState extends State<EditItemScreen> {
           ),
           Row(
             children: [
-              if (widget.item.userAddedItems.isNotEmpty)
+              if (widget.item.userAddedElements.isNotEmpty)
                 TextButton.icon(
                   onPressed: _resetUserItems,
                   icon: const Icon(Icons.restore, size: 16),
-                  label: Text('מחק ${widget.item.userAddedItems.length} נוספים'),
+                  label: Text('מחק ${widget.item.userAddedElements.length} נוספים'),
                   style: TextButton.styleFrom(
                     foregroundColor: Colors.orange,
                   ),

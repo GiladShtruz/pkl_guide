@@ -32,10 +32,10 @@ class ItemModel extends HiveObject {
   String? classification;
 
   @HiveField(9)
-  List<String> originalItems;
+  List<String> originalElements;
 
   @HiveField(10)
-  List<String> userAddedItems;
+  List<String> userAddedElements;
 
   @HiveField(11)
   DateTime? lastAccessed;
@@ -59,26 +59,26 @@ class ItemModel extends HiveObject {
     this.originalLink,
     this.userLink,
     this.classification,
-    required this.originalItems,
+    required this.originalElements,
     List<String>? userAddedItems,
     this.lastAccessed,
     this.clickCount = 0,
     this.isUserCreated = false,
     this.isUserChanged = false,
-  }) : userAddedItems = userAddedItems ?? [];
+  }) : userAddedElements = userAddedItems ?? [];
 
   // Getters for current values (user values if exist, otherwise original)
   String get name => userTitle ?? originalTitle;
   String? get detail => userDetail ?? originalDetail;
   String? get link => userLink ?? originalLink;
-  List<String> get items => [...originalItems, ...userAddedItems];
+  List<String> get items => [...originalElements, ...userAddedElements];
 
   // Check if has user modifications
   bool get hasUserModifications =>
       userTitle != null ||
           userDetail != null ||
           userLink != null ||
-          userAddedItems.isNotEmpty;
+          userAddedElements.isNotEmpty;
 
   // Reset specific field methods
   void resetTitle() {
@@ -96,8 +96,8 @@ class ItemModel extends HiveObject {
     _updateUserChangedStatus();
   }
 
-  void resetItems() {
-    userAddedItems.clear();
+  void resetElements() {
+    userAddedElements.clear();
     _updateUserChangedStatus();
   }
 
@@ -105,7 +105,7 @@ class ItemModel extends HiveObject {
     userTitle = null;
     userDetail = null;
     userLink = null;
-    userAddedItems.clear();
+    userAddedElements.clear();
     isUserChanged = false;
   }
 
@@ -133,15 +133,24 @@ class ItemModel extends HiveObject {
   }
 
   // Method to add user item and mark as changed
-  void addUserItem(String item) {
-    userAddedItems.add(item);
+  void addUserElement(String item) {
+    userAddedElements.add(item);
     isUserChanged = true;
   }
 
   // Method to remove user item and mark as changed
-  void removeUserItem(String item) {
-    userAddedItems.remove(item);
+  void removeUserElement(String item) {
+    userAddedElements.remove(item);
     _updateUserChangedStatus();
+  }
+
+  void updateOriginalOnUpgrade(ItemModel newItem) {
+    originalTitle = newItem.originalTitle;
+    originalDetail = newItem.originalDetail;
+    originalLink = newItem.originalLink;
+    originalElements = newItem.originalElements;
+    category = newItem.category;
+    classification = newItem.classification;
   }
 
   Map<String, dynamic> toJson() {
@@ -155,8 +164,8 @@ class ItemModel extends HiveObject {
       'originalLink': originalLink,
       'userLink': userLink,
       'classification': classification,
-      'originalItems': originalItems,
-      'userAddedItems': userAddedItems,
+      'originalItems': originalElements,
+      'userAddedItems': userAddedElements,
       'lastAccessed': lastAccessed?.toIso8601String(),
       'clickCount': clickCount,
       'isUserCreated': isUserCreated,
@@ -175,7 +184,7 @@ class ItemModel extends HiveObject {
       originalLink: json['originalLink'] ?? json['link'],
       userLink: json['userLink'],
       classification: json['classification'],
-      originalItems: json['originalItems'] != null
+      originalElements: json['originalItems'] != null
           ? List<String>.from(json['originalItems'])
           : (json['items'] != null ? List<String>.from(json['items']) : []),
       userAddedItems: json['userAddedItems'] != null

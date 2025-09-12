@@ -80,10 +80,13 @@ class JsonService {
 
       final version = jsonData['version'] ?? 1;
       final categories = jsonData['categories'] ?? {};
-      List<ItemModel> items = [];
+      List<ItemModel> appItems = [];
 
       // Parse each category
       categories.forEach((categoryKey, categoryItems) {
+        print('Parsing category: $categoryKey');
+        print('Category appItems: $categoryItems');
+
         final category = _getCategoryType(categoryKey);
         print('Parsing category: $categoryKey as ${category.name}');
 
@@ -91,17 +94,17 @@ class JsonService {
           for (var itemData in categoryItems) {
             final item = _parseItem(itemData, category);
             if (item != null) {
-              items.add(item);
+              appItems.add(item);
               print('Added item: ${item.name} with ID: ${item.id}');
             }
           }
         }
       });
 
-      print('Parsed ${items.length} items total');
+      print('Parsed ${appItems.length} appItems total');
 
       // Save to storage
-      await storageService.saveAppData(items);
+      await storageService.saveAppData(appItems);
       await storageService.saveVersion(version.toString());
 
       if (isUpdate) {
@@ -129,12 +132,12 @@ class JsonService {
       String? detail = data['detail'];
       String? link = data['link'];
       String? classification = data['classification'];
-      List<String> items = [];
+      List<String> elements = [];
 
-      // Parse items array
-      final dataItems = data['items'];
+      // Parse elements array
+      final dataItems = data['elements'];
       if (dataItems is List) {
-        items = dataItems.map((e) => e.toString()).toList();
+        elements = dataItems.map((e) => e.toString()).toList();
       }
 
       if (title == null || title.isEmpty) {
@@ -148,13 +151,13 @@ class JsonService {
         originalDetail: detail,
         originalLink: link,
         classification: classification,
-        originalItems: items,
+        originalElements: elements,
         category: category.name,
         isUserCreated: false,
         isUserChanged: false
       );
 
-      print('Created item: ${item.name} with ${items.length} content items');
+      print('Created item: ${item.name} with ${elements.length} content elements');
       return item;
 
     } catch (e) {

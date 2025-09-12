@@ -64,19 +64,19 @@ class _AddItemScreenState extends State<AddItemScreen> {
         originalDetail: _detailController.text.isNotEmpty
             ? _detailController.text
             : null,
-        userLink: _linkController.text.isNotEmpty
+        originalLink: _linkController.text.isNotEmpty
             ? _linkController.text
             : null,
         classification: _classificationController.text.isNotEmpty
             ? _classificationController.text
             : null,
-        originalItems: [],
-        userAddedItems: _contentList,
+        originalElements: _contentList,
+        userAddedItems: [],
         category: widget.category.name,
         isUserCreated: true,
       );
 
-      // await storageService.addUserCreatedItem(newItem);
+       await storageService.addItem(newItem);
 
       if (mounted) {
         Navigator.pop(context);

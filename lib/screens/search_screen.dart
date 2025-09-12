@@ -135,14 +135,14 @@ class SearchScreenState extends State<SearchScreen> {
 
   String? _searchInItems(ItemModel categoryItem, String queryLower) {
     // חפש קודם ב-userAddedItems
-    for (var item in categoryItem.userAddedItems) {
+    for (var item in categoryItem.userAddedElements) {
       if (item.toLowerCase().contains(queryLower)) {
         return item;
       }
     }
 
     // אם לא נמצא, חפש ב-originalItems
-    for (var item in categoryItem.originalItems) {
+    for (var item in categoryItem.originalElements) {
       if (item.toLowerCase().contains(queryLower)) {
         return item;
       }
@@ -159,7 +159,7 @@ class SearchScreenState extends State<SearchScreen> {
     }
 
     // אם אין תיאור, הראה פריט ראשון
-    List<String> allItems = [...categoryItem.userAddedItems, ...categoryItem.originalItems];
+    List<String> allItems = [...categoryItem.userAddedElements, ...categoryItem.originalElements];
     if (allItems.isNotEmpty) {
       return _truncateText(allItems.first, 100);
     }

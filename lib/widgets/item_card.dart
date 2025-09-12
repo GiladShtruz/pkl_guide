@@ -56,13 +56,13 @@ class ItemCard extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        if (isFavorite)
-                          const Icon(
-                            Icons.favorite,
-                            size: 16,
-                            color: Colors.red,
-                          ),
-                        if (isFavorite) const SizedBox(width: 4),
+                        // if (isFavorite)
+                        //   const Icon(
+                        //     Icons.favorite,
+                        //     size: 16,
+                        //     color: Colors.red,
+                        //   ),
+                        // if (isFavorite) const SizedBox(width: 4),
                         Expanded(
                           child: Text(
                             item.name,
@@ -112,7 +112,7 @@ class ItemCard extends StatelessWidget {
                             ),
                           ),
                         // Show user added items count
-                        if (item.userAddedItems.isNotEmpty)
+                        if (item.userAddedElements.isNotEmpty)
                           Container(
                             margin: const EdgeInsets.only(left: 4),
                             padding: const EdgeInsets.symmetric(
@@ -124,7 +124,7 @@ class ItemCard extends StatelessWidget {
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
-                              '+${item.userAddedItems.length}',
+                              '+${item.userAddedElements.length}',
                               style: const TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.bold,

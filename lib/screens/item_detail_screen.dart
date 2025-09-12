@@ -9,7 +9,7 @@ import '../services/lists_service.dart';
 import '../screens/edit_item_screen.dart';
 
 import '../dialogs/add_to_lists_dialog.dart';
-import 'game_play.dart';
+
 
 class ItemDetailScreen extends StatefulWidget {
   final ItemModel item;
@@ -65,9 +65,10 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final isPantomime = widget.item.name.toLowerCase().contains('פנטומימה');
+    final isAlias = widget.item.name.toLowerCase().contains('נחש את המילה');
     final hasModifications = widget.item.hasUserModifications;
-    final originalCount = widget.item.originalItems.length;
-    final userAddedCount = widget.item.userAddedItems.length;
+    final originalCount = widget.item.originalElements.length;
+    final userAddedCount = widget.item.userAddedElements.length;
     final totalItems = widget.item.items.length;
 
     return Scaffold(
@@ -430,7 +431,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
           const SliverToBoxAdapter(child: SizedBox(height: 80)),
         ],
       ),
-      floatingActionButton: isPantomime
+      floatingActionButton: isPantomime || isAlias
           ? FloatingActionButton.extended(
               onPressed: () {
                 Navigator.push(
@@ -438,12 +439,6 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                   MaterialPageRoute(
                     builder: (context) =>
                         SwitchCardGameScreen(item: widget.item),
-                    // CardSwiperGameScreen(item: widget.item),
-                        // PantomimeGameScreen(wordGame: WordGame(
-                        //   name: widget.item.name,
-                        //   description: widget.item.detail!,
-                        //   words: widget.item.items,
-                        // ),),
                   ),
                 );
               },

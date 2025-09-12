@@ -23,9 +23,15 @@ class StorageService {
 
   // App Data Methods
   Future<void> saveAppData(List<ItemModel> items) async {
-    await appDataBox.clear();
     for (var item in items) {
-      await appDataBox.put(item.id, item);
+      if (appDataBox.containsKey(item.id)) {
+        ItemModel existingItem = appDataBox.get(item.id)!;
+        existingItem.updateOriginalOnUpgrade(item);
+
+        await appDataBox.put(item.id, item);
+      } else {
+        await appDataBox.put(item.id, item);
+      }
     }
   }
 
@@ -71,19 +77,19 @@ class StorageService {
   }
 
   // Add user item to existing item
-  Future<void> addUserItemToExisting(String itemId, String newItem) async {
+  Future<void> addUserElements(String itemId, String newItem) async {
     final item = appDataBox.get(itemId);
     if (item != null) {
-      item.addUserItem(newItem);
+      item.addUserElement(newItem);
       await item.save();
     }
   }
 
   // Remove user item from existing item
-  Future<void> removeUserItem(String itemId, String itemToRemove) async {
+  Future<void> removeUserElement(String itemId, String itemToRemove) async {
     final item = appDataBox.get(itemId);
     if (item != null) {
-      item.removeUserItem(itemToRemove);
+      item.removeUserElement(itemToRemove);
       await item.save();
     }
   }
@@ -113,10 +119,10 @@ class StorageService {
     }
   }
 
-  Future<void> resetItemUserItems(String itemId) async {
+  Future<void> resetElements(String itemId) async {
     final item = appDataBox.get(itemId);
     if (item != null) {
-      item.resetItems();
+      item.resetElements();
       await item.save();
     }
   }
@@ -130,15 +136,19 @@ class StorageService {
   }
 
   // Settings Methods
-  Future<void> saveSortingMethod(CategoryType category, SortingMethod method) async {
+  Future<void> saveSortingMethod(
+    CategoryType category,
+    SortingMethod method,
+  ) async {
     await settingsBox.put('sorting_${category.name}', method.name);
   }
 
   SortingMethod getSortingMethod(CategoryType category) {
+    // TODO: check why return SortingMethod.original and if it works
     final methodName = settingsBox.get('sorting_${category.name}');
     if (methodName != null) {
       return SortingMethod.values.firstWhere(
-            (m) => m.name == methodName,
+        (m) => m.name == methodName,
         orElse: () => SortingMethod.original,
       );
     }
@@ -173,8 +183,13 @@ class StorageService {
 
   // Get original app data items only (not user created and not modified)
   List<ItemModel> getOriginalAppDataItems() {
-    return appDataBox.values.where((item) => !item.isUserCreated && !item.isUserChanged).toList();
+    return appDataBox.values
+        .where((item) => !item.isUserCreated && !item.isUserChanged)
+        .toList();
   }
+
+  // TODO: getExportUserUpdateDate
+  // TODO: restoreFromJson
 
   // Update item access
   Future<void> updateItemAccess(String itemId) async {
@@ -198,7 +213,9 @@ class StorageService {
 
   // Get items by category
   List<ItemModel> getItemsByCategory(String category) {
-    return appDataBox.values.where((item) => item.category == category).toList();
+    return appDataBox.values
+        .where((item) => item.category == category)
+        .toList();
   }
 
   // Get items count
@@ -221,26 +238,16 @@ class StorageService {
     await appDataBox.clear();
   }
 
-  // Backup data to JSON
-  Map<String, dynamic> backupToJson() {
-    final items = appDataBox.values.map((item) => item.toJson()).toList();
-    return {
-      'items': items,
-      'timestamp': DateTime.now().toIso8601String(),
-      'version': getVersion(),
-    };
-  }
-
   // Restore data from JSON
-  Future<void> restoreFromJson(Map<String, dynamic> backup) async {
-    if (backup['items'] != null) {
-      await clearAllData();
-      final items = (backup['items'] as List)
-          .map((json) => ItemModel.fromJson(json))
-          .toList();
-      for (var item in items) {
-        await addItem(item);
-      }
-    }
-  }
+  // Future<void> restoreFromJson(Map<String, dynamic> backup) async {
+  //   if (backup['items'] != null) {
+  //     await clearAllData();
+  //     final items = (backup['items'] as List)
+  //         .map((json) => ItemModel.fromJson(json))
+  //         .toList();
+  //     for (var item in items) {
+  //       await addItem(item);
+  //     }
+  //   }
+  // }
 }

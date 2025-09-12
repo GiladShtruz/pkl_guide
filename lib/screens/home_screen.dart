@@ -9,7 +9,7 @@ import '../services/lists_service.dart';
 import '../widgets/category_card.dart';
 import '../widgets/bottom_nav.dart';
 import '../screens/category_screen.dart';
-import '../screens/games_categories_screen.dart';
+import '../screens/games_classification_screen.dart';
 import '../screens/search_screen.dart';
 import '../screens/lists_screen.dart';
 import '../dialogs/update_dialog.dart';
@@ -348,7 +348,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const GamesCategoriesScreen(),
+                      builder: (context) => const GamesClassificationScreen(),
                     ),
                   ).then((_) {
                     setState(() {});
