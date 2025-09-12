@@ -29,24 +29,33 @@ class ItemModel extends HiveObject {
   String? userLink;
 
   @HiveField(8)
-  String? classification;
+  String? originalClassification;
 
   @HiveField(9)
-  List<String> originalElements;
+  String? userClassification;
 
   @HiveField(10)
-  List<String> userAddedElements;
+  String? originalEquipment;
 
   @HiveField(11)
-  DateTime? lastAccessed;
+  String? userEquipment;
 
   @HiveField(12)
-  int clickCount;
+  List<String> originalElements;
 
   @HiveField(13)
-  bool isUserCreated;
+  List<String> userElements;
 
   @HiveField(14)
+  DateTime? lastAccessed;
+
+  @HiveField(15)
+  int clickCount;
+
+  @HiveField(16)
+  bool isUserCreated;
+
+  @HiveField(17)
   bool isUserChanged;
 
   ItemModel({
@@ -58,27 +67,34 @@ class ItemModel extends HiveObject {
     this.userDetail,
     this.originalLink,
     this.userLink,
-    this.classification,
+    this.originalClassification,
+    this.userClassification,
+    this.originalEquipment,
+    this.userEquipment,
     required this.originalElements,
-    List<String>? userAddedItems,
+    List<String>? userElements,
     this.lastAccessed,
     this.clickCount = 0,
     this.isUserCreated = false,
     this.isUserChanged = false,
-  }) : userAddedElements = userAddedItems ?? [];
+  }) : userElements = userElements ?? [];
 
   // Getters for current values (user values if exist, otherwise original)
   String get name => userTitle ?? originalTitle;
   String? get detail => userDetail ?? originalDetail;
   String? get link => userLink ?? originalLink;
-  List<String> get items => [...originalElements, ...userAddedElements];
+  String? get classification => userClassification ?? originalClassification;
+  String? get equipment => userEquipment ?? originalEquipment;
+  List<String> get items => [...originalElements, ...userElements];
 
   // Check if has user modifications
   bool get hasUserModifications =>
       userTitle != null ||
           userDetail != null ||
           userLink != null ||
-          userAddedElements.isNotEmpty;
+          userClassification != null ||
+          userEquipment != null ||
+          userElements.isNotEmpty;
 
   // Reset specific field methods
   void resetTitle() {
@@ -96,8 +112,18 @@ class ItemModel extends HiveObject {
     _updateUserChangedStatus();
   }
 
+  void resetClassification() {
+    userClassification = null;
+    _updateUserChangedStatus();
+  }
+
+  void resetEquipment() {
+    userEquipment = null;
+    _updateUserChangedStatus();
+  }
+
   void resetElements() {
-    userAddedElements.clear();
+    userElements.clear();
     _updateUserChangedStatus();
   }
 
@@ -105,7 +131,9 @@ class ItemModel extends HiveObject {
     userTitle = null;
     userDetail = null;
     userLink = null;
-    userAddedElements.clear();
+    userClassification = null;
+    userEquipment = null;
+    userElements.clear();
     isUserChanged = false;
   }
 
@@ -132,15 +160,27 @@ class ItemModel extends HiveObject {
     isUserChanged = true;
   }
 
-  // Method to add user item and mark as changed
-  void addUserElement(String item) {
-    userAddedElements.add(item);
+  // Method to update classification and mark as changed
+  void updateClassification(String? newClassification) {
+    userClassification = newClassification;
     isUserChanged = true;
   }
 
-  // Method to remove user item and mark as changed
+  // Method to update equipment and mark as changed
+  void updateEquipment(String? newEquipment) {
+    userEquipment = newEquipment;
+    isUserChanged = true;
+  }
+
+  // Method to add user element and mark as changed
+  void addUserElement(String item) {
+    userElements.add(item);
+    isUserChanged = true;
+  }
+
+  // Method to remove user element and mark as changed
   void removeUserElement(String item) {
-    userAddedElements.remove(item);
+    userElements.remove(item);
     _updateUserChangedStatus();
   }
 
@@ -148,9 +188,10 @@ class ItemModel extends HiveObject {
     originalTitle = newItem.originalTitle;
     originalDetail = newItem.originalDetail;
     originalLink = newItem.originalLink;
+    originalClassification = newItem.originalClassification;
+    originalEquipment = newItem.originalEquipment;
     originalElements = newItem.originalElements;
     category = newItem.category;
-    classification = newItem.classification;
   }
 
   Map<String, dynamic> toJson() {
@@ -163,9 +204,12 @@ class ItemModel extends HiveObject {
       'userDetail': userDetail,
       'originalLink': originalLink,
       'userLink': userLink,
-      'classification': classification,
-      'originalItems': originalElements,
-      'userAddedItems': userAddedElements,
+      'originalClassification': originalClassification,
+      'userClassification': userClassification,
+      'originalEquipment': originalEquipment,
+      'userEquipment': userEquipment,
+      'originalElements': originalElements,
+      'userElements': userElements,
       'lastAccessed': lastAccessed?.toIso8601String(),
       'clickCount': clickCount,
       'isUserCreated': isUserCreated,
@@ -183,13 +227,20 @@ class ItemModel extends HiveObject {
       userDetail: json['userDetail'],
       originalLink: json['originalLink'] ?? json['link'],
       userLink: json['userLink'],
-      classification: json['classification'],
-      originalElements: json['originalItems'] != null
+      originalClassification: json['originalClassification'] ?? json['classification'],
+      userClassification: json['userClassification'],
+      originalEquipment: json['originalEquipment'] ?? json['equipment'],
+      userEquipment: json['userEquipment'],
+      originalElements: json['originalElements'] != null
+          ? List<String>.from(json['originalElements'])
+          : (json['originalItems'] != null
           ? List<String>.from(json['originalItems'])
-          : (json['items'] != null ? List<String>.from(json['items']) : []),
-      userAddedItems: json['userAddedItems'] != null
+          : (json['items'] != null ? List<String>.from(json['items']) : [])),
+      userElements: json['userElements'] != null
+          ? List<String>.from(json['userElements'])
+          : (json['userAddedItems'] != null
           ? List<String>.from(json['userAddedItems'])
-          : [],
+          : []),
       lastAccessed: json['lastAccessed'] != null
           ? DateTime.tryParse(json['lastAccessed'])
           : null,

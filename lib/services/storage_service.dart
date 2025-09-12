@@ -76,8 +76,26 @@ class StorageService {
     }
   }
 
-  // Add user item to existing item
-  Future<void> addUserElements(String itemId, String newItem) async {
+  // Update item classification
+  Future<void> updateItemClassification(String itemId, String? newClassification) async {
+    final item = appDataBox.get(itemId);
+    if (item != null) {
+      item.updateClassification(newClassification);
+      await item.save();
+    }
+  }
+
+  // Update item equipment
+  Future<void> updateItemEquipment(String itemId, String? newEquipment) async {
+    final item = appDataBox.get(itemId);
+    if (item != null) {
+      item.updateEquipment(newEquipment);
+      await item.save();
+    }
+  }
+
+  // Add user element to existing item
+  Future<void> addUserElement(String itemId, String newItem) async {
     final item = appDataBox.get(itemId);
     if (item != null) {
       item.addUserElement(newItem);
@@ -85,7 +103,7 @@ class StorageService {
     }
   }
 
-  // Remove user item from existing item
+  // Remove user element from existing item
   Future<void> removeUserElement(String itemId, String itemToRemove) async {
     final item = appDataBox.get(itemId);
     if (item != null) {
@@ -119,6 +137,22 @@ class StorageService {
     }
   }
 
+  Future<void> resetItemClassification(String itemId) async {
+    final item = appDataBox.get(itemId);
+    if (item != null) {
+      item.resetClassification();
+      await item.save();
+    }
+  }
+
+  Future<void> resetItemEquipment(String itemId) async {
+    final item = appDataBox.get(itemId);
+    if (item != null) {
+      item.resetEquipment();
+      await item.save();
+    }
+  }
+
   Future<void> resetElements(String itemId) async {
     final item = appDataBox.get(itemId);
     if (item != null) {
@@ -137,9 +171,9 @@ class StorageService {
 
   // Settings Methods
   Future<void> saveSortingMethod(
-    CategoryType category,
-    SortingMethod method,
-  ) async {
+      CategoryType category,
+      SortingMethod method,
+      ) async {
     await settingsBox.put('sorting_${category.name}', method.name);
   }
 
@@ -148,7 +182,7 @@ class StorageService {
     final methodName = settingsBox.get('sorting_${category.name}');
     if (methodName != null) {
       return SortingMethod.values.firstWhere(
-        (m) => m.name == methodName,
+            (m) => m.name == methodName,
         orElse: () => SortingMethod.original,
       );
     }
@@ -238,16 +272,16 @@ class StorageService {
     await appDataBox.clear();
   }
 
-  // Restore data from JSON
-  // Future<void> restoreFromJson(Map<String, dynamic> backup) async {
-  //   if (backup['items'] != null) {
-  //     await clearAllData();
-  //     final items = (backup['items'] as List)
-  //         .map((json) => ItemModel.fromJson(json))
-  //         .toList();
-  //     for (var item in items) {
-  //       await addItem(item);
-  //     }
-  //   }
-  // }
+// Restore data from JSON
+// Future<void> restoreFromJson(Map<String, dynamic> backup) async {
+//   if (backup['items'] != null) {
+//     await clearAllData();
+//     final items = (backup['items'] as List)
+//         .map((json) => ItemModel.fromJson(json))
+//         .toList();
+//     for (var item in items) {
+//       await addItem(item);
+//     }
+//   }
+// }
 }

@@ -68,7 +68,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     final isAlias = widget.item.name.toLowerCase().contains('נחש את המילה');
     final hasModifications = widget.item.hasUserModifications;
     final originalCount = widget.item.originalElements.length;
-    final userAddedCount = widget.item.userAddedElements.length;
+    final userAddedCount = widget.item.userElements.length;
     final totalItems = widget.item.items.length;
 
     return Scaffold(

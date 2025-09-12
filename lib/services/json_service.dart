@@ -150,7 +150,7 @@ class JsonService {
         originalTitle: title,
         originalDetail: detail,
         originalLink: link,
-        classification: classification,
+        originalClassification: classification,
         originalElements: elements,
         category: category.name,
         isUserCreated: false,

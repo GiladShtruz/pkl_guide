@@ -112,7 +112,7 @@ class ItemCard extends StatelessWidget {
                             ),
                           ),
                         // Show user added items count
-                        if (item.userAddedElements.isNotEmpty)
+                        if (item.userElements.isNotEmpty)
                           Container(
                             margin: const EdgeInsets.only(left: 4),
                             padding: const EdgeInsets.symmetric(
@@ -124,7 +124,7 @@ class ItemCard extends StatelessWidget {
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
-                              '+${item.userAddedElements.length}',
+                              '+${item.userElements.length}',
                               style: const TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.bold,

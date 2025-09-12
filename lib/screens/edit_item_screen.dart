@@ -142,13 +142,13 @@ class _EditItemScreenState extends State<EditItemScreen> {
   }
 
   void _resetUserItems() async {
-    if (widget.item.userAddedElements.isEmpty) return;
+    if (widget.item.userElements.isEmpty) return;
 
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('שחזר תוכן'),
-        content: Text('האם למחוק את כל ${widget.item.userAddedElements.length} הפריטים שנוספו?'),
+        content: Text('האם למחוק את כל ${widget.item.userElements.length} הפריטים שנוספו?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -170,7 +170,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
 
   void _addContent() async {
     if (_newItemController.text.isNotEmpty) {
-      await _storageService.addUserElements(
+      await _storageService.addUserElement(
           widget.item.id,
           _newItemController.text
       );
@@ -257,8 +257,8 @@ class _EditItemScreenState extends State<EditItemScreen> {
       // Remove items in reverse order to maintain indices
       selectedUserIndices.sort((a, b) => b.compareTo(a));
       for (int index in selectedUserIndices) {
-        if (index < widget.item.userAddedElements.length) {
-          final itemToRemove = widget.item.userAddedElements[index];
+        if (index < widget.item.userElements.length) {
+          final itemToRemove = widget.item.userElements[index];
           await _storageService.removeUserElement(widget.item.id, itemToRemove);
         }
       }
@@ -403,8 +403,8 @@ class _EditItemScreenState extends State<EditItemScreen> {
   }
 
   List<Widget> _buildContentSection() {
-    final allItems = widget.item.userAddedElements;
-    final originalItemsCount = widget.item.userAddedElements.length;
+    final allItems = widget.item.userElements;
+    final originalItemsCount = widget.item.userElements.length;
 
     return [
       // Add new content
@@ -448,11 +448,11 @@ class _EditItemScreenState extends State<EditItemScreen> {
           ),
           Row(
             children: [
-              if (widget.item.userAddedElements.isNotEmpty)
+              if (widget.item.userElements.isNotEmpty)
                 TextButton.icon(
                   onPressed: _resetUserItems,
                   icon: const Icon(Icons.restore, size: 16),
-                  label: Text('מחק ${widget.item.userAddedElements.length} נוספים'),
+                  label: Text('מחק ${widget.item.userElements.length} נוספים'),
                   style: TextButton.styleFrom(
                     foregroundColor: Colors.orange,
                   ),

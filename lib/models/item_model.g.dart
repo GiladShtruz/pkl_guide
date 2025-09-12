@@ -25,20 +25,23 @@ class ItemModelAdapter extends TypeAdapter<ItemModel> {
       userDetail: fields[5] as String?,
       originalLink: fields[6] as String?,
       userLink: fields[7] as String?,
-      classification: fields[8] as String?,
-      originalElements: (fields[9] as List).cast<String>(),
-      userAddedItems: (fields[10] as List?)?.cast<String>(),
-      lastAccessed: fields[11] as DateTime?,
-      clickCount: fields[12] as int,
-      isUserCreated: fields[13] as bool,
-      isUserChanged: fields[14] as bool,
+      originalClassification: fields[8] as String?,
+      userClassification: fields[9] as String?,
+      originalEquipment: fields[10] as String?,
+      userEquipment: fields[11] as String?,
+      originalElements: (fields[12] as List).cast<String>(),
+      userElements: (fields[13] as List?)?.cast<String>(),
+      lastAccessed: fields[14] as DateTime?,
+      clickCount: fields[15] as int,
+      isUserCreated: fields[16] as bool,
+      isUserChanged: fields[17] as bool,
     );
   }
 
   @override
   void write(BinaryWriter writer, ItemModel obj) {
     writer
-      ..writeByte(15)
+      ..writeByte(18)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -56,18 +59,24 @@ class ItemModelAdapter extends TypeAdapter<ItemModel> {
       ..writeByte(7)
       ..write(obj.userLink)
       ..writeByte(8)
-      ..write(obj.classification)
+      ..write(obj.originalClassification)
       ..writeByte(9)
-      ..write(obj.originalElements)
+      ..write(obj.userClassification)
       ..writeByte(10)
-      ..write(obj.userAddedElements)
+      ..write(obj.originalEquipment)
       ..writeByte(11)
-      ..write(obj.lastAccessed)
+      ..write(obj.userEquipment)
       ..writeByte(12)
-      ..write(obj.clickCount)
+      ..write(obj.originalElements)
       ..writeByte(13)
-      ..write(obj.isUserCreated)
+      ..write(obj.userElements)
       ..writeByte(14)
+      ..write(obj.lastAccessed)
+      ..writeByte(15)
+      ..write(obj.clickCount)
+      ..writeByte(16)
+      ..write(obj.isUserCreated)
+      ..writeByte(17)
       ..write(obj.isUserChanged);
   }
 
