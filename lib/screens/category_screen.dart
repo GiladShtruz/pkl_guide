@@ -65,11 +65,6 @@ class _CategoryScreenState extends State<CategoryScreen> {
     // Apply sorting
     final sortingMethod = appProvider.getSortingMethod(widget.category);
     _sortItems(sortingMethod);
-
-    // Update access count
-    for (var item in _items) {
-      storageService.updateItemAccess(item.id);
-    }
   }
 
   void _sortItems(SortingMethod method) {
@@ -198,56 +193,49 @@ class _CategoryScreenState extends State<CategoryScreen> {
             ],
           ],
         ),
-        body: RefreshIndicator(
-          onRefresh: () async {
-            setState(() {
-              _loadItems();
-            });
-          },
-          child: ListView(
-            children: [
-              if (_favoriteItems.isNotEmpty) ...[
+        body: ListView(
+          children: [
+            if (_favoriteItems.isNotEmpty) ...[
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(
+                  'מועדפים',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.red[700],
+                  ),
+                ),
+              ),
+              ..._favoriteItems.map((item) => ItemCard(
+                item: item,
+                showCheckbox: _isSelectionMode,
+                onTap: () => _openItemDetail(item),
+                onLongPress: _toggleSelectionMode,
+              )),
+            ],
+            if (_regularItems.isNotEmpty) ...[
+              if (_favoriteItems.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.all(16),
                   child: Text(
-                    'מועדפים',
+                    'כל הפריטים',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: Colors.red[700],
+                      color: Colors.grey[700],
                     ),
                   ),
                 ),
-                ..._favoriteItems.map((item) => ItemCard(
-                  item: item,
-                  showCheckbox: _isSelectionMode,
-                  onTap: () => _openItemDetail(item),
-                  onLongPress: _toggleSelectionMode,
-                )),
-              ],
-              if (_regularItems.isNotEmpty) ...[
-                if (_favoriteItems.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Text(
-                      'כל הפריטים',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey[700],
-                      ),
-                    ),
-                  ),
-                ..._regularItems.map((item) => ItemCard(
-                  item: item,
-                  showCheckbox: _isSelectionMode,
-                  onTap: () => _openItemDetail(item),
-                  onLongPress: _toggleSelectionMode,
-                )),
-              ],
-              const SizedBox(height: 80),
+              ..._regularItems.map((item) => ItemCard(
+                item: item,
+                showCheckbox: _isSelectionMode,
+                onTap: () => _openItemDetail(item),
+                onLongPress: _toggleSelectionMode,
+              )),
             ],
-          ),
+            const SizedBox(height: 80),
+          ],
         ),
         floatingActionButton: FloatingActionButton(
           onPressed: _isSelectionMode

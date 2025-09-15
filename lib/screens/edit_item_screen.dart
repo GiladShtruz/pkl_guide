@@ -1,5 +1,6 @@
 // lib/screens/edit_item_screen.dart
 import 'package:flutter/material.dart';
+import 'package:pkl_guide/models/category.dart';
 import 'package:provider/provider.dart';
 import '../models/item_model.dart';
 import '../services/storage_service.dart';
@@ -17,7 +18,13 @@ class _EditItemScreenState extends State<EditItemScreen> {
   late TextEditingController _nameController;
   late TextEditingController _detailController;
   late TextEditingController _linkController;
+  late TextEditingController _equipmentController;
   late TextEditingController _newItemController;
+
+  final FocusNode _addElementsFocusNode = FocusNode();
+
+
+
   final Set<int> _selectedIndices = {};
   bool _isSelectionMode = false;
   bool _hasChanges = false;
@@ -32,12 +39,14 @@ class _EditItemScreenState extends State<EditItemScreen> {
     _nameController = TextEditingController(text: widget.item.name);
     _detailController = TextEditingController(text: widget.item.detail ?? '');
     _linkController = TextEditingController(text: widget.item.link ?? '');
+    _equipmentController = TextEditingController(text: widget.item.equipment ?? '');
     _newItemController = TextEditingController();
 
     // Add listeners for changes
     _nameController.addListener(_markChanged);
     _detailController.addListener(_markChanged);
     _linkController.addListener(_markChanged);
+    _equipmentController.addListener(_markChanged);
   }
 
   void _markChanged() {
@@ -53,23 +62,59 @@ class _EditItemScreenState extends State<EditItemScreen> {
     _nameController.dispose();
     _detailController.dispose();
     _linkController.dispose();
+    _equipmentController.dispose();
     _newItemController.dispose();
+
+    _addElementsFocusNode.dispose();
+
     super.dispose();
   }
 
   Future<bool> _onWillPop() async {
-    if (_hasChanges) {
-      // showDialog to save or delete?
-      // await _saveChanges();
+    if(_isSelectionMode){
+      setState(() {
+        _isSelectionMode = false;
+        _selectedIndices.clear();
+      });
+      return false;
     }
+    if (_hasChanges) {
+      await _saveChanges();
+    }
+    // if (_hasChanges) {
+    //   bool toSave = false;
+    //   showDialog(context: context, builder: (context)  =>
+    //     AlertDialog(
+    //         title: Text("האם לשמור?"),
+    //         actions: [
+    //           TextButton(
+    //             child: Text('אל תשמור'),
+    //             onPressed: () {
+    //               Navigator.of(context).pop();
+    //             },
+    //           ),
+    //
+    //           TextButton(
+    //             child: Text('שמור'),
+    //             onPressed: () {
+    //                toSave = true;
+    //               Navigator.of(context).pop();
+    //             },
+    //           ),
+    //         ]
+    //     ));
+    //   if(toSave){
+    //     await _saveChanges();
+    //   }
+    // }
     return true;
   }
+
 
   Future<void> _saveChanges() async {
     // Save title changes
     if (_nameController.text != widget.item.originalTitle) {
-      await _storageService.updateItemTitle(widget.item.id,
-          _nameController.text);
+      await _storageService.updateItemTitle(widget.item.id, _nameController.text);
     }
 
     // Save detail changes
@@ -80,19 +125,34 @@ class _EditItemScreenState extends State<EditItemScreen> {
       );
     }
 
-    // Link cannot be edited by user based on requirements
+    // Save link changes
+    if (_linkController.text != (widget.item.originalLink ?? '')) {
+      await _storageService.updateItemLink(
+          widget.item.id,
+          _linkController.text.isNotEmpty ? _linkController.text : null
+      );
+    }
+
+    // Save equipment changes
+    if (_equipmentController.text != (widget.item.originalEquipment ?? '')) {
+      await _storageService.updateItemEquipment(
+          widget.item.id,
+          _equipmentController.text.isNotEmpty ? _equipmentController.text : null
+      );
+    }
 
     setState(() {
       _hasChanges = false;
     });
   }
 
-  void _resetTitle() async {
+
+  void _resetData(CategoryEntry categoryEntry, String title, String content) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('שחזר כותרת'),
-        content: const Text('האם לשחזר את הכותרת המקורית?'),
+        title: Text(title),
+        content: Text(content),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -107,66 +167,176 @@ class _EditItemScreenState extends State<EditItemScreen> {
     );
 
     if (confirmed == true) {
-      await _storageService.resetItemTitle(widget.item.id);
-      setState(() {
-        _nameController.text = widget.item.originalTitle;
-      });
+      switch (categoryEntry) {
+        case CategoryEntry.title:
+          await _storageService.resetItemTitle(widget.item.id);
+          setState(() {
+            _nameController.text = widget.item.originalTitle;
+          });
+          break;
+        case CategoryEntry.detail:
+        await _storageService.resetItemDetail(widget.item.id);
+        setState(() {
+          _detailController.text = widget.item.originalDetail ?? '';
+        });
+          break;
+        case CategoryEntry.link:
+          await _storageService.resetItemLink(widget.item.id);
+          setState(() {
+            _linkController.text = widget.item.originalLink ?? '';
+          });
+          break;
+        case CategoryEntry.equipment:
+          await _storageService.resetItemEquipment(widget.item.id);
+          setState(() {
+            _equipmentController.text = widget.item.originalEquipment ?? '';
+          });
+          break;
+        case CategoryEntry.elements:
+          if (widget.item.userElements.isEmpty) return;
+          await _storageService.resetElements(widget.item.id);
+          setState(() {});
+          break;
+        default:
+          // Handle other cases if needed
+
+      }
     }
   }
-
-  void _resetDetail() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('שחזר תיאור'),
-        content: const Text('האם לשחזר את התיאור המקורי?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('ביטול'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('שחזר', style: TextStyle(color: Colors.orange)),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed == true) {
-      await _storageService.resetItemDetail(widget.item.id);
-      setState(() {
-        _detailController.text = widget.item.originalDetail ?? '';
-      });
-    }
-  }
-
-  void _resetUserItems() async {
-    if (widget.item.userElements.isEmpty) return;
-
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('שחזר תוכן'),
-        content: Text('האם למחוק את כל ${widget.item.userElements.length} הפריטים שנוספו?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('ביטול'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('מחק', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed == true) {
-      await _storageService.resetElements(widget.item.id);
-      setState(() {});
-    }
-  }
+  //
+  // void _resetTitle() async {
+  //   final confirmed = await showDialog<bool>(
+  //     context: context,
+  //     builder: (context) => AlertDialog(
+  //       title: const Text('שחזר כותרת'),
+  //       content: const Text('האם לשחזר את הכותרת המקורית?'),
+  //       actions: [
+  //         TextButton(
+  //           onPressed: () => Navigator.pop(context, false),
+  //           child: const Text('ביטול'),
+  //         ),
+  //         TextButton(
+  //           onPressed: () => Navigator.pop(context, true),
+  //           child: const Text('שחזר', style: TextStyle(color: Colors.orange)),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  //
+  //   if (confirmed == true) {
+  //     await _storageService.resetItemTitle(widget.item.id);
+  //     setState(() {
+  //       _nameController.text = widget.item.originalTitle;
+  //     });
+  //   }
+  // }
+  // void _resetDetail() async {
+  //   final confirmed = await showDialog<bool>(
+  //     context: context,
+  //     builder: (context) => AlertDialog(
+  //       title: const Text('שחזר תיאור'),
+  //       content: const Text('האם לשחזר את התיאור המקורי?'),
+  //       actions: [
+  //         TextButton(
+  //           onPressed: () => Navigator.pop(context, false),
+  //           child: const Text('ביטול'),
+  //         ),
+  //         TextButton(
+  //           onPressed: () => Navigator.pop(context, true),
+  //           child: const Text('שחזר', style: TextStyle(color: Colors.orange)),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  //
+  //   if (confirmed == true) {
+  //     await _storageService.resetItemDetail(widget.item.id);
+  //     setState(() {
+  //       _detailController.text = widget.item.originalDetail ?? '';
+  //     });
+  //   }
+  // }
+  //
+  // void _resetLink() async {
+  //   final confirmed = await showDialog<bool>(
+  //     context: context,
+  //     builder: (context) => AlertDialog(
+  //       title: const Text('שחזר קישור'),
+  //       content: const Text('האם לשחזר את הקישור המקורי?'),
+  //       actions: [
+  //         TextButton(
+  //           onPressed: () => Navigator.pop(context, false),
+  //           child: const Text('ביטול'),
+  //         ),
+  //         TextButton(
+  //           onPressed: () => Navigator.pop(context, true),
+  //           child: const Text('שחזר', style: TextStyle(color: Colors.orange)),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  //
+  //   if (confirmed == true) {
+  //     await _storageService.resetItemLink(widget.item.id);
+  //     setState(() {
+  //       _linkController.text = widget.item.originalLink ?? '';
+  //     });
+  //   }
+  // }
+  //
+  // void _resetEquipment() async {
+  //   final confirmed = await showDialog<bool>(
+  //     context: context,
+  //     builder: (context) => AlertDialog(
+  //       title: const Text('שחזר ציוד'),
+  //       content: const Text('האם לשחזר את הציוד המקורי?'),
+  //       actions: [
+  //         TextButton(
+  //           onPressed: () => Navigator.pop(context, false),
+  //           child: const Text('ביטול'),
+  //         ),
+  //         TextButton(
+  //           onPressed: () => Navigator.pop(context, true),
+  //           child: const Text('שחזר', style: TextStyle(color: Colors.orange)),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  //
+  //   if (confirmed == true) {
+  //     await _storageService.resetItemEquipment(widget.item.id);
+  //     setState(() {
+  //       _equipmentController.text = widget.item.originalEquipment ?? '';
+  //     });
+  //   }
+  // }
+  //
+  // void _resetUserItems() async {
+  //   if (widget.item.userElements.isEmpty) return;
+  //
+  //   final confirmed = await showDialog<bool>(
+  //     context: context,
+  //     builder: (context) => AlertDialog(
+  //       title: const Text('שחזר תוכן'),
+  //       content: Text('האם למחוק את כל ${widget.item.userElements.length} הפריטים שנוספו?'),
+  //       actions: [
+  //         TextButton(
+  //           onPressed: () => Navigator.pop(context, false),
+  //           child: const Text('ביטול'),
+  //         ),
+  //         TextButton(
+  //           onPressed: () => Navigator.pop(context, true),
+  //           child: const Text('מחק', style: TextStyle(color: Colors.red)),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  //
+  //   if (confirmed == true) {
+  //     await _storageService.resetElements(widget.item.id);
+  //     setState(() {});
+  //   }
+  // }
 
   void _addContent() async {
     if (_newItemController.text.isNotEmpty) {
@@ -181,7 +351,8 @@ class _EditItemScreenState extends State<EditItemScreen> {
       _newItemController.clear();
 
       // Keep focus on the text field
-      FocusScope.of(context).requestFocus();
+      FocusScope.of(context).requestFocus(_addElementsFocusNode);
+
     }
   }
 
@@ -207,7 +378,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
       );
 
       if (confirmed == true) {
-        // await _storageService.deleteUserCreatedItem(widget.item.id);
+        await _storageService.deleteItem(widget.item.id);
         if (mounted) {
           Navigator.pop(context);
         }
@@ -219,27 +390,28 @@ class _EditItemScreenState extends State<EditItemScreen> {
     if (_selectedIndices.isEmpty) return;
 
     // Get indices of user added items
-    final userItemsStartIndex = widget.item.originalElements.length;
-    final selectedUserIndices = _selectedIndices
-        .where((index) => index >= userItemsStartIndex)
-        .map((index) => index - userItemsStartIndex)
-        .toList();
+    // final userElementsStartIndex = widget.item.originalElements.length;
+    // final selectedUserIndices = _selectedIndices
+    //     .where((index) => index >= userElementsStartIndex)
+    //     .map((index) => index - userElementsStartIndex)
+    //     .toList();
 
-    if (selectedUserIndices.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('ניתן למחוק רק פריטים שהוספת'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      return;
-    }
+    // if (_selectedIndices.isEmpty) {
+    //   ScaffoldMessenger.of(context).showSnackBar(
+    //     const SnackBar(
+    //       content: Text('ניתן למחוק רק פריטים שהוספת'),
+    //       backgroundColor: Colors.orange,
+    //     ),
+    //   );
+    //   return;
+    // }
+
 
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('מחיקת פריטים'),
-        content: Text('האם למחוק ${selectedUserIndices.length} פריטים?'),
+        content: Text('האם למחוק ${_selectedIndices.length} פריטים?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -254,13 +426,9 @@ class _EditItemScreenState extends State<EditItemScreen> {
     );
 
     if (confirmed == true) {
-      // Remove items in reverse order to maintain indices
-      selectedUserIndices.sort((a, b) => b.compareTo(a));
-      for (int index in selectedUserIndices) {
-        if (index < widget.item.userElements.length) {
-          final itemToRemove = widget.item.userElements[index];
+      for (int index in _selectedIndices) {
+          final itemToRemove = widget.item.userElements[widget.item.userElements.length - index - 1];
           await _storageService.removeUserElement(widget.item.id, itemToRemove);
-        }
       }
 
       setState(() {
@@ -274,56 +442,54 @@ class _EditItemScreenState extends State<EditItemScreen> {
   @override
   Widget build(BuildContext context) {
     return WillPopScope(
-      onWillPop: _onWillPop,
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('עריכת פריט'),
-          centerTitle: true,
-          leading: _isSelectionMode
-              ? IconButton(
-            icon: const Icon(Icons.close),
-            onPressed: () {
-              setState(() {
-                _isSelectionMode = false;
-                _selectedIndices.clear();
-              });
-            },
-          )
-              : IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () async {
-              print("get: $_hasChanges");
-
-              if (_hasChanges) {
-                await _saveChanges();
-              }
-              Navigator.pop(context);
-            },
-          ),
-          actions: [
-            if (!_isSelectionMode) ...[
-              if (widget.item.isUserCreated)
-                IconButton(
-                  icon: const Icon(Icons.delete, color: Colors.red),
-                  onPressed: _deleteItem,
-                ),
-              TextButton(
-                onPressed: () async {
+        onWillPop: _onWillPop,
+        child: Scaffold(
+          appBar: AppBar(
+            title: const Text('עריכת פריט'),
+            centerTitle: true,
+            leading: _isSelectionMode
+                ? IconButton(
+              icon: const Icon(Icons.close),
+              onPressed: () {
+                setState(() {
+                  _isSelectionMode = false;
+                  _selectedIndices.clear();
+                });
+              },
+            )
+                : IconButton(
+              icon: const Icon(Icons.arrow_back),
+              onPressed: () async {
+                if (_hasChanges) {
                   await _saveChanges();
-                  Navigator.pop(context);
-                },
-                child: const Text('שמור'),
-              ),
+                }
+                Navigator.pop(context);
+              },
+            ),
+            actions: [
+              ...[
+                if (widget.item.isUserCreated)
+                  IconButton(
+                    icon: const Icon(Icons.delete, color: Colors.red),
+                    onPressed: _deleteItem,
+                  ),
+                TextButton(
+                  onPressed: () async {
+                    await _saveChanges();
+                    Navigator.pop(context);
+                  },
+                  child: const Text('שמור'),
+                ),
+              ],
             ],
-          ],
-        ),
-        body: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Title field with reset button
-              Column(
+          ),
+          body: SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                // Title field with reset button
+                Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   TextField(
@@ -335,7 +501,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
                   ),
                   if (widget.item.userTitle != null)
                     TextButton.icon(
-                      onPressed: _resetTitle,
+                      onPressed:() => _resetData(CategoryEntry.title, "שחזר כותרת", "האם לשחזר את הכותרת המקורית?"),
                       icon: const Icon(Icons.restore, size: 16),
                       label: const Text('שחזר למקור'),
                       style: TextButton.styleFrom(
@@ -360,7 +526,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
                   ),
                   if (widget.item.userDetail != null)
                     TextButton.icon(
-                      onPressed: _resetDetail,
+                      onPressed:() => _resetData(CategoryEntry.detail, "שחזר תיאור", "האם לשחזר את התיאור המקורי?"),
                       icon: const Icon(Icons.restore, size: 16),
                       label: const Text('שחזר למקור'),
                       style: TextButton.styleFrom(
@@ -371,40 +537,79 @@ class _EditItemScreenState extends State<EditItemScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Link field (read-only for non-user-created items)
-              TextField(
-                controller: _linkController,
-                decoration: const InputDecoration(
-                  labelText: 'קישור',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.link),
-                ),
-                readOnly: !widget.item.isUserCreated,
+              // Link field with reset button
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextField(
+                    controller: _linkController,
+                    decoration: const InputDecoration(
+                      labelText: 'קישור',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.link),
+                    ),
+                  ),
+                  if (widget.item.userLink != null)
+                    TextButton.icon(
+                      onPressed:() => _resetData(CategoryEntry.link, "שחזר קישור", "האם לשחזר את הקישור המקורי?"),
+                      icon: const Icon(Icons.restore, size: 16),
+                      label: const Text('שחזר למקור'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.orange,
+                      ),
+                    ),
+                ],
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
 
-              // Add new content section
-              if (widget.item.category != 'texts') ..._buildContentSection(),
-
-              const SizedBox(height: 80),
-            ],
+              // Equipment field with reset button
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                TextField(
+                controller: _equipmentController,
+                decoration: const InputDecoration(
+                  labelText: 'ציוד נדרש',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.sports_soccer),
+                ),
+                maxLines: 2,
+              ),
+              if (widget.item.userEquipment != null)
+          TextButton.icon(
+            onPressed:() => _resetData(CategoryEntry.equipment, "שחזר רשימת ציוד", "האם לשחזר את רשימת הציוד המקורית?"),
+          icon: const Icon(Icons.restore, size: 16),
+          label: const Text('שחזר למקור'),
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.orange,
+            ),
           ),
+                ],
+              ),
+                  const SizedBox(height: 24),
+
+                  // Add new content section
+                  if (widget.item.category != 'texts') ..._buildContentSection(),
+
+                  const SizedBox(height: 80),
+                ],
+              ),
+          ),
+          floatingActionButton: _isSelectionMode
+              ? FloatingActionButton(
+            onPressed: _deleteSelectedUserItems,
+            backgroundColor: Colors.red,
+            child: const Icon(Icons.delete),
+          )
+              : null,
+          floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
         ),
-        floatingActionButton: _isSelectionMode
-            ? FloatingActionButton(
-          onPressed: _deleteSelectedUserItems,
-          backgroundColor: Colors.red,
-          child: const Icon(Icons.delete),
-        )
-            : null,
-        floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-      ),
     );
   }
 
   List<Widget> _buildContentSection() {
-    final allItems = widget.item.userElements;
-    final originalItemsCount = widget.item.userElements.length;
+    final userElements = widget.item.userElements;
+    final userItemCount = widget.item.userElements.length;
 
     return [
       // Add new content
@@ -417,16 +622,19 @@ class _EditItemScreenState extends State<EditItemScreen> {
           const SizedBox(width: 8),
           Expanded(
             child: TextField(
+              textInputAction: TextInputAction.next,
+              onEditingComplete: _addContent,
               controller: _newItemController,
+              focusNode: _addElementsFocusNode,
               decoration: InputDecoration(
                 hintText: _getAddContentHint(),
+
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 12,
                   vertical: 8,
                 ),
                 border: const OutlineInputBorder(),
               ),
-              onSubmitted: (_) => _addContent(),
             ),
           ),
           const SizedBox(width: 8),
@@ -450,14 +658,14 @@ class _EditItemScreenState extends State<EditItemScreen> {
             children: [
               if (widget.item.userElements.isNotEmpty)
                 TextButton.icon(
-                  onPressed: _resetUserItems,
+                  onPressed:() => _resetData(CategoryEntry.elements, "מחק פריטים", "האם למחוק את הפריטים שהוספת?"),
                   icon: const Icon(Icons.restore, size: 16),
-                  label: Text('מחק ${widget.item.userElements.length} נוספים'),
+                  label: Text('מחק הכל'),
                   style: TextButton.styleFrom(
                     foregroundColor: Colors.orange,
                   ),
                 ),
-              if (allItems.isNotEmpty)
+              if (userElements.isNotEmpty)
                 TextButton.icon(
                   onPressed: () {
                     setState(() {
@@ -478,7 +686,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
 
       // Content list
       Card(
-        child: allItems.isEmpty
+        child: userElements.isEmpty
             ? Padding(
           padding: const EdgeInsets.all(32),
           child: Center(
@@ -491,19 +699,18 @@ class _EditItemScreenState extends State<EditItemScreen> {
             : ListView.separated(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          itemCount: allItems.length,
+          itemCount: userElements.length,
           separatorBuilder: (context, index) => const Divider(height: 1),
           itemBuilder: (context, index) {
             final isSelected = _selectedIndices.contains(index);
-            final isUserAdded = index >= originalItemsCount;
-            final canDelete = isUserAdded || widget.item.isUserCreated;
+            // final isUserAdded = index >= userItemCount;
+            // final canDelete = isUserAdded || widget.item.isUserCreated;
 
             return ListTile(
               leading: _isSelectionMode
                   ? Checkbox(
                 value: isSelected,
-                onChanged: canDelete
-                    ? (value) {
+                onChanged: (value) {
                   setState(() {
                     if (value == true) {
                       _selectedIndices.add(index);
@@ -512,30 +719,26 @@ class _EditItemScreenState extends State<EditItemScreen> {
                     }
                   });
                 }
-                    : null,
+                ,
               )
                   : CircleAvatar(
-                backgroundColor: isUserAdded
-                    ? Colors.blue[100]
-                    : Colors.grey[200],
+                backgroundColor: Colors.blue[100],
+                    // : Colors.grey[200],
                 child: Text(
                   '${index + 1}',
                   style: TextStyle(
-                    color: isUserAdded
-                        ? Colors.blue
-                        : Colors.grey[700],
+                    color: Colors.blue,
+                        // : Colors.grey[700],
                   ),
                 ),
               ),
-              title: Text('${index + 1}. ${allItems[index]}'),
-              trailing: isUserAdded
-                  ? const Chip(
-                label: Text('נוסף', style: TextStyle(fontSize: 12)),
-                backgroundColor: Colors.blue,
-                labelStyle: TextStyle(color: Colors.white),
-              )
-                  : null,
-              onTap: _isSelectionMode && canDelete
+              title: Text(userElements[userElements.length - index - 1]),
+              // trailing: const Chip(
+              //   label: Text('נוסף', style: TextStyle(fontSize: 12)),
+              //   backgroundColor: Colors.blue,
+              //   labelStyle: TextStyle(color: Colors.white),
+              // ),
+              onTap: _isSelectionMode
                   ? () {
                 setState(() {
                   if (_selectedIndices.contains(index)) {
@@ -582,5 +785,4 @@ class _EditItemScreenState extends State<EditItemScreen> {
         return 'הכנס תוכן חדש...';
     }
   }
-
 }

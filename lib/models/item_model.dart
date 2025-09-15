@@ -5,7 +5,7 @@ part 'item_model.g.dart';
 @HiveType(typeId: 0)
 class ItemModel extends HiveObject {
   @HiveField(0)
-  String id;
+  int id;
 
   @HiveField(1)
   String category;
@@ -219,7 +219,7 @@ class ItemModel extends HiveObject {
 
   factory ItemModel.fromJson(Map<String, dynamic> json, {String? categoryType}) {
     return ItemModel(
-      id: json['id'] ?? 'ID-${DateTime.now().millisecondsSinceEpoch}-${json['originalTitle']?.hashCode ?? 0}',
+      id: json['id'] ?? DateTime.now().millisecondsSinceEpoch % 100000000,
       category: categoryType ?? json['category'] ?? '',
       originalTitle: json['originalTitle'] ?? json['title'] ?? '',
       userTitle: json['userTitle'],

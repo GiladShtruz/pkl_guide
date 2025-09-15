@@ -28,12 +28,14 @@ class _SwitchCardGameScreenState extends State<SwitchCardGameScreen>
   int _currentRoundScore = 0;
   bool _isPlaying = false;
   bool _isPaused = false;
-  int _remainingSeconds = 60;
-  int _totalSeconds = 60;
+  int _remainingSeconds = 10;
+  int _totalSeconds = 10;
   Timer? _timer;
   bool _wordsRepeating = false;
   late AnimationController _timerAnimationController;
   late Animation<double> _timerAnimation;
+  List<String> _correctWords = [];
+  List<String> _skippedWords = [];
 
   @override
   void initState() {
@@ -80,14 +82,14 @@ class _SwitchCardGameScreenState extends State<SwitchCardGameScreen>
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-
         title: Text('איך משחקים:'),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-               Text( widget.item.detail ?? "",
+              Text(
+                widget.item.detail ?? "",
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
@@ -176,6 +178,8 @@ class _SwitchCardGameScreenState extends State<SwitchCardGameScreen>
       _isPaused = false;
       _remainingSeconds = _totalSeconds;
       _currentRoundScore = 0;
+      _correctWords = []; // Add this line
+      _skippedWords = []; // Add this line
     });
 
     _timerAnimationController.forward(from: 0.0);
@@ -248,16 +252,139 @@ class _SwitchCardGameScreenState extends State<SwitchCardGameScreen>
       barrierDismissible: false,
       builder: (context) => AlertDialog(
         title: Text('סיום סיבוב - קבוצה $_currentTeam'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'ניחשתם $_currentRoundScore מילים!',
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            Text('ניקוד כולל: $_team1Score - $_team2Score'),
-          ],
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Points summary
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.green.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.star, color: Colors.green, size: 28),
+                    const SizedBox(width: 8),
+                    Text(
+                      'קיבלתם $_currentRoundScore נקודות!',
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // Total score
+              Text(
+                'ניקוד כולל: $_team1Score - $_team2Score',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
+                textAlign: TextAlign.center,
+              ),
+
+              const SizedBox(height: 16),
+
+              // Correct words section
+              if (_correctWords.isNotEmpty) ...[
+                Row(
+                  children: [
+                    const Icon(Icons.check_circle, color: Colors.green, size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      'מילים שניחשתם (${_correctWords.length}):',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  constraints: const BoxConstraints(maxHeight: 150),
+                  child: SingleChildScrollView(
+                    child: Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: _correctWords.map((word) => Chip(
+                        label: Text(
+                          word,
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                        backgroundColor: Colors.green.withOpacity(0.2),
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      )).toList(),
+                    ),
+                  ),
+                ),
+              ],
+
+              // Skipped words section
+              if (_skippedWords.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    const Icon(Icons.skip_next, color: Colors.orange, size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      'מילים שדילגתם (${_skippedWords.length}):',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.orange,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  constraints: const BoxConstraints(maxHeight: 150),
+                  child: SingleChildScrollView(
+                    child: Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: _skippedWords.map((word) => Chip(
+                        label: Text(
+                          word,
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                        backgroundColor: Colors.orange.withOpacity(0.2),
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      )).toList(),
+                    ),
+                  ),
+                ),
+              ],
+
+              // If no words were guessed
+              if (_correctWords.isEmpty && _skippedWords.isEmpty) ...[
+                const SizedBox(height: 12),
+                const Center(
+                  child: Text(
+                    'לא שיחקתם מילים בסיבוב זה',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
         ),
         actions: [
           TextButton(
@@ -265,15 +392,16 @@ class _SwitchCardGameScreenState extends State<SwitchCardGameScreen>
               Navigator.pop(context);
               setState(() {
                 _currentTeam = _currentTeam == 1 ? 2 : 1;
+                _correctWords.clear();
+                _skippedWords.clear();
               });
             },
-            child: const Text('אישור'),
+            child: const Text('המשך למשחק'),
           ),
         ],
       ),
     );
   }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -422,9 +550,15 @@ class _SwitchCardGameScreenState extends State<SwitchCardGameScreen>
                                 );
                               },
                           onSwipe: (previousIndex, currentIndex, direction) {
+                            final word =
+                                _words[previousIndex %
+                                    _words
+                                        .length]; // Get the word that was swiped
+
                             if (direction == CardSwiperDirection.right) {
                               setState(() {
                                 _currentRoundScore++;
+                                _correctWords.add(word); // Track correct word
                               });
                               HapticFeedback.lightImpact();
                             } else if (direction == CardSwiperDirection.left) {
@@ -432,6 +566,7 @@ class _SwitchCardGameScreenState extends State<SwitchCardGameScreen>
                                 if (_currentRoundScore > 0) {
                                   _currentRoundScore--;
                                 }
+                                _skippedWords.add(word); // Track skipped word
                               });
                             }
 
@@ -505,7 +640,6 @@ class _SwitchCardGameScreenState extends State<SwitchCardGameScreen>
                   if (_isPlaying)
                     Column(
                       children: [
-
                         const SizedBox(height: 10),
                         // Control buttons during game
                         Row(
@@ -533,14 +667,16 @@ class _SwitchCardGameScreenState extends State<SwitchCardGameScreen>
                                       width: 80,
                                       height: 80,
                                       child: CircularProgressIndicator(
-                                        value: _remainingSeconds / _totalSeconds,
+                                        value:
+                                            _remainingSeconds / _totalSeconds,
                                         strokeWidth: 8,
                                         backgroundColor: Colors.grey[700],
-                                        valueColor: AlwaysStoppedAnimation<Color>(
-                                          _remainingSeconds <= 10
-                                              ? Colors.red
-                                              : Colors.green,
-                                        ),
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                              _remainingSeconds <= 10
+                                                  ? Colors.red
+                                                  : Colors.green,
+                                            ),
                                       ),
                                     ),
                                     Text(
@@ -603,7 +739,10 @@ class _SwitchCardGameScreenState extends State<SwitchCardGameScreen>
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.green,
                             foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 32,
+                              vertical: 16,
+                            ),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(30),
                             ),

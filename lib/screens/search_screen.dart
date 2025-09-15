@@ -61,79 +61,80 @@ class SearchScreenState extends State<SearchScreen> {
       return;
     }
 
-    setState(() {
-      _isSearching = true;
-    });
 
-    final storageService = context.read<StorageService>();
-    final allCategoryItems = storageService.getAllCategoryItems();
+      final storageService = context.read<StorageService>();
+      final allCategoryItems = storageService.getAllCategoryItems();
 
-    // נתוני חיפוש מסודרים לפי עדיפות
-    final List<SearchResult> titleResults = [];
-    final List<SearchResult> detailResults = [];
-    final List<SearchResult> itemsResults = [];
+      // נתוני חיפוש מסודרים לפי עדיפות
+      final List<SearchResult> titleResults = [];
+      final List<SearchResult> detailResults = [];
+      final List<SearchResult> itemsResults = [];
 
-    final queryLower = query.toLowerCase();
+      final queryLower = query.toLowerCase();
 
-    for (var categoryItem in allCategoryItems) {
-      bool foundInTitle = false;
-      bool foundInDetail = false;
+      for (var categoryItem in allCategoryItems) {
+        bool foundInTitle = false;
+        bool foundInDetail = false;
 
-      // 1. חיפוש בכותרת (עדיפות ראשונה)
-      String titleToSearch = categoryItem.userTitle ?? categoryItem.originalTitle;
-      if (titleToSearch.toLowerCase().contains(queryLower)) {
-        titleResults.add(SearchResult(
-          item: categoryItem,
-          matchType: MatchType.title,
-          matchedText: _getDisplayDetail(categoryItem),
-          searchQuery: query,
-          priority: 1,
-        ));
-        foundInTitle = true;
-      }
-
-      // 2. חיפוש בתיאור (עדיפות שנייה) - רק אם לא נמצא בכותרת
-      if (!foundInTitle) {
-        String? detailToSearch = categoryItem.userDetail ?? categoryItem.originalDetail;
-        if (detailToSearch != null && detailToSearch.toLowerCase().contains(queryLower)) {
-          detailResults.add(SearchResult(
+        // 1. חיפוש בכותרת (עדיפות ראשונה)
+        String titleToSearch = categoryItem.userTitle ??
+            categoryItem.originalTitle;
+        if (titleToSearch.toLowerCase().contains(queryLower)) {
+          titleResults.add(SearchResult(
             item: categoryItem,
-            matchType: MatchType.detail,
-            matchedText: detailToSearch,
+            matchType: MatchType.title,
+            matchedText: _getDisplayDetail(categoryItem),
             searchQuery: query,
-            priority: 2,
+            priority: 1,
           ));
-          foundInDetail = true;
+          foundInTitle = true;
+        }
+
+        // 2. חיפוש בתיאור (עדיפות שנייה) - רק אם לא נמצא בכותרת
+        if (!foundInTitle) {
+          String? detailToSearch = categoryItem.userDetail ??
+              categoryItem.originalDetail;
+          if (detailToSearch != null &&
+              detailToSearch.toLowerCase().contains(queryLower)) {
+            detailResults.add(SearchResult(
+              item: categoryItem,
+              matchType: MatchType.detail,
+              matchedText: detailToSearch,
+              searchQuery: query,
+              priority: 2,
+            ));
+            foundInDetail = true;
+          }
+        }
+
+        // 3. חיפוש ברשימת פריטים (עדיפות שלישית) - רק אם לא נמצא בכותרת או תיאור
+        if (!foundInTitle && !foundInDetail) {
+          // חפש קודם ב-userElements ואז ב-originalElements
+          String? matchedItem = _searchInItems(categoryItem, queryLower);
+          if (matchedItem != null) {
+            itemsResults.add(SearchResult(
+              item: categoryItem,
+              matchType: MatchType.items,
+              matchedText: matchedItem,
+              searchQuery: query,
+              priority: 3,
+            ));
+          }
         }
       }
 
-      // 3. חיפוש ברשימת פריטים (עדיפות שלישית) - רק אם לא נמצא בכותרת או תיאור
-      if (!foundInTitle && !foundInDetail) {
-        // חפש קודם ב-userElements ואז ב-originalElements
-        String? matchedItem = _searchInItems(categoryItem, queryLower);
-        if (matchedItem != null) {
-          itemsResults.add(SearchResult(
-            item: categoryItem,
-            matchType: MatchType.items,
-            matchedText: matchedItem,
-            searchQuery: query,
-            priority: 3,
-          ));
-        }
-      }
-    }
+      // איחוד התוצאות לפי סדר עדיפויות
+      final List<SearchResult> combinedResults = [
+        ...titleResults,
+        ...detailResults,
+        ...itemsResults,
+      ];
 
-    // איחוד התוצאות לפי סדר עדיפויות
-    final List<SearchResult> combinedResults = [
-      ...titleResults,
-      ...detailResults,
-      ...itemsResults,
-    ];
+      setState(() {
+        _searchResults = combinedResults;
+        _isSearching = false;
+      });
 
-    setState(() {
-      _searchResults = combinedResults;
-      _isSearching = false;
-    });
   }
 
   String? _searchInItems(ItemModel categoryItem, String queryLower) {
@@ -171,13 +172,28 @@ class SearchScreenState extends State<SearchScreen> {
   }
 
   // Widget להדגשת טקסט עם חיפוש
-  Widget _buildHighlightedText(String text, String query, {int maxLines = 2}) {
+  Widget _buildHighlightedText(
+      String text,
+      String query, {
+        int maxLines = 2,
+        bool isTitle = false,
+        double? fontSize,
+      }) {
+    final defaultStyle = TextStyle(
+      color: Colors.grey[700],
+      fontWeight: isTitle ? FontWeight.bold : FontWeight.normal,
+      fontSize: fontSize ?? (isTitle ? 18 : 14),
+    );
+
+    // תמיד נחזיר RichText, גם כשאין התאמה
     if (query.isEmpty || !text.toLowerCase().contains(query.toLowerCase())) {
-      return Text(
-        text,
+      return RichText(
         maxLines: maxLines,
         overflow: TextOverflow.ellipsis,
-        style: TextStyle(color: Colors.grey[700]),
+        text: TextSpan(
+          text: text,
+          style: defaultStyle,
+        ),
       );
     }
 
@@ -193,14 +209,14 @@ class SearchScreenState extends State<SearchScreen> {
       if (indexOf > start) {
         matches.add(TextSpan(
           text: text.substring(start, indexOf),
-          style: TextStyle(color: Colors.grey[700]),
+          style: defaultStyle,
         ));
       }
 
       // הטקסט המודגש
       matches.add(TextSpan(
         text: text.substring(indexOf, indexOf + query.length),
-        style: const TextStyle(
+        style: defaultStyle.copyWith(
           backgroundColor: Colors.yellow,
           color: Colors.black,
           fontWeight: FontWeight.bold,
@@ -211,21 +227,23 @@ class SearchScreenState extends State<SearchScreen> {
       indexOf = lowerText.indexOf(lowerQuery, start);
     }
 
-    // הוסף את השארית
+    // השארית
     if (start < text.length) {
       matches.add(TextSpan(
         text: text.substring(start),
-        style: TextStyle(color: Colors.grey[700]),
+        style: defaultStyle,
       ));
     }
 
     return RichText(
       maxLines: maxLines,
       overflow: TextOverflow.ellipsis,
-      text: TextSpan(children: matches),
+      text: TextSpan(
+        style: defaultStyle,
+        children: matches,
+      ),
     );
   }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -325,6 +343,9 @@ class SearchScreenState extends State<SearchScreen> {
                     result.item.userTitle ?? result.item.originalTitle,
                     result.searchQuery,
                     maxLines: 1,
+                    isTitle: true,
+
+
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -352,18 +373,8 @@ class SearchScreenState extends State<SearchScreen> {
                   result.matchedText,
                   result.searchQuery,
                   maxLines: 2,
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Text(
-                      result.item.category,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                  ],
+                    // isTitle: true
+                  fontSize: 15
                 ),
               ],
             ),

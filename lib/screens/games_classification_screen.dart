@@ -4,6 +4,7 @@ import '../models/category.dart';
 import '../models/item_model.dart';
 import '../services/storage_service.dart';
 import '../screens/category_screen.dart';
+import '../widgets/game_classification_card.dart';  // Import the new widget
 
 class GamesClassificationScreen extends StatefulWidget {
   const GamesClassificationScreen({super.key});
@@ -31,15 +32,10 @@ class _GamesClassificationScreenState extends State<GamesClassificationScreen> {
 
     // Group games by classification
     for (var game in allGames) {
-      print(game.originalTitle);
-      print(game.classification);
       final classification = game.classification ?? 'אחר';
       _classifications.add(classification);
-
       _categorizedGames.putIfAbsent(classification, () => []).add(game);
     }
-    print(allGames);
-    print(_classifications);
 
     setState(() {});
   }
@@ -75,72 +71,25 @@ class _GamesClassificationScreenState extends State<GamesClassificationScreen> {
           final games = _categorizedGames[classification] ?? [];
           final isAllGames = classification == 'all';
 
-          return Card(
-            elevation: isAllGames ? 4 : 2,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: InkWell(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => CategoryScreen(
-                      category: CategoryType.games,
-                      classification: isAllGames ? null : classification,
-                    ),
-                  ),
-                );
-              },
-              borderRadius: BorderRadius.circular(12),
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: isAllGames
-                        ? [Colors.purple[600]!, Colors.purple[800]!]
-                        : [Colors.purple[400]!, Colors.purple[600]!],
+          return GameClassificationCard(
+            title: isAllGames ? 'כל המשחקים' : classification,
+            itemCount: games.length,
+            icon: isAllGames ? Icons.sports_esports : Icons.category,
+            isHighlighted: isAllGames,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => CategoryScreen(
+                    category: CategoryType.games,
+                    classification: isAllGames ? null : classification,
                   ),
                 ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      isAllGames ? Icons.sports_esports : Icons.category,
-                      size: isAllGames ? 40 : 36,
-                      color: Colors.white,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      isAllGames ? 'כל המשחקים' : classification,
-                      style: TextStyle(
-                        fontSize: isAllGames ? 16 : 14,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 4),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.3),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text(
-                        '${games.length} משחקים',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+              ).then((_) {
+                // Reload games after returning
+                _loadGames();
+              });
+            },
           );
         },
       ),

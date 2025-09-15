@@ -15,6 +15,12 @@ enum CategoryType {
 
 
 
+enum CategoryEntry {
+  title, detail, link, classification, equipment, elements,
+}
+
+
+
 /*
   games('משחקים', Icons.sports_esports),
       games('משחקים', Icons.casino),

@@ -11,7 +11,7 @@ class AppProvider extends ChangeNotifier {
   };
 
   bool _isSelectionMode = false;
-  final Set<String> _selectedItems = {};
+  final Set<int> _selectedItems = {};
 
   SortingMethod getSortingMethod(CategoryType category) {
     return _sortingMethods[category] ?? SortingMethod.original;
@@ -23,7 +23,7 @@ class AppProvider extends ChangeNotifier {
   }
 
   bool get isSelectionMode => _isSelectionMode;
-  Set<String> get selectedItems => _selectedItems;
+  Set<int> get selectedItems => _selectedItems;
 
   void toggleSelectionMode() {
     _isSelectionMode = !_isSelectionMode;
@@ -33,7 +33,7 @@ class AppProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void toggleItemSelection(String itemId) {
+  void toggleItemSelection(int itemId) {
     if (_selectedItems.contains(itemId)) {
       _selectedItems.remove(itemId);
     } else {

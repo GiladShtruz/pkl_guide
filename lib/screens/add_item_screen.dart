@@ -1,4 +1,6 @@
 // lib/screens/add_item_screen.dart
+import 'dart:ffi';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/category.dart';
@@ -23,6 +25,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
   final _detailController = TextEditingController();
   final _linkController = TextEditingController();
   final _classificationController = TextEditingController();
+  final _equipmentController = TextEditingController();
   final _contentController = TextEditingController();
   final List<String> _contentList = [];
 
@@ -32,6 +35,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
     _detailController.dispose();
     _linkController.dispose();
     _classificationController.dispose();
+    _equipmentController.dispose();
     _contentController.dispose();
     super.dispose();
   }
@@ -56,7 +60,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
       final storageService = context.read<StorageService>();
 
       // Generate unique ID for user-created item
-      final id = 'USER-${widget.category.name}-${DateTime.now().millisecondsSinceEpoch}';
+      final id = DateTime.now().millisecondsSinceEpoch % 100000000;
 
       final newItem = ItemModel(
         id: id,
@@ -67,16 +71,20 @@ class _AddItemScreenState extends State<AddItemScreen> {
         originalLink: _linkController.text.isNotEmpty
             ? _linkController.text
             : null,
-        userClassification: _classificationController.text.isNotEmpty
+        originalClassification: _classificationController.text.isNotEmpty
             ? _classificationController.text
+            : null,
+        originalEquipment: _equipmentController.text.isNotEmpty
+            ? _equipmentController.text
             : null,
         originalElements: _contentList,
         userElements: [],
         category: widget.category.name,
         isUserCreated: true,
+        lastAccessed: DateTime.now(),
       );
 
-       await storageService.addItem(newItem);
+      await storageService.addItem(newItem);
 
       if (mounted) {
         Navigator.pop(context);
@@ -88,7 +96,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('${widget.category.displayName} חדש'),
+        title: Text(_getCategoryAddName()),
         centerTitle: true,
       ),
       body: Form(
@@ -100,6 +108,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
             children: [
               TextFormField(
                 controller: _nameController,
+                textInputAction: TextInputAction.next,
                 decoration: const InputDecoration(
                   labelText: 'שם',
                   border: OutlineInputBorder(),
@@ -115,6 +124,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
 
               TextFormField(
                 controller: _detailController,
+
                 decoration: const InputDecoration(
                   labelText: 'תיאור (אופציונלי)',
                   border: OutlineInputBorder(),
@@ -133,6 +143,19 @@ class _AddItemScreenState extends State<AddItemScreen> {
               ),
               const SizedBox(height: 16),
 
+              // Add equipment field
+              TextFormField(
+                controller: _equipmentController,
+                decoration: const InputDecoration(
+                  labelText: 'ציוד נדרש (אופציונלי)',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.sports_soccer),
+                  hintText: 'לדוגמה: כדור, חבל, נייר וצבעים',
+                ),
+                maxLines: 2,
+              ),
+              const SizedBox(height: 16),
+
               // Add classification field for games and activities
               if (widget.category == CategoryType.games ||
                   widget.category == CategoryType.activities) ...[
@@ -141,14 +164,14 @@ class _AddItemScreenState extends State<AddItemScreen> {
                   decoration: const InputDecoration(
                     labelText: 'סיווג (אופציונלי)',
                     border: OutlineInputBorder(),
-                    hintText: 'לדוגמא: כיתה, בחוץ, שטח',
+                    hintText: 'לדוגמה: כיתה, בחוץ, שטח',
                   ),
                 ),
                 const SizedBox(height: 24),
               ],
 
               Text(
-                _getContentLabel(),
+                "${_getContentLabel()} (אופציונלי)",
                 style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -165,7 +188,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
                         hintText: _getContentHint(),
                         border: const OutlineInputBorder(),
                       ),
-                      onSubmitted: (_) => _addContent(),
+                      onEditingComplete: _addContent,
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -192,10 +215,10 @@ class _AddItemScreenState extends State<AddItemScreen> {
                           backgroundColor: Colors.blue[100],
                           child: Text('${index + 1}'),
                         ),
-                        title: Text(_contentList[index]),
+                        title: Text(_contentList[_contentList.length - index - 1]),
                         trailing: IconButton(
                           icon: const Icon(Icons.delete, color: Colors.red),
-                          onPressed: () => _removeContent(index),
+                          onPressed: () => _removeContent(_contentList.length - index - 1),
                         ),
                       );
                     },
@@ -211,6 +234,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
         label: const Text('שמור'),
         icon: const Icon(Icons.save),
       ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
   }
 
@@ -239,4 +263,18 @@ class _AddItemScreenState extends State<AddItemScreen> {
         return 'הוסף קטע...';
     }
   }
+
+  String _getCategoryAddName() {
+    switch (widget.category) {
+      case CategoryType.games:
+        return 'משחק חדש';
+      case CategoryType.activities:
+        return 'פעילות חדשה';
+      case CategoryType.riddles:
+        return 'חידה חדשה';
+      case CategoryType.texts:
+        return 'קטע חדש';
+    }
+  }
+
 }

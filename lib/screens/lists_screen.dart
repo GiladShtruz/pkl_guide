@@ -22,7 +22,7 @@ class ListsScreen extends StatefulWidget {
 
 class _ListsScreenState extends State<ListsScreen> {
   bool _isEditMode = false;
-  final Set<String> _selectedLists = {};
+  final Set<int> _selectedLists = {};
   late ListsService _listsService;
   ListSortMethod _sortMethod = ListSortMethod.original;
 
@@ -157,7 +157,7 @@ class _ListsScreenState extends State<ListsScreen> {
             ),
             if (lists.length > 1) // Only show if there are custom lists
               IconButton(
-                icon: Icon(_isEditMode ? Icons.close : Icons.delete_outline),
+                icon: Icon(_isEditMode ? Icons.close : Icons.edit),
                 onPressed: _toggleEditMode,
               ),
           ],

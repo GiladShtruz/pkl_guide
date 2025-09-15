@@ -45,12 +45,12 @@ class StorageService {
   }
 
   // Delete item
-  Future<void> deleteItem(String itemId) async {
+  Future<void> deleteItem(int itemId) async {
     await appDataBox.delete(itemId);
   }
 
   // Update item title
-  Future<void> updateItemTitle(String itemId, String newTitle) async {
+  Future<void> updateItemTitle(int itemId, String newTitle) async {
     final item = appDataBox.get(itemId);
     if (item != null) {
       item.updateTitle(newTitle);
@@ -59,7 +59,7 @@ class StorageService {
   }
 
   // Update item detail
-  Future<void> updateItemDetail(String itemId, String? newDetail) async {
+  Future<void> updateItemDetail(int itemId, String? newDetail) async {
     final item = appDataBox.get(itemId);
     if (item != null) {
       item.updateDetail(newDetail);
@@ -68,7 +68,7 @@ class StorageService {
   }
 
   // Update item link
-  Future<void> updateItemLink(String itemId, String? newLink) async {
+  Future<void> updateItemLink(int itemId, String? newLink) async {
     final item = appDataBox.get(itemId);
     if (item != null) {
       item.updateLink(newLink);
@@ -77,7 +77,7 @@ class StorageService {
   }
 
   // Update item classification
-  Future<void> updateItemClassification(String itemId, String? newClassification) async {
+  Future<void> updateItemClassification(int itemId, String? newClassification) async {
     final item = appDataBox.get(itemId);
     if (item != null) {
       item.updateClassification(newClassification);
@@ -86,7 +86,7 @@ class StorageService {
   }
 
   // Update item equipment
-  Future<void> updateItemEquipment(String itemId, String? newEquipment) async {
+  Future<void> updateItemEquipment(int itemId, String? newEquipment) async {
     final item = appDataBox.get(itemId);
     if (item != null) {
       item.updateEquipment(newEquipment);
@@ -95,7 +95,7 @@ class StorageService {
   }
 
   // Add user element to existing item
-  Future<void> addUserElement(String itemId, String newItem) async {
+  Future<void> addUserElement(int itemId, String newItem) async {
     final item = appDataBox.get(itemId);
     if (item != null) {
       item.addUserElement(newItem);
@@ -104,7 +104,7 @@ class StorageService {
   }
 
   // Remove user element from existing item
-  Future<void> removeUserElement(String itemId, String itemToRemove) async {
+  Future<void> removeUserElement(int itemId, String itemToRemove) async {
     final item = appDataBox.get(itemId);
     if (item != null) {
       item.removeUserElement(itemToRemove);
@@ -113,7 +113,7 @@ class StorageService {
   }
 
   // Reset methods
-  Future<void> resetItemTitle(String itemId) async {
+  Future<void> resetItemTitle(int itemId) async {
     final item = appDataBox.get(itemId);
     if (item != null) {
       item.resetTitle();
@@ -121,7 +121,7 @@ class StorageService {
     }
   }
 
-  Future<void> resetItemDetail(String itemId) async {
+  Future<void> resetItemDetail(int itemId) async {
     final item = appDataBox.get(itemId);
     if (item != null) {
       item.resetDetail();
@@ -129,7 +129,7 @@ class StorageService {
     }
   }
 
-  Future<void> resetItemLink(String itemId) async {
+  Future<void> resetItemLink(int itemId) async {
     final item = appDataBox.get(itemId);
     if (item != null) {
       item.resetLink();
@@ -137,7 +137,7 @@ class StorageService {
     }
   }
 
-  Future<void> resetItemClassification(String itemId) async {
+  Future<void> resetItemClassification(int itemId) async {
     final item = appDataBox.get(itemId);
     if (item != null) {
       item.resetClassification();
@@ -145,7 +145,7 @@ class StorageService {
     }
   }
 
-  Future<void> resetItemEquipment(String itemId) async {
+  Future<void> resetItemEquipment(int itemId) async {
     final item = appDataBox.get(itemId);
     if (item != null) {
       item.resetEquipment();
@@ -153,7 +153,7 @@ class StorageService {
     }
   }
 
-  Future<void> resetElements(String itemId) async {
+  Future<void> resetElements(int itemId) async {
     final item = appDataBox.get(itemId);
     if (item != null) {
       item.resetElements();
@@ -161,7 +161,7 @@ class StorageService {
     }
   }
 
-  Future<void> resetItem(String itemId) async {
+  Future<void> resetItem(int itemId) async {
     final item = appDataBox.get(itemId);
     if (item != null) {
       item.resetAll();
@@ -222,11 +222,184 @@ class StorageService {
         .toList();
   }
 
-  // TODO: getExportUserUpdateDate
-  // TODO: restoreFromJson
+// Export user data to JSON
+  Map<String, dynamic> exportUserData() {
+    final exportData = <String, dynamic>{
+      'exportDate': DateTime.now().toIso8601String(),
+      'appVersion': getVersion() ?? '1',
+      'data': [],
+      'userLists': []
+    };
+
+    // Export items data
+    final itemsData = <Map<String, dynamic>>[];
+
+    for (var item in appDataBox.values) {
+      if (item.isUserCreated) {
+        // User created items - export everything
+        itemsData.add({
+          'id': item.id,
+          'category': item.category,
+          'originalTitle': item.originalTitle,
+          'userTitle': item.userTitle,
+          'originalDetail': item.originalDetail,
+          'userDetail': item.userDetail,
+          'originalLink': item.originalLink,
+          'userLink': item.userLink,
+          'originalClassification': item.originalClassification,
+          'userClassification': item.userClassification,
+          'originalEquipment': item.originalEquipment,
+          'userEquipment': item.userEquipment,
+          'originalElements': item.originalElements,
+          'userElements': item.userElements,
+          'lastAccessed': item.lastAccessed?.toIso8601String(),
+          'clickCount': item.clickCount,
+          'isUserCreated': true,
+          'isUserChanged': item.isUserChanged,
+        });
+      } else if (item.isUserChanged) {
+        // Modified items - export only user values and metadata
+        final modifiedData = <String, dynamic>{
+          'id': item.id,
+          'category': item.category,
+          'lastAccessed': item.lastAccessed?.toIso8601String(),
+          'clickCount': item.clickCount,
+          'isUserCreated': false,
+          'isUserChanged': true,
+        };
+
+        // Add only user modified fields
+        if (item.userTitle != null) {
+          modifiedData['userTitle'] = item.userTitle;
+        }
+        if (item.userDetail != null) {
+          modifiedData['userDetail'] = item.userDetail;
+        }
+        if (item.userLink != null) {
+          modifiedData['userLink'] = item.userLink;
+        }
+        if (item.userClassification != null) {
+          modifiedData['userClassification'] = item.userClassification;
+        }
+        if (item.userEquipment != null) {
+          modifiedData['userEquipment'] = item.userEquipment;
+        }
+        if (item.userElements.isNotEmpty) {
+          modifiedData['userElements'] = item.userElements;
+        }
+
+        itemsData.add(modifiedData);
+      } else if (item.clickCount > 0 || item.lastAccessed != null) {
+        // Items with usage data only
+        itemsData.add({
+          'id': item.id,
+          'category': item.category,
+          'lastAccessed': item.lastAccessed?.toIso8601String(),
+          'clickCount': item.clickCount,
+          'isUserCreated': false,
+          'isUserChanged': false,
+        });
+      }
+    }
+
+    exportData['data'] = itemsData;
+
+    return exportData;
+  }
+
+// Import user data from JSON
+  Future<void> importUserData(Map<String, dynamic> importData) async {
+    try {
+      // Import items data
+      if (importData['data'] != null) {
+        final itemsData = importData['data'] as List;
+
+        for (var itemJson in itemsData) {
+          final itemId = itemJson['id'] as int;
+          final isUserCreated = itemJson['isUserCreated'] ?? false;
+          final isUserChanged = itemJson['isUserChanged'] ?? false;
+
+          if (isUserCreated) {
+            // Create new user item
+            final newItem = ItemModel(
+              id: itemId,
+              category: itemJson['category'],
+              originalTitle: itemJson['originalTitle'] ?? '',
+              userTitle: itemJson['userTitle'],
+              originalDetail: itemJson['originalDetail'],
+              userDetail: itemJson['userDetail'],
+              originalLink: itemJson['originalLink'],
+              userLink: itemJson['userLink'],
+              originalClassification: itemJson['originalClassification'],
+              userClassification: itemJson['userClassification'],
+              originalEquipment: itemJson['originalEquipment'],
+              userEquipment: itemJson['userEquipment'],
+              originalElements: itemJson['originalElements'] != null
+                  ? List<String>.from(itemJson['originalElements'])
+                  : [],
+              userElements: itemJson['userElements'] != null
+                  ? List<String>.from(itemJson['userElements'])
+                  : [],
+              lastAccessed: itemJson['lastAccessed'] != null
+                  ? DateTime.tryParse(itemJson['lastAccessed'])
+                  : null,
+              clickCount: itemJson['clickCount'] ?? 0,
+              isUserCreated: true,
+              isUserChanged: itemJson['isUserChanged'] ?? false,
+            );
+
+            await appDataBox.put(itemId, newItem);
+
+          } else if (isUserChanged || itemJson['clickCount'] > 0) {
+            // Update existing item with user modifications or usage data
+            final existingItem = appDataBox.get(itemId);
+
+            if (existingItem != null) {
+              // Update user modifications
+              if (itemJson['userTitle'] != null) {
+                existingItem.userTitle = itemJson['userTitle'];
+              }
+              if (itemJson['userDetail'] != null) {
+                existingItem.userDetail = itemJson['userDetail'];
+              }
+              if (itemJson['userLink'] != null) {
+                existingItem.userLink = itemJson['userLink'];
+              }
+              if (itemJson['userClassification'] != null) {
+                existingItem.userClassification = itemJson['userClassification'];
+              }
+              if (itemJson['userEquipment'] != null) {
+                existingItem.userEquipment = itemJson['userEquipment'];
+              }
+              if (itemJson['userElements'] != null) {
+                existingItem.userElements = List<String>.from(itemJson['userElements']);
+              }
+
+              // Update usage data
+              if (itemJson['clickCount'] != null) {
+                existingItem.clickCount = itemJson['clickCount'];
+              }
+              if (itemJson['lastAccessed'] != null) {
+                existingItem.lastAccessed = DateTime.tryParse(itemJson['lastAccessed']);
+              }
+
+              existingItem.isUserChanged = isUserChanged;
+
+              await existingItem.save();
+            }
+          }
+        }
+      }
+
+      print('Import completed successfully');
+    } catch (e) {
+      print('Error importing user data: $e');
+      throw Exception('Failed to import user data: $e');
+    }
+  }
 
   // Update item access
-  Future<void> updateItemAccess(String itemId) async {
+  Future<void> updateItemAccess(int itemId) async {
     ItemModel? item = appDataBox.get(itemId);
     if (item != null) {
       item.lastAccessed = DateTime.now();
@@ -236,12 +409,12 @@ class StorageService {
   }
 
   // Get item by ID
-  ItemModel? getItemById(String itemId) {
+  ItemModel? getItemById(int itemId) {
     return appDataBox.get(itemId);
   }
 
   // Check if item exists
-  bool itemExists(String itemId) {
+  bool itemExists(int itemId) {
     return appDataBox.containsKey(itemId);
   }
 

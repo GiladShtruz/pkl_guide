@@ -22,7 +22,7 @@ class ListDetailScreen extends StatefulWidget {
 class _ListDetailScreenState extends State<ListDetailScreen> {
   bool _isEditMode = false;
   bool _isReorderMode = false;
-  final Set<String> _selectedItems = {};
+  final Set<int> _selectedItems = {};
   late ListsService _listsService;
   late List<ItemModel> _items;
 
@@ -35,6 +35,11 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
 
   void _loadItems() {
     _items = _listsService.getListItems(widget.list.id);
+
+
+
+
+
   }
 
   void _toggleEditMode() {
@@ -103,7 +108,7 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('מחיקת רשימה'),
-        content: const Text('האם למחוק את הרשימה לצמיתות?'),
+        content: const Text('האם למחוק את הרשימה?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -145,6 +150,7 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
           title: Text(widget.list.name),
           centerTitle: true,
           actions: [
+            IconButton(onPressed: _openListEditScreen, icon: const Icon(Icons.edit)),
             if (!widget.list.isDefault)
               IconButton(
                 icon: const Icon(Icons.delete, color: Colors.red),
@@ -190,6 +196,7 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
                 (widget.list.detail != null && widget.list.detail!.isNotEmpty))
               GestureDetector(
                 onTap: _openListEditScreen,
+
                 child: Card(
                   margin: const EdgeInsets.all(16),
                   child: Padding(
@@ -237,16 +244,24 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
                   ? ReorderableListView.builder(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 itemCount: _items.length,
+                //key: UniqueKey(),
                 onReorder: (oldIndex, newIndex) async {
+                  setState(() {
+                    if (newIndex > oldIndex) {
+                      newIndex -= 1;
+                    }
+                    final item = _items.removeAt(oldIndex);
+                    _items.insert(newIndex, item);
+                  });
                   await _listsService.reorderListItems(
                     widget.list.id,
                     oldIndex,
                     newIndex,
                   );
-                  setState(() {
-                    _loadItems();
-                  });
-                },
+
+
+
+                                },
                 itemBuilder: (context, index) {
                   final item = _items[index];
                   return Card(
@@ -290,6 +305,7 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
                           : BorderSide.none,
                     ),
                     child: ListTile(
+                      onLongPress: _toggleEditMode,
                       leading: _isEditMode
                           ? Checkbox(
                         value: isSelected,
@@ -351,11 +367,15 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
           backgroundColor: _selectedItems.isNotEmpty ? Colors.red : Colors.grey,
           child: const Icon(Icons.delete),
         )
-            : !widget.list.isDefault
-            ? FloatingActionButton(
-          onPressed: _openListEditScreen,
-          child: const Icon(Icons.edit),
-        )
+            : _isReorderMode ?
+            FloatingActionButton(
+          onPressed: _toggleReorderMode,
+          child: const Icon(Icons.check), )
+        // ) : !widget.list.isDefault
+        //     ? FloatingActionButton(
+        //   onPressed: _openListEditScreen,
+        //   child: const Icon(Icons.edit),
+        // )
             : null,
         floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       ),

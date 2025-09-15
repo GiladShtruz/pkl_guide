@@ -122,16 +122,17 @@ class JsonService {
   ItemModel? _parseItem(Map<String, dynamic> data, CategoryType category) {
     try {
       // Extract ID from JSON
-      String? id = data['id'];
-      if (id == null || id.isEmpty) {
+      int? id = data['id'];
+      if (id == null || id.isNaN) {
         // Generate ID if not provided
-        id = 'ID-${DateTime.now().millisecondsSinceEpoch}-${data['title']?.hashCode ?? 0}';
+        id = DateTime.now().millisecondsSinceEpoch % 100;
       }
 
       String? title = data['title'];
       String? detail = data['detail'];
       String? link = data['link'];
       String? classification = data['classification'];
+      String? equipment = data['equipment'];
       List<String> elements = [];
 
       // Parse elements array
@@ -151,13 +152,14 @@ class JsonService {
         originalDetail: detail,
         originalLink: link,
         originalClassification: classification,
+        originalEquipment: equipment,
         originalElements: elements,
         category: category.name,
         isUserCreated: false,
         isUserChanged: false
       );
 
-      print('Created item: ${item.name} with ${elements.length} content elements');
+      //print('Created item: ${item.name} with ${elements.length} content elements');
       return item;
 
     } catch (e) {

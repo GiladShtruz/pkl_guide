@@ -17,10 +17,10 @@ class ListModelAdapter extends TypeAdapter<ListModel> {
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
     return ListModel(
-      id: fields[0] as String,
+      id: fields[0] as int,
       name: fields[1] as String,
       detail: fields[2] as String?,
-      categoryItemIds: (fields[3] as List).cast<String>(),
+      categoryItemIds: (fields[3] as List).cast<int>(),
       createdAt: fields[4] as DateTime,
       lastModified: fields[5] as DateTime?,
       isDefault: fields[6] as bool,

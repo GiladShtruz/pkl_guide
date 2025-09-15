@@ -20,23 +20,23 @@ class CategoryCard extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
       ),
-      child: InkWell(
-        onTap: onTap,
+      child: Material(  // עטוף ב-Material
+        color: Colors.transparent,  // שקוף כדי לראות את הגרדיאנט
         borderRadius: BorderRadius.circular(16),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(16),
-          splashColor: Colors.white.withOpacity(0.3), // ADD THIS
-          highlightColor: Colors.white.withOpacity(0.1), // ADD THIS
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: _getGradientColors(),
-              ),
+        child: Ink(  // השתמש ב-Ink במקום Container
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: _getGradientColors(),
             ),
+          ),
+          child: InkWell(  // רק InkWell אחד!
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(16),
+            splashColor: Colors.white.withOpacity(0.3),
+            highlightColor: Colors.white.withOpacity(0.1),
             child: Stack(
               children: [
                 Center(

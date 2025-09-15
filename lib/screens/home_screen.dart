@@ -1,7 +1,13 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 import '../models/category.dart';
+import '../services/import_export_service.dart';
 import '../services/storage_service.dart';
 import '../services/json_service.dart';
 import '../services/lists_service.dart';
@@ -293,14 +299,11 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ) : null,
-      body: IndexedStack(
-        index: _currentIndex,
-        children: [
-          _buildHomeGrid(),
-          SearchScreen(key: _searchKey),
-          const ListsScreen(),
-        ],
-      ),
+      body: [
+        _buildHomeGrid(),
+        SearchScreen(key: _searchKey),
+        const ListsScreen(),
+      ][_currentIndex],
       bottomNavigationBar: CustomBottomNav(
         currentIndex: _currentIndex,
         onTap: (index) {
@@ -324,83 +327,243 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildHomeGrid() {
     final storageService = context.read<StorageService>();
 
-    return RefreshIndicator(
-      onRefresh: _forceReloadData,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: GridView.builder(
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            childAspectRatio: 1.2,
-            crossAxisSpacing: 16,
-            mainAxisSpacing: 16,
-          ),
-          itemCount: CategoryType.values.length,
-          itemBuilder: (context, index) {
-            final category = CategoryType.values[index];
-            final itemCount = storageService.getAllCategoryItems(category: category).length;
-
-            return CategoryCard(
-              category: category,
-              itemCount: itemCount,
-              onTap: () {
-                if (category == CategoryType.games) {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const GamesClassificationScreen(),
-                    ),
-                  ).then((_) {
-                    setState(() {});
-                  });
-                } else {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => CategoryScreen(category: category),
-                    ),
-                  ).then((_) {
-                    setState(() {});
-                  });
-                }
-              },
-            );
-          },
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: GridView.builder(
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          childAspectRatio: 1.2,
+          crossAxisSpacing: 16,
+          mainAxisSpacing: 16,
         ),
+        itemCount: CategoryType.values.length,
+        itemBuilder: (context, index) {
+          final category = CategoryType.values[index];
+          final itemCount = storageService.getAllCategoryItems(category: category).length;
+
+          return CategoryCard(
+            category: category,
+            itemCount: itemCount,
+            onTap: () {
+              if (category == CategoryType.games) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const GamesClassificationScreen(),
+                  ),
+                ).then((_) {
+                  setState(() {});
+                });
+              } else {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => CategoryScreen(category: category),
+                  ),
+                ).then((_) {
+                  setState(() {});
+                });
+              }
+            },
+          );
+        },
       ),
     );
   }
 
+
+// החלף את הפונקציות הקיימות ב-home_screen.dart
+
   void _handleImport() async {
-    // TODO: Update ImportExportService to handle JSON format
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('ייבוא JSON בפיתוח'),
-        backgroundColor: Colors.orange,
-      ),
-    );
+    try {
+      final importExportService = ImportExportService(
+        storageService: context.read<StorageService>(),
+        listsService: context.read<ListsService>(),
+      );
+
+      final success = await importExportService.importFromFile();
+
+      if (success) {
+        setState(() {}); // Refresh UI
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('הנתונים יובאו בהצלחה'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('ביטול ייבוא'),
+            backgroundColor: Colors.grey,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('שגיאה בייבוא: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   void _handleExport() async {
-    // TODO: Update ImportExportService to export as JSON
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('ייצוא JSON בפיתוח'),
-        backgroundColor: Colors.orange,
-      ),
-    );
+    try {
+      final importExportService = ImportExportService(
+        storageService: context.read<StorageService>(),
+        listsService: context.read<ListsService>(),
+      );
+
+      // Show preview dialog
+      final preview = importExportService.getExportPreview();
+
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('ייצוא נתונים'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('פריטים שנוספו: ${preview['userCreatedItems']}'),
+              Text('פריטים ששונו: ${preview['modifiedItems']}'),
+              Text('פריטים עם נתוני שימוש: ${preview['itemsWithUsageData']}'),
+              const Divider(),
+              Text('סה"כ פריטים: ${preview['totalItems']}'),
+              Text('רשימות: ${preview['lists']}'),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('ביטול'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('ייצא'),
+            ),
+          ],
+        ),
+      );
+
+      if (confirmed == true) {
+        await importExportService.shareExport();
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('שגיאה בייצוא: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   void _handleShare() async {
-    // TODO: Update sharing to use JSON format
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('שיתוף JSON בפיתוח'),
-        backgroundColor: Colors.orange,
-      ),
-    );
-  }
+    try {
+      final importExportService = ImportExportService(
+        storageService: context.read<StorageService>(),
+        listsService: context.read<ListsService>(),
+      );
 
+      // Get preview of what will be shared
+      final preview = importExportService.getSharePreview();
+
+      if (preview['isEmpty']) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('אין תוספות או שינויים לשיתוף'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
+
+      // Show preview dialog
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('שיתוף תוספות'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('פריטים חדשים: ${preview['additionsCount']}'),
+                Text('פריטים ששונו: ${preview['modificationsCount']}'),
+                const Divider(),
+                const Text(
+                  'תצוגה מקדימה:',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.grey[300]!),
+                  ),
+                  constraints: const BoxConstraints(maxHeight: 200),
+                  child: SingleChildScrollView(
+                    child: Text(
+                      preview['text'],
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'הנתונים יישלחו דרך טופס Google',
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('ביטול'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('פתח קישור'),
+            ),
+          ],
+        ),
+      );
+
+      if (confirmed == true) {
+        final success = await importExportService.shareViaGoogleForms();
+
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('הטופס נפתח בדפדפן'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('לא ניתן לפתוח את הטופס'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('שגיאה בשיתוף: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
   void _showAbout() {
     showDialog(
       context: context,

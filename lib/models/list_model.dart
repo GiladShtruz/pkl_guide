@@ -5,7 +5,7 @@ part 'list_model.g.dart';
 @HiveType(typeId: 1)
 class ListModel extends HiveObject {
   @HiveField(0)
-  String id;
+  int id;
 
   @HiveField(1)
   String name;
@@ -14,7 +14,7 @@ class ListModel extends HiveObject {
   String? detail;
 
   @HiveField(3)
-  List<String> categoryItemIds; // References to items
+  List<int> categoryItemIds; // References to items
 
   @HiveField(4)
   DateTime createdAt;
@@ -52,7 +52,7 @@ class ListModel extends HiveObject {
       id: json['id'],
       name: json['name'],
       detail: json['detail'],
-      categoryItemIds: List<String>.from(json['categoryItemIds']),
+      categoryItemIds: List<int>.from(json['categoryItemIds']),
       createdAt: DateTime.parse(json['createdAt']),
       lastModified: json['lastModified'] != null
           ? DateTime.parse(json['lastModified'])

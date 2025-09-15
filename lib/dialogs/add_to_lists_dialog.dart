@@ -6,7 +6,7 @@ import '../services/storage_service.dart';
 import 'create_list_dialog.dart';
 
 class AddToListsDialog extends StatefulWidget {
-  final List<String> itemIds;
+  final List<int> itemIds;
   final String? itemName;
 
   const AddToListsDialog({
@@ -22,7 +22,7 @@ class AddToListsDialog extends StatefulWidget {
 class _AddToListsDialogState extends State<AddToListsDialog> {
   late ListsService _listsService;
   late StorageService _storageService;
-  final Set<String> _selectedLists = {};
+  final Set<int> _selectedLists = {};
   List<ListModel> _lists = [];
 
   @override

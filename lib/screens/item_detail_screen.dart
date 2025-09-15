@@ -1,5 +1,6 @@
 // lib/screens/item_detail_screen.dart
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:pkl_guide/screens/card_swiper_game_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -9,7 +10,6 @@ import '../services/lists_service.dart';
 import '../screens/edit_item_screen.dart';
 
 import '../dialogs/add_to_lists_dialog.dart';
-
 
 class ItemDetailScreen extends StatefulWidget {
   final ItemModel item;
@@ -90,15 +90,9 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
             icon: const Icon(Icons.bookmark_border),
             onPressed: _openListsDialog,
           ),
-          if (widget.item.link != null && widget.item.link!.isNotEmpty)
-            IconButton(
-              icon: const Icon(Icons.link),
-              onPressed: _openLink,
-              tooltip: 'פתח קישור',
-            ),
-          PopupMenuButton<String>(
-            onSelected: (value) {
-              if (value == 'edit') {
+          IconButton(
+            icon: Icon(Icons.edit),
+            onPressed: () =>
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -106,24 +100,11 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                   ),
                 ).then((_) {
                   setState(() {});
-                });
-              }
-            },
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'edit',
-                child: Row(
-                  children: [
-                    Icon(Icons.edit),
-                    SizedBox(width: 8),
-                    Text('עריכה'),
-                  ],
-                ),
-              ),
-            ],
+                }),
           ),
         ],
       ),
+
       body: CustomScrollView(
         slivers: [
           // Fixed header content
@@ -162,79 +143,36 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                     ),
                   // Detail card
                   if (widget.item.detail != null &&
-                      widget.item.detail!.isNotEmpty) ...[
-                    SizedBox(
-                      width: double.infinity,
-                      child: Card(
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    _getContentDetail(),
-                                    style: const TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  if (widget.item.userDetail != null)
-                                    const Chip(
-                                      label: Text(
-                                        'עודכן',
-                                        style: TextStyle(fontSize: 10),
-                                      ),
-                                      backgroundColor: Colors.blue,
-                                      labelStyle: TextStyle(
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                widget.item.detail!,
-                                style: const TextStyle(fontSize: 16),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
+                      widget.item.detail!.isNotEmpty)
+                    _buildInfoCard(
+                      title: _getContentDetail(),
+                      content: widget.item.detail!,
+                      icon: Icons.description,
                     ),
-                    const SizedBox(height: 16),
-                  ],
+                  if (widget.item.equipment != null &&
+                      widget.item.equipment!.isNotEmpty)
+                    _buildInfoCard(
+                      title: 'ציוד נדרש',
+                      content: widget.item.equipment!,
+                      icon: Icons.sports_soccer,
+                    ),
 
                   // Classification
                   if (widget.item.classification != null &&
-                      widget.item.classification!.isNotEmpty) ...[
-                    Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.location_on, color: Colors.grey),
-                            const SizedBox(width: 8),
-                            const Text(
-                              'מיקום: ',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Text(
-                              widget.item.classification!,
-                              style: const TextStyle(fontSize: 16),
-                            ),
-                          ],
-                        ),
-                      ),
+                      widget.item.classification!.isNotEmpty)
+                    _buildInfoCard(
+                      title: 'מיקום',
+                      content: widget.item.classification!,
+                      icon: Icons.location_on,
                     ),
-                    const SizedBox(height: 16),
-                  ],
+
+                  if (widget.item.link != null && widget.item.link!.isNotEmpty)
+                    _buildInfoCard(
+                      title: 'קישור',
+                      content: widget.item.link!,
+                      icon: Icons.link,
+                      isLink: true,
+                    ),
 
                   // Items count header
                   if (totalItems > 0) ...[
@@ -262,7 +200,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Text(
-                                  '$originalCount מקוריים',
+                                  '$originalCount פריטים',
                                   style: TextStyle(
                                     fontSize: 14,
                                     fontWeight: FontWeight.bold,
@@ -490,5 +428,93 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
       default:
         return Colors.grey;
     }
+  }
+
+  Widget _buildInfoCard({
+    required String title,
+    required String content,
+    required IconData icon,
+    bool isLink = false,
+  }) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      child: ListTile(
+        title: Row(
+          children: [
+            Icon(icon),
+            SizedBox(width: 10),
+            Text(
+              title,
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+            ),
+          ],
+        ),
+        subtitle: Text(
+          content,
+          style: isLink
+              ? const TextStyle(
+                  color: Colors.blue,
+                  decoration: TextDecoration.underline,
+                )
+              : TextStyle(),
+        ),
+        trailing: isLink
+            ? IconButton(
+                icon: const Icon(Icons.copy, size: 20),
+                onPressed: () => _copyToClipboard(widget.item.link!),
+              )
+            : null,
+        onTap: isLink ? () => _launchURL(widget.item.link!) : null,
+      ),
+    );
+  }
+
+  void _copyToClipboard(String text) {
+    Clipboard.setData(ClipboardData(text: text));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('הועתק ללוח'),
+        duration: Duration(seconds: 1),
+      ),
+    );
+  }
+
+  void _launchURL(String url) async {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('האם לפתוח את הקישור?'),
+
+          actions: <Widget>[
+            TextButton(
+              child: Text('ביטול'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: Text('פתח'),
+              onPressed: () async {
+                if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                  url = 'https://$url';
+                }
+                final Uri uri = Uri.parse(url);
+                if (await canLaunchUrl(uri)) {
+                  await launchUrl(uri);
+                } else {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('לא ניתן לפתוח את הקישור')),
+                    );
+                  }
+                }
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
   }
 }
