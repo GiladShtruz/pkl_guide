@@ -36,7 +36,7 @@ dependencies:
   path_provider: ^2.1.5
 
   #flutter_riverpod: ^2.6.1 # לניהול state (קל להרחבה)
-#  vibration: ^1.7.4
+  vibration: ^3.1.3
   audioplayers: ^6.5.0
   provider: ^6.1.1
   swipable_stack: ^2.0.0
@@ -68,7 +68,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/pkl.csv
-    - assets/sounds/timer_end.aac
+    - assets/sounds/timer_end.mp3
     - assets/data.json
 
 

@@ -1,11 +1,13 @@
 import 'dart:async';
 import 'dart:math';
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 // import 'package:vibration/vibration.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_card_swiper/flutter_card_swiper.dart';
+import 'package:vibration/vibration.dart';
 import '../models/item_model.dart';
 
 class SwitchCardGameScreen extends StatefulWidget {
@@ -36,6 +38,8 @@ class _SwitchCardGameScreenState extends State<SwitchCardGameScreen>
   late Animation<double> _timerAnimation;
   List<String> _correctWords = [];
   List<String> _skippedWords = [];
+  final AudioPlayer _audioPlayer = AudioPlayer();
+
 
   @override
   void initState() {
@@ -63,6 +67,7 @@ class _SwitchCardGameScreenState extends State<SwitchCardGameScreen>
     _timer?.cancel();
     _timerAnimationController.dispose();
     _controller.dispose();
+    _audioPlayer.dispose();
     super.dispose();
   }
 
@@ -213,6 +218,8 @@ class _SwitchCardGameScreenState extends State<SwitchCardGameScreen>
     _timer?.cancel();
     _timerAnimationController.stop();
     _timerAnimationController.reset();
+    _audioPlayer.stop();
+
 
     setState(() {
       _isPlaying = false;
@@ -224,7 +231,7 @@ class _SwitchCardGameScreenState extends State<SwitchCardGameScreen>
     _shuffleWords();
   }
 
-  void _endRound() {
+  void _endRound() async {
     _timer?.cancel();
     _timerAnimationController.stop();
 
@@ -237,12 +244,11 @@ class _SwitchCardGameScreenState extends State<SwitchCardGameScreen>
         _team2Score += _currentRoundScore;
       }
     });
-
-    // Vibrate and play sound
-    // if (Vibration.hasVibrator() != null) {
-    //   Vibration.vibrate(duration: 500);
-    // }
-
+    if (await Vibration.hasVibrator() ?? false) {
+    Vibration.vibrate(duration: 500); // רטט חצי שניה
+    }
+    // Play a sound (you can use a local asset or URL)
+    await _audioPlayer.play(AssetSource('sounds/timer_end.mp3'));
     _showRoundSummary();
   }
 
@@ -375,7 +381,7 @@ class _SwitchCardGameScreenState extends State<SwitchCardGameScreen>
                 const SizedBox(height: 12),
                 const Center(
                   child: Text(
-                    'לא שיחקתם מילים בסיבוב זה',
+                    'לא שיחקתם בסיבוב זה',
                     style: TextStyle(
                       fontSize: 14,
                       color: Colors.grey,
