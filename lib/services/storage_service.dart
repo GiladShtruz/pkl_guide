@@ -189,11 +189,11 @@ class StorageService {
     return SortingMethod.original;
   }
 
-  Future<void> saveVersion(String version) async {
+  Future<void> saveVersion(int version) async {
     await settingsBox.put('json_version', version);
   }
 
-  String? getVersion() {
+  int? getVersion() {
     return settingsBox.get('json_version');
   }
 

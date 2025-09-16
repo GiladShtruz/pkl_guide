@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
@@ -71,50 +72,22 @@ class _HomeScreenState extends State<HomeScreen> {
     _checkForUpdatesInBackground();
   }
 
-  Future<void> _checkForUpdatesInBackground() async {
-    // Small delay to let UI render first
-    await Future.delayed(const Duration(seconds: 1));
+  void _checkForUpdatesInBackground() {
+    // Run update check in background without blocking UI
+    Future.delayed(Duration(seconds: 1), () {
+      if (mounted) {
+        final jsonService = context.read<JsonService>();
 
-    if (!mounted) return;
+        // Use the compute version for true background processing
+        jsonService.checkForOnlineUpdates();
 
-    try {
-      final jsonService = context.read<JsonService>();
-      final updateInfo = await jsonService.checkForUpdates();
-
-      if (updateInfo != null && mounted) {
-        setState(() {
-          _hasUpdate = true;
-          _updateInfo = updateInfo;
-        });
-
-        _showUpdateDialog();
+        // Alternative: Use the simple version if compute causes issues
+        // jsonService.checkForOnlineUpdatesSimple();
       }
-    } catch (e) {
-      print('Error checking for updates: $e');
-    }
+    });
   }
 
-  void _showUpdateDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => UpdateDialog(
-        onConfirm: () async {
-          final jsonService = context.read<JsonService>();
-          await jsonService.updateFromOnline(
-            _updateInfo!['data'],
-            _updateInfo!['version'],
-          );
-          setState(() {
-            _hasUpdate = false;
-            _updateInfo = null;
-          });
-        },
-        onDecline: () {
-          // Keep the update button visible
-        },
-      ),
-    );
-  }
+
 
   Future<void> _forceReloadData() async {
     // Clear all data
@@ -196,21 +169,11 @@ class _HomeScreenState extends State<HomeScreen> {
         title: const Text('פק״ל למדריך'),
         centerTitle: true,
         actions: [
-          if (_hasUpdate)
-            IconButton(
-              icon: const Icon(Icons.update, color: Colors.orange),
-              onPressed: _showUpdateDialog,
-              tooltip: 'עדכון זמין',
-            ),
-          IconButton(
-              icon: Icon(Icons.adb_sharp),
-            onPressed: (){
-                var s = StorageService();
-
-
-
-
-          }, ),
+          // IconButton(
+          //     icon: Icon(Icons.adb_sharp),
+          //   onPressed: (){
+          //     _checkForUpdatesInBackground();
+          // }, ),
           PopupMenuButton<String>(
             onSelected: (value) async {
               switch (value) {
@@ -265,26 +228,26 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
               ),
-              const PopupMenuItem(
-                value: 'reload',
-                child: Row(
-                  children: [
-                    Icon(Icons.refresh),
-                    SizedBox(width: 8),
-                    Text('טען מחדש'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'reset',
-                child: Row(
-                  children: [
-                    Icon(Icons.restore, color: Colors.orange),
-                    SizedBox(width: 8),
-                    Text('אפס לנתונים מקוריים'),
-                  ],
-                ),
-              ),
+              // const PopupMenuItem(
+              //   value: 'reload',
+              //   child: Row(
+              //     children: [
+              //       Icon(Icons.refresh),
+              //       SizedBox(width: 8),
+              //       Text('טען מחדש'),
+              //     ],
+              //   ),
+              // ),
+              // const PopupMenuItem(
+              //   value: 'reset',
+              //   child: Row(
+              //     children: [
+              //       Icon(Icons.restore, color: Colors.orange),
+              //       SizedBox(width: 8),
+              //       Text('אפס לנתונים מקוריים'),
+              //     ],
+              //   ),
+              // ),
               const PopupMenuItem(
                 value: 'about',
                 child: Row(

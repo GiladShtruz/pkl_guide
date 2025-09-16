@@ -2,14 +2,17 @@
 import 'dart:convert';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
+import 'package:flutter/foundation.dart';
 import '../models/item_model.dart';
 import '../models/category.dart';
 import 'storage_service.dart';
 
 class JsonService {
   final StorageService storageService;
-  static const String onlineJsonUrl =
-      'https://your-server.com/data.json'; // Replace with actual URL
+
+  // Version check URL
+  static const String versionCheckUrl =
+      'https://drive.google.com/uc?export=download&id=1gx4d_8yPdlaMhlcDzdyK-sCBcT66HD5r';
 
   JsonService(this.storageService);
 
@@ -26,8 +29,8 @@ class JsonService {
         print('Data already exists in Hive');
       }
 
-      // Check for updates in background
-      checkForUpdates();
+      // Check for updates in background (non-blocking)
+      checkForOnlineUpdates();
     } catch (e) {
       print('Error loading initial data: $e');
     }
@@ -44,28 +47,148 @@ class JsonService {
     }
   }
 
-  Future<Map<String, dynamic>?> checkForUpdates() async {
+  /// Check for updates from online version file (runs in background)
+  void checkForOnlineUpdates() {
+    // Run in background using compute
+    // bool isComputeDoTrouble = false;
     try {
-      final response = await http.get(Uri.parse(onlineJsonUrl));
-      if (response.statusCode == 200) {
-        final jsonData = json.decode(utf8.decode(response.bodyBytes));
-        final newVersion = jsonData['version'] ?? 0;
-        final currentVersion = int.tryParse(storageService.getVersion() ?? '0') ?? 0;
-
-        if (newVersion > currentVersion) {
-          return {
-            'version': newVersion.toString(),
-            'data': jsonData,
-          };
+      compute(_checkAndUpdateInBackground, {
+        'versionCheckUrl': versionCheckUrl,
+        'currentVersion': storageService.getVersion() ?? 1,
+      }).then((result) {
+        if (result != null && result['shouldUpdate'] == true) {
+          // Update found and downloaded - save to storage
+          _saveUpdateData(result['data'], result['version']);
         }
+      }).catchError((error) {
+        print('Background update check failed: $error');
+
+      });
+    }
+    catch (e){
+
+    }
+    // if (isComputeDoTrouble){
+    //   print("start");
+    //   checkForOnlineUpdatesSimple();
+    // }
+  }
+
+  /// Background function for checking and downloading updates
+  /// Must be static or top-level for compute
+  static Future<Map<String, dynamic>?> _checkAndUpdateInBackground(
+      Map<String, dynamic> params) async {
+    try {
+      final versionCheckUrl = params['versionCheckUrl'] as String;
+      final currentVersion = params['currentVersion'] as int;
+
+      print('Checking for updates in background...');
+
+      // Step 1: Get version info from Google Drive
+      final versionResponse = await http.get(Uri.parse(versionCheckUrl));
+      if (versionResponse.statusCode != 200) {
+        print('Failed to fetch version info');
+        return null;
       }
+
+      final versionData = json.decode(utf8.decode(versionResponse.bodyBytes));
+      final newVersion = versionData['version'] ?? 0;
+      final dataUrl = versionData['dataUrl'];
+
+      print('Current version: $currentVersion, Available version: $newVersion');
+
+      // Step 2: Check if update is needed
+      if (newVersion <= currentVersion || dataUrl == null) {
+        print('No update needed');
+        return null;
+      }
+
+      print('Update available! Downloading from: $dataUrl');
+
+      // Step 3: Download new data
+      final dataResponse = await http.get(Uri.parse(dataUrl));
+      if (dataResponse.statusCode != 200) {
+        print('Failed to download data');
+        return null;
+      }
+
+      final jsonData = json.decode(utf8.decode(dataResponse.bodyBytes));
+
+      return {
+        'shouldUpdate': true,
+        'version': newVersion,
+        'data': jsonData,
+      };
+    } catch (e) {
+      print('Error in background update check: $e');
+      return null;
+    }
+  }
+
+  /// Save update data to storage (runs on main thread)
+  Future<void> _saveUpdateData(Map<String, dynamic> jsonData, int version) async {
+    try {
+      print('Saving update data with version: $version');
+
+      // Clear existing app data (but keep user data)
+      await storageService.appDataBox.clear();
+
+      // Parse and save new data
+      await parseAndSaveJson(jsonData, isUpdate: true);
+      await storageService.saveVersion(version);
+
+      print('Update saved successfully');
+    } catch (e) {
+      print('Error saving update data: $e');
+    }
+  }
+
+  /// Alternative: Check for updates without compute (simpler but blocks UI briefly)
+  Future<void> checkForOnlineUpdatesSimple() async {
+    try {
+      print('Checking for updates...');
+
+      // Get version info
+      final versionResponse = await http.get(Uri.parse(versionCheckUrl));
+      if (versionResponse.statusCode != 200) {
+        print('Failed to fetch version info');
+        return;
+      }
+
+      final versionData = json.decode(utf8.decode(versionResponse.bodyBytes));
+      final newVersion = versionData['version'] ?? 0;
+      final dataUrl = versionData['dataUrl'];
+      final currentVersion = storageService.getVersion() ?? 1;
+
+      print('Current version: $currentVersion, Available version: $newVersion');
+
+      // Check if update is needed
+      if (newVersion <= currentVersion || dataUrl == null) {
+        print('No update needed');
+        return;
+      }
+
+      print('Update available! Downloading...');
+
+      // Download new data
+      final dataResponse = await http.get(Uri.parse(dataUrl));
+      if (dataResponse.statusCode != 200) {
+        print('Failed to download data');
+        return;
+      }
+
+      final jsonData = json.decode(utf8.decode(dataResponse.bodyBytes));
+
+      // Update data
+      await updateFromOnline(jsonData, newVersion);
+
+      print('Update completed successfully');
     } catch (e) {
       print('Error checking for updates: $e');
     }
-    return null;
   }
 
-  Future<void> updateFromOnline(Map<String, dynamic> jsonData, String version) async {
+  Future<void> updateFromOnline(Map<String, dynamic> jsonData, int version) async {
     // Clear existing app data (but keep user data)
     await storageService.appDataBox.clear();
 
@@ -85,7 +208,6 @@ class JsonService {
       // Parse each category
       categories.forEach((categoryKey, categoryItems) {
         print('Parsing category: $categoryKey');
-        print('Category appItems: $categoryItems');
 
         final category = _getCategoryType(categoryKey);
         print('Parsing category: $categoryKey as ${category.name}');
@@ -105,7 +227,7 @@ class JsonService {
 
       // Save to storage
       await storageService.saveAppData(appItems);
-      await storageService.saveVersion(version.toString());
+      await storageService.saveVersion(version);
 
       if (isUpdate) {
         print('Update completed');
@@ -147,19 +269,18 @@ class JsonService {
       }
 
       final item = ItemModel(
-        id: id,
-        originalTitle: title,
-        originalDetail: detail,
-        originalLink: link,
-        originalClassification: classification,
-        originalEquipment: equipment,
-        originalElements: elements,
-        category: category.name,
-        isUserCreated: false,
-        isUserChanged: false
+          id: id,
+          originalTitle: title,
+          originalDetail: detail,
+          originalLink: link,
+          originalClassification: classification,
+          originalEquipment: equipment,
+          originalElements: elements,
+          category: category.name,
+          isUserCreated: false,
+          isUserChanged: false
       );
 
-      //print('Created item: ${item.name} with ${elements.length} content elements');
       return item;
 
     } catch (e) {
@@ -191,15 +312,6 @@ class JsonService {
 
   Future<void> resetToOriginal(CategoryType? category) async {
     if (category != null) {
-      // Remove user created items for specific category
-      final userItems = storageService.getUserCreatedItems()
-          .where((item) => item.category == category.name)
-          .toList();
-
-      // for (var item in userItems) {
-      //   await storageService.deleteUserCreatedItem(item.id);
-      // }
-
       // Reset modifications in app data items for this category
       final appItems = storageService.getAppData()
           .where((item) => item.category == category.name)
@@ -209,16 +321,10 @@ class JsonService {
         await storageService.resetItem(item.id);
       }
     } else {
-      // Reset all user modifications
-      // await storageService.userBox.clear();
-
       // Reset all modifications in app data
       for (var item in storageService.getAppData()) {
         await storageService.resetItem(item.id);
       }
     }
-
-    // Optionally reload from original data
-    // await loadFromLocalJson();
   }
 }
