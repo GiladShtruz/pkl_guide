@@ -2,6 +2,7 @@
 import 'dart:ffi';
 
 import 'package:flutter/material.dart';
+import 'package:pkl_guide/models/element_model.dart';
 import 'package:provider/provider.dart';
 import '../models/category.dart';
 import '../models/item_model.dart';
@@ -27,7 +28,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
   final _classificationController = TextEditingController();
   final _equipmentController = TextEditingController();
   final _contentController = TextEditingController();
-  final List<String> _contentList = [];
+  final List<ElementModel> _contentList = [];
 
   @override
   void dispose() {
@@ -43,7 +44,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
   void _addContent() {
     if (_contentController.text.isNotEmpty) {
       setState(() {
-        _contentList.add(_contentController.text);
+        _contentList.add(ElementModel(_contentController.text, true));
         _contentController.clear();
       });
     }
@@ -77,8 +78,8 @@ class _AddItemScreenState extends State<AddItemScreen> {
         originalEquipment: _equipmentController.text.isNotEmpty
             ? _equipmentController.text
             : null,
-        originalElements: _contentList,
-        userElements: [],
+        elements: _contentList,
+
         category: widget.category.name,
         isUserCreated: true,
         lastAccessed: DateTime.now(),
@@ -215,7 +216,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
                           backgroundColor: Colors.blue[100],
                           child: Text('${index + 1}'),
                         ),
-                        title: Text(_contentList[_contentList.length - index - 1]),
+                        title: Text(_contentList[_contentList.length - index - 1].text),
                         trailing: IconButton(
                           icon: const Icon(Icons.delete, color: Colors.red),
                           onPressed: () => _removeContent(_contentList.length - index - 1),

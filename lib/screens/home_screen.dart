@@ -15,7 +15,7 @@ import '../services/lists_service.dart';
 
 import '../widgets/category_card.dart';
 import '../widgets/bottom_nav.dart';
-import '../screens/category_screen.dart';
+import '../screens/category_items_screen.dart';
 import '../screens/games_classification_screen.dart';
 import '../screens/search_screen.dart';
 import '../screens/lists_screen.dart';
@@ -228,16 +228,16 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
               ),
-              // const PopupMenuItem(
-              //   value: 'reload',
-              //   child: Row(
-              //     children: [
-              //       Icon(Icons.refresh),
-              //       SizedBox(width: 8),
-              //       Text('טען מחדש'),
-              //     ],
-              //   ),
-              // ),
+              const PopupMenuItem(
+                value: 'reload',
+                child: Row(
+                  children: [
+                    Icon(Icons.refresh),
+                    SizedBox(width: 8),
+                    Text('טען מחדש'),
+                  ],
+                ),
+              ),
               // const PopupMenuItem(
               //   value: 'reset',
               //   child: Row(
@@ -321,7 +321,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => CategoryScreen(category: category),
+                    builder: (context) => CategoryItemsScreen(category: category),
                   ),
                 ).then((_) {
                   setState(() {});

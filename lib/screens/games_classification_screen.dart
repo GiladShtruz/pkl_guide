@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import '../models/category.dart';
 import '../models/item_model.dart';
 import '../services/storage_service.dart';
-import '../screens/category_screen.dart';
+import '../screens/category_items_screen.dart';
 import '../widgets/game_classification_card.dart';  // Import the new widget
 
 class GamesClassificationScreen extends StatefulWidget {
@@ -80,7 +80,7 @@ class _GamesClassificationScreenState extends State<GamesClassificationScreen> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => CategoryScreen(
+                  builder: (context) => CategoryItemsScreen(
                     category: CategoryType.games,
                     classification: isAllGames ? null : classification,
                   ),

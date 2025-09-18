@@ -427,8 +427,8 @@ class _EditItemScreenState extends State<EditItemScreen> {
 
     if (confirmed == true) {
       for (int index in _selectedIndices) {
-          final itemToRemove = widget.item.userElements[widget.item.userElements.length - index - 1];
-          await _storageService.removeUserElement(widget.item.id, itemToRemove);
+          final elementToRemove = widget.item.userElements[widget.item.userElements.length - index - 1];
+          await _storageService.removeElement(widget.item.id, elementToRemove);
       }
 
       setState(() {
@@ -732,7 +732,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
                   ),
                 ),
               ),
-              title: Text(userElements[userElements.length - index - 1]),
+              title: Text(userElements[userElements.length - index - 1].text),
               // trailing: const Chip(
               //   label: Text('נוסף', style: TextStyle(fontSize: 12)),
               //   backgroundColor: Colors.blue,

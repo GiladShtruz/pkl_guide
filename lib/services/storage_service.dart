@@ -1,4 +1,9 @@
+import 'dart:convert';
+
+import 'package:flutter/cupertino.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:pkl_guide/models/element_model.dart';
+import 'package:pkl_guide/services/json_service.dart';
 import '../models/item_model.dart';
 import '../models/sorting_method.dart';
 import '../models/category.dart';
@@ -21,19 +26,31 @@ class StorageService {
     settingsBox = await Hive.openBox(settingsBoxName);
   }
 
-  // App Data Methods
-  Future<void> saveAppData(List<ItemModel> items) async {
-    for (var item in items) {
-      if (appDataBox.containsKey(item.id)) {
-        ItemModel existingItem = appDataBox.get(item.id)!;
-        existingItem.updateOriginalOnUpgrade(item);
 
-        await appDataBox.put(item.id, item);
-      } else {
-        await appDataBox.put(item.id, item);
-      }
-    }
+  Future<void> saveAllData(List<ItemModel> items) async {
+    final entries = {
+      for (var item in items) item.id : item
+    };
+    await appDataBox.putAll(entries);
   }
+
+
+
+  // Future<void> saveAppData(List<ItemModel> items) async {
+  //   appDataBox.putAll(entries);
+  //
+  //
+  //   for (var item in items) {
+  //     if (appDataBox.containsKey(item.id)) {
+  //       ItemModel existingItem = appDataBox.get(item.id)!;
+  //       existingItem.updateItemFromOnline(item);
+  //
+  //       await appDataBox.put(item.id, item);
+  //     } else {
+  //       await appDataBox.put(item.id, item);
+  //     }
+  //   }
+  // }
 
   List<ItemModel> getAppData() {
     return appDataBox.values.toList();
@@ -77,7 +94,10 @@ class StorageService {
   }
 
   // Update item classification
-  Future<void> updateItemClassification(int itemId, String? newClassification) async {
+  Future<void> updateItemClassification(
+    int itemId,
+    String? newClassification,
+  ) async {
     final item = appDataBox.get(itemId);
     if (item != null) {
       item.updateClassification(newClassification);
@@ -98,19 +118,20 @@ class StorageService {
   Future<void> addUserElement(int itemId, String newItem) async {
     final item = appDataBox.get(itemId);
     if (item != null) {
-      item.addUserElement(newItem);
+      item.addElement(newItem, isUserCreated: true);
       await item.save();
     }
   }
 
-  // Remove user element from existing item
-  Future<void> removeUserElement(int itemId, String itemToRemove) async {
+  // Remove element from item
+  Future<void> removeElement(int itemId, ElementModel element) async {
     final item = appDataBox.get(itemId);
     if (item != null) {
-      item.removeUserElement(itemToRemove);
+      item.removeElementByText(element.text);
       await item.save();
     }
   }
+
 
   // Reset methods
   Future<void> resetItemTitle(int itemId) async {
@@ -171,9 +192,9 @@ class StorageService {
 
   // Settings Methods
   Future<void> saveSortingMethod(
-      CategoryType category,
-      SortingMethod method,
-      ) async {
+    CategoryType category,
+    SortingMethod method,
+  ) async {
     await settingsBox.put('sorting_${category.name}', method.name);
   }
 
@@ -182,7 +203,7 @@ class StorageService {
     final methodName = settingsBox.get('sorting_${category.name}');
     if (methodName != null) {
       return SortingMethod.values.firstWhere(
-            (m) => m.name == methodName,
+        (m) => m.name == methodName,
         orElse: () => SortingMethod.original,
       );
     }
@@ -222,13 +243,62 @@ class StorageService {
         .toList();
   }
 
+
+  Future<void> updateFromOnline(Map<String, dynamic> jsonData) async {
+    final categories = jsonData['categories'] ?? {};
+    JsonService jsonService = JsonService(this);
+    categories.forEach((categoryName, categoryItems) {
+      final categoryHebName = getCategoryType(categoryName);
+
+      if (categoryItems is List) {
+        for (var itemData in categoryItems) {
+          final newItem = jsonService.parseItem(itemData, categoryHebName);
+          if (newItem != null) {
+            final curItem = appDataBox.get(newItem.id);
+            if (curItem != null) {
+              curItem.category = newItem.category;
+              curItem.originalTitle = newItem.originalTitle;
+              curItem.originalDetail = newItem.originalDetail;
+              curItem.originalLink = newItem.originalLink;
+              curItem.originalClassification = newItem.originalClassification;
+              curItem.originalEquipment = newItem.originalEquipment;
+
+              // update elements:
+              if (newItem.isElementsChanged) {
+                Set<ElementModel> combinedElements = {
+                  ...curItem.elements,
+                  ...newItem.elements,
+                };
+                for (var element in combinedElements) {
+                  // add new elements
+                  if (!curItem.elements.contains(element)) {
+                    curItem.elements.add(element);
+                  }
+                  // remove elements
+                  if (curItem.elements.contains(element) &&
+                      !newItem.elements.contains(element)) {
+                    curItem.elements.remove(element);
+                  }
+                }
+              } else {
+                curItem.itemElements = newItem.elements;
+              }
+              appDataBox.put(curItem.id, curItem);
+            }
+          }
+        }
+      }
+    });
+  }
+
+
 // Export user data to JSON
   Map<String, dynamic> exportUserData() {
     final exportData = <String, dynamic>{
       'exportDate': DateTime.now().toIso8601String(),
       'appVersion': getVersion() ?? '1',
       'data': [],
-      'userLists': []
+      'userLists': [],
     };
 
     // Export items data
@@ -237,6 +307,11 @@ class StorageService {
     for (var item in appDataBox.values) {
       if (item.isUserCreated) {
         // User created items - export everything
+
+
+
+        // המרה למחרוזת JSON
+
         itemsData.add({
           'id': item.id,
           'category': item.category,
@@ -250,8 +325,7 @@ class StorageService {
           'userClassification': item.userClassification,
           'originalEquipment': item.originalEquipment,
           'userEquipment': item.userEquipment,
-          'originalElements': item.originalElements,
-          'userElements': item.userElements,
+          'elements': jsonEncode(item.elements.map((e) => e.toJson()).toList()),
           'lastAccessed': item.lastAccessed?.toIso8601String(),
           'clickCount': item.clickCount,
           'isUserCreated': true,
@@ -307,7 +381,11 @@ class StorageService {
     return exportData;
   }
 
-// Import user data from JSON
+
+
+
+
+  // Import user data from JSON
   Future<void> importUserData(Map<String, dynamic> importData) async {
     try {
       // Import items data
@@ -334,12 +412,12 @@ class StorageService {
               userClassification: itemJson['userClassification'],
               originalEquipment: itemJson['originalEquipment'],
               userEquipment: itemJson['userEquipment'],
-              originalElements: itemJson['originalElements'] != null
-                  ? List<String>.from(itemJson['originalElements'])
+              elements: itemJson['elements'] != null
+                  ? (itemJson['elements'] as List)
+                  .map((e) => ElementModel.fromJson(e))
+                  .toList()
                   : [],
-              userElements: itemJson['userElements'] != null
-                  ? List<String>.from(itemJson['userElements'])
-                  : [],
+
               lastAccessed: itemJson['lastAccessed'] != null
                   ? DateTime.tryParse(itemJson['lastAccessed'])
                   : null,
@@ -349,7 +427,6 @@ class StorageService {
             );
 
             await appDataBox.put(itemId, newItem);
-
           } else if (isUserChanged || itemJson['clickCount'] > 0) {
             // Update existing item with user modifications or usage data
             final existingItem = appDataBox.get(itemId);
@@ -366,21 +443,25 @@ class StorageService {
                 existingItem.userLink = itemJson['userLink'];
               }
               if (itemJson['userClassification'] != null) {
-                existingItem.userClassification = itemJson['userClassification'];
+                existingItem.userClassification =
+                    itemJson['userClassification'];
               }
               if (itemJson['userEquipment'] != null) {
                 existingItem.userEquipment = itemJson['userEquipment'];
               }
-              if (itemJson['userElements'] != null) {
-                existingItem.userElements = List<String>.from(itemJson['userElements']);
+              if (itemJson['elements'] != null || itemJson['elements'] != []) {
+                existingItem.itemElements = (itemJson['elements'] as List)
+                    .map((e) => ElementModel.fromJson(e))
+                    .toList();
               }
-
               // Update usage data
               if (itemJson['clickCount'] != null) {
                 existingItem.clickCount = itemJson['clickCount'];
               }
               if (itemJson['lastAccessed'] != null) {
-                existingItem.lastAccessed = DateTime.tryParse(itemJson['lastAccessed']);
+                existingItem.lastAccessed = DateTime.tryParse(
+                  itemJson['lastAccessed'],
+                );
               }
 
               existingItem.isUserChanged = isUserChanged;
@@ -445,16 +526,16 @@ class StorageService {
     await appDataBox.clear();
   }
 
-// Restore data from JSON
-// Future<void> restoreFromJson(Map<String, dynamic> backup) async {
-//   if (backup['items'] != null) {
-//     await clearAllData();
-//     final items = (backup['items'] as List)
-//         .map((json) => ItemModel.fromJson(json))
-//         .toList();
-//     for (var item in items) {
-//       await addItem(item);
-//     }
-//   }
-// }
+  // Restore data from JSON
+  // Future<void> restoreFromJson(Map<String, dynamic> backup) async {
+  //   if (backup['items'] != null) {
+  //     await clearAllData();
+  //     final items = (backup['items'] as List)
+  //         .map((json) => ItemModel.fromJson(json))
+  //         .toList();
+  //     for (var item in items) {
+  //       await addItem(item);
+  //     }
+  //   }
+  // }
 }

@@ -69,7 +69,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     final hasModifications = widget.item.hasUserModifications;
     final originalCount = widget.item.originalElements.length;
     final userAddedCount = widget.item.userElements.length;
-    final totalItems = widget.item.items.length;
+    final totalItems = widget.item.strElements.length;
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
@@ -247,7 +247,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
               sliver: SliverList.builder(
                 itemCount: totalItems,
                 itemBuilder: (context, index) {
-                  final item = widget.item.items[index];
+                  final item = widget.item.strElements[index];
                   final isUserAdded = index >= originalCount;
 
                   if (widget.item.category == 'riddles') {

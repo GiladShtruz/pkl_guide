@@ -1,6 +1,28 @@
 
 import 'package:flutter/material.dart';
 
+CategoryType getCategoryType(String categoryKey) {
+  switch (categoryKey.toLowerCase()) {
+    case 'games':
+    case 'משחקים':
+      return CategoryType.games;
+    case 'activities':
+    case 'פעילויות':
+      return CategoryType.activities;
+    case 'riddle':
+    case 'riddles':
+    case 'חידות':
+      return CategoryType.riddles;
+    case 'texts':
+    case 'קטעים':
+      return CategoryType.texts;
+    default:
+      print('Unknown category: $categoryKey, defaulting to games');
+      return CategoryType.games;
+  }
+}
+
+
 enum CategoryType {
   games('משחקים', Icons.casino),
   activities('פעילויות', Icons.group),

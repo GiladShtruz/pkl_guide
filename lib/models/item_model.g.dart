@@ -29,19 +29,22 @@ class ItemModelAdapter extends TypeAdapter<ItemModel> {
       userClassification: fields[9] as String?,
       originalEquipment: fields[10] as String?,
       userEquipment: fields[11] as String?,
-      originalElements: (fields[12] as List).cast<String>(),
-      userElements: (fields[13] as List?)?.cast<String>(),
-      lastAccessed: fields[14] as DateTime?,
-      clickCount: fields[15] as int,
-      isUserCreated: fields[16] as bool,
-      isUserChanged: fields[17] as bool,
+      elements: _buildElementsList(
+        fields[13] as List<String>? ?? [],
+        fields[14] as List<bool>? ?? [],
+      ),
+      isElementsChanged: fields[15] as bool,
+      lastAccessed: fields[16] as DateTime?,
+      clickCount: fields[17] as int,
+      isUserCreated: fields[18] as bool,
+      isUserChanged: fields[19] as bool,
     );
   }
 
   @override
   void write(BinaryWriter writer, ItemModel obj) {
     writer
-      ..writeByte(18)
+      ..writeByte(19)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -66,17 +69,19 @@ class ItemModelAdapter extends TypeAdapter<ItemModel> {
       ..write(obj.originalEquipment)
       ..writeByte(11)
       ..write(obj.userEquipment)
-      ..writeByte(12)
-      ..write(obj.originalElements)
       ..writeByte(13)
-      ..write(obj.userElements)
+      ..write(obj.elementTexts)
       ..writeByte(14)
-      ..write(obj.lastAccessed)
+      ..write(obj.isUserElementList)
       ..writeByte(15)
-      ..write(obj.clickCount)
+      ..write(obj.isElementsChanged)
       ..writeByte(16)
-      ..write(obj.isUserCreated)
+      ..write(obj.lastAccessed)
       ..writeByte(17)
+      ..write(obj.clickCount)
+      ..writeByte(18)
+      ..write(obj.isUserCreated)
+      ..writeByte(19)
       ..write(obj.isUserChanged);
   }
 
@@ -86,7 +91,19 @@ class ItemModelAdapter extends TypeAdapter<ItemModel> {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is ItemModelAdapter &&
-          runtimeType == other.runtimeType &&
-          typeId == other.typeId;
+          other is ItemModelAdapter &&
+              runtimeType == other.runtimeType &&
+              typeId == other.typeId;
+
+  // Helper method to build elements list from two parallel lists
+  static List<ElementModel> _buildElementsList(List<String> texts, List<bool> types) {
+    final result = <ElementModel>[];
+    for (int i = 0; i < texts.length; i++) {
+      result.add(ElementModel(
+        texts[i],
+        i < types.length ? types[i] : false,
+      ));
+    }
+    return result;
+  }
 }

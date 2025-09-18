@@ -67,7 +67,6 @@ flutter_native_splash:
 flutter:
   uses-material-design: true
   assets:
-    - assets/pkl.csv
     - assets/sounds/timer_end.mp3
     - assets/data.json
 

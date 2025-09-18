@@ -92,7 +92,7 @@ class ItemCard extends StatelessWidget {
                             ),
                           ),
                         // Show items count for riddles
-                        if (item.category == 'riddles' && item.items.isNotEmpty)
+                        if (item.category == 'riddles' && item.strElements.isNotEmpty)
                           Container(
                             margin: const EdgeInsets.only(left: 8),
                             padding: const EdgeInsets.symmetric(
@@ -104,7 +104,7 @@ class ItemCard extends StatelessWidget {
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
-                              '${item.items.length}',
+                              '${item.strElements.length}',
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,

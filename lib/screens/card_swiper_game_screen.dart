@@ -45,7 +45,7 @@ class _SwitchCardGameScreenState extends State<SwitchCardGameScreen>
   void initState() {
     super.initState();
     _controller = CardSwiperController();
-    _words = List.from(widget.item.items);
+    _words = List.from(widget.item.strElements);
     _usedWords = [];
     _shuffleWords();
 

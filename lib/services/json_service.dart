@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
+import '../models/element_model.dart';
 import '../models/item_model.dart';
 import '../models/category.dart';
 import 'storage_service.dart';
@@ -16,32 +17,47 @@ class JsonService {
 
   JsonService(this.storageService);
 
-  Future<void> loadInitialData() async {
-    try {
-      // Check if we have local data
-      final hasLocalData = storageService.getAppData().isNotEmpty;
-
-      if (!hasLocalData) {
-        // First time - load from local JSON file
-        print('First time loading - loading from JSON');
-        await loadFromLocalJson();
-      } else {
-        print('Data already exists in Hive');
-      }
-
-      // Check for updates in background (non-blocking)
-      checkForOnlineUpdates();
-    } catch (e) {
-      print('Error loading initial data: $e');
-    }
-  }
-
   Future<void> loadFromLocalJson() async {
     try {
       // Load JSON from assets
       final jsonString = await rootBundle.loadString('assets/data.json');
       final jsonData = json.decode(jsonString);
-      await parseAndSaveJson(jsonData, isUpdate: false);
+
+      // parseAndSaveJson
+      try {
+        print('Starting JSON parsing...');
+
+        final version = jsonData['version'] ?? 1;
+        final categories = jsonData['categories'] ?? {};
+        List<ItemModel> appItems = [];
+
+        // Parse each category
+        categories.forEach((categoryName, categoryItems) {
+          print('Parsing category: $categoryName');
+
+          final categoryType = getCategoryType(categoryName);
+          //print('Parsing category: $categoryName as ${categoryHebName.name}');
+
+          if (categoryItems is List) {
+            for (var itemData in categoryItems) {
+              final item = parseItem(itemData, categoryType);
+              if (item != null) {
+                appItems.add(item);
+                print('Added item: ${item.name} with ID: ${item.id}');
+              }
+            }
+          }
+        });
+
+        print('Parsed ${appItems.length} appItems total');
+
+        // Save to storage
+        await storageService.saveAllData(appItems);
+        await storageService.saveVersion(version);
+      } catch (e) {
+        print('Error parsing JSON: $e');
+        print('Stack trace: ${StackTrace.current}');
+      }
     } catch (e) {
       print('Error loading local JSON: $e');
     }
@@ -76,8 +92,7 @@ class JsonService {
 
   /// Background function for checking and downloading updates
   /// Must be static or top-level for compute
-  static Future<Map<String, dynamic>?> _checkAndUpdateInBackground(
-      Map<String, dynamic> params) async {
+  static Future<Map<String, dynamic>?> _checkAndUpdateInBackground(Map<String, dynamic> params) async {
     try {
       final versionCheckUrl = params['versionCheckUrl'] as String;
       final currentVersion = params['currentVersion'] as int;
@@ -92,7 +107,7 @@ class JsonService {
       }
 
       final versionData = json.decode(utf8.decode(versionResponse.bodyBytes));
-      final newVersion = versionData['version'] ?? 0;
+      final newVersion = versionData['version'] ?? 1;
       final dataUrl = versionData['dataUrl'];
 
       print('Current version: $currentVersion, Available version: $newVersion');
@@ -106,35 +121,34 @@ class JsonService {
       print('Update available! Downloading from: $dataUrl');
 
       // Step 3: Download new data
-      final dataResponse = await http.get(Uri.parse(dataUrl));
-      if (dataResponse.statusCode != 200) {
-        print('Failed to download data');
-        return null;
+      if (newVersion > currentVersion) {
+        final dataResponse = await http.get(Uri.parse(dataUrl));
+        if (dataResponse.statusCode != 200) {
+          print('Failed to download data');
+          return null;
+        }
+
+        final jsonData = json.decode(utf8.decode(dataResponse.bodyBytes));
+
+        return {
+          'shouldUpdate': true,
+          'version': newVersion,
+          'data': jsonData,
+        };
       }
-
-      final jsonData = json.decode(utf8.decode(dataResponse.bodyBytes));
-
-      return {
-        'shouldUpdate': true,
-        'version': newVersion,
-        'data': jsonData,
-      };
-    } catch (e) {
+    }
+    catch (e) {
       print('Error in background update check: $e');
       return null;
     }
+    return null;
   }
 
   /// Save update data to storage (runs on main thread)
   Future<void> _saveUpdateData(Map<String, dynamic> jsonData, int version) async {
     try {
       print('Saving update data with version: $version');
-
-      // Clear existing app data (but keep user data)
-      await storageService.appDataBox.clear();
-
-      // Parse and save new data
-      await parseAndSaveJson(jsonData, isUpdate: true);
+      await storageService.updateFromOnline(jsonData);
       await storageService.saveVersion(version);
 
       print('Update saved successfully');
@@ -144,104 +158,10 @@ class JsonService {
   }
 
   /// Alternative: Check for updates without compute (simpler but blocks UI briefly)
-  Future<void> checkForOnlineUpdatesSimple() async {
-    try {
-      print('Checking for updates...');
 
-      // Get version info
-      final versionResponse = await http.get(Uri.parse(versionCheckUrl));
-      if (versionResponse.statusCode != 200) {
-        print('Failed to fetch version info');
-        return;
-      }
 
-      final versionData = json.decode(utf8.decode(versionResponse.bodyBytes));
-      final newVersion = versionData['version'] ?? 0;
-      final dataUrl = versionData['dataUrl'];
-      final currentVersion = storageService.getVersion() ?? 1;
 
-      print('Current version: $currentVersion, Available version: $newVersion');
-
-      // Check if update is needed
-      if (newVersion <= currentVersion || dataUrl == null) {
-        print('No update needed');
-        return;
-      }
-
-      print('Update available! Downloading...');
-
-      // Download new data
-      final dataResponse = await http.get(Uri.parse(dataUrl));
-      if (dataResponse.statusCode != 200) {
-        print('Failed to download data');
-        return;
-      }
-
-      final jsonData = json.decode(utf8.decode(dataResponse.bodyBytes));
-
-      // Update data
-      await updateFromOnline(jsonData, newVersion);
-
-      print('Update completed successfully');
-    } catch (e) {
-      print('Error checking for updates: $e');
-    }
-  }
-
-  Future<void> updateFromOnline(Map<String, dynamic> jsonData, int version) async {
-    // Clear existing app data (but keep user data)
-    await storageService.appDataBox.clear();
-
-    // Parse and save new data
-    await parseAndSaveJson(jsonData, isUpdate: true);
-    await storageService.saveVersion(version);
-  }
-
-  Future<void> parseAndSaveJson(Map<String, dynamic> jsonData, {required bool isUpdate}) async {
-    try {
-      print('Starting JSON parsing...');
-
-      final version = jsonData['version'] ?? 1;
-      final categories = jsonData['categories'] ?? {};
-      List<ItemModel> appItems = [];
-
-      // Parse each category
-      categories.forEach((categoryKey, categoryItems) {
-        print('Parsing category: $categoryKey');
-
-        final category = _getCategoryType(categoryKey);
-        print('Parsing category: $categoryKey as ${category.name}');
-
-        if (categoryItems is List) {
-          for (var itemData in categoryItems) {
-            final item = _parseItem(itemData, category);
-            if (item != null) {
-              appItems.add(item);
-              print('Added item: ${item.name} with ID: ${item.id}');
-            }
-          }
-        }
-      });
-
-      print('Parsed ${appItems.length} appItems total');
-
-      // Save to storage
-      await storageService.saveAppData(appItems);
-      await storageService.saveVersion(version);
-
-      if (isUpdate) {
-        print('Update completed');
-        // When updating, preserve user modifications
-        // User modifications are already stored in the ItemModel itself
-      }
-
-    } catch (e) {
-      print('Error parsing JSON: $e');
-      print('Stack trace: ${StackTrace.current}');
-    }
-  }
-
-  ItemModel? _parseItem(Map<String, dynamic> data, CategoryType category) {
+  ItemModel? parseItem(Map<String, dynamic> data, CategoryType category) {
     try {
       // Extract ID from JSON
       int? id = data['id'];
@@ -255,12 +175,10 @@ class JsonService {
       String? link = data['link'];
       String? classification = data['classification'];
       String? equipment = data['equipment'];
-      List<String> elements = [];
-
-      // Parse elements array
-      final dataItems = data['elements'];
-      if (dataItems is List) {
-        elements = dataItems.map((e) => e.toString()).toList();
+      List<ElementModel> elements = [];
+      final dataElements = data['elements'];
+      if (dataElements is List) {
+        elements = dataElements.map((e) => ElementModel(e.toString(), false)).toList();
       }
 
       if (title == null || title.isEmpty) {
@@ -275,7 +193,7 @@ class JsonService {
           originalLink: link,
           originalClassification: classification,
           originalEquipment: equipment,
-          originalElements: elements,
+          elements: elements,
           category: category.name,
           isUserCreated: false,
           isUserChanged: false
@@ -289,26 +207,7 @@ class JsonService {
     }
   }
 
-  CategoryType _getCategoryType(String categoryKey) {
-    switch (categoryKey.toLowerCase()) {
-      case 'games':
-      case 'משחקים':
-        return CategoryType.games;
-      case 'activities':
-      case 'פעילויות':
-        return CategoryType.activities;
-      case 'riddle':
-      case 'riddles':
-      case 'חידות':
-        return CategoryType.riddles;
-      case 'texts':
-      case 'קטעים':
-        return CategoryType.texts;
-      default:
-        print('Unknown category: $categoryKey, defaulting to games');
-        return CategoryType.games;
-    }
-  }
+
 
   Future<void> resetToOriginal(CategoryType? category) async {
     if (category != null) {

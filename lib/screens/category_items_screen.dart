@@ -12,22 +12,22 @@ import '../screens/item_detail_screen.dart';
 import '../screens/add_item_screen.dart';
 import '../dialogs/add_to_lists_dialog.dart';
 
-class CategoryScreen extends StatefulWidget {
+class CategoryItemsScreen extends StatefulWidget {
   final CategoryType category;
   final String? classification;
 
 
-  const CategoryScreen({
+  const CategoryItemsScreen({
     super.key,
     required this.category,
-    this.classification, // ADD THIS
+    this.classification,
   });
 
   @override
-  State<CategoryScreen> createState() => _CategoryScreenState();
+  State<CategoryItemsScreen> createState() => _CategoryItemsScreenState();
 }
 
-class _CategoryScreenState extends State<CategoryScreen> {
+class _CategoryItemsScreenState extends State<CategoryItemsScreen> {
   late List<ItemModel> _items;
   late List<ItemModel> _favoriteItems;
   late List<ItemModel> _regularItems;
@@ -132,6 +132,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
                 : '${selectedItems.length} פריטים עודכנו ברשימות',
           ),
           backgroundColor: Colors.green,
+          duration: const Duration(seconds: 1),
         ),
       );
     }
