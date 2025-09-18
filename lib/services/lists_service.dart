@@ -106,6 +106,17 @@ class ListsService {
     }
   }
 
+  // updateListItemsOrder:
+  Future<void> updateListItemsOrder(int listId, List<int> itemIds) async {
+    final list = listsBox.get(listId);
+    if (list != null) {
+      list.categoryItemIds = itemIds;
+      list.lastModified = DateTime.now();
+      await list.save();
+    }
+  }
+
+
   // Update list description
   Future<void> updateListDescription(int listId, String? description) async {
     final list = listsBox.get(listId);
@@ -265,5 +276,11 @@ class ListsService {
       throw Exception('Failed to import lists: $e');
     }
   }
+
+  // is list exists:
+  bool listExists(int listId) {
+    return listsBox.containsKey(listId);
+  }
+
 
 }

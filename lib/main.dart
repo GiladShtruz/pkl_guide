@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:pkl_guide/app_theme.dart';
 import 'package:provider/provider.dart';
 import 'models/element_model.dart';
 import 'screens/home_screen.dart';
@@ -56,16 +57,17 @@ class MyApp extends StatelessWidget {
       supportedLocales: const [
         Locale('he', 'IL'),
       ],
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        fontFamily: 'Heebo',
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.white,
-          foregroundColor: Colors.black,
-          elevation: 1,
-        ),
-        useMaterial3: true,
-      ),
+      // theme: ThemeData(
+      //   primarySwatch: Colors.blue,
+      //   fontFamily: 'Heebo',
+      //   appBarTheme: const AppBarTheme(
+      //     backgroundColor: Colors.white,
+      //     foregroundColor: Colors.black,
+      //     elevation: 1,
+      //   ),
+      //   useMaterial3: true,
+      // ),
+      theme: AppTheme.lightTheme,
       home: const HomeScreen(),
     );
   }

@@ -192,6 +192,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
           // _isChangeElements = false;
           setState(() {
             _currentElements = List.from(widget.item.elements);
+            _isChangeElements = false;
           });
           break;
         default:
@@ -469,9 +470,8 @@ class _EditItemScreenState extends State<EditItemScreen> {
             : FloatingActionButton(
                 onPressed: () async {
                   await _saveChanges();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('השינויים נשמרו')),
-                  );
+                  Navigator.pop(context, true); // Force refresh
+
                 },
                 backgroundColor: Colors.green,
                 child: const Icon(Icons.save),
@@ -543,8 +543,8 @@ class _EditItemScreenState extends State<EditItemScreen> {
                     }
                   });
                 },
-                icon: Icon(_isEditMode ? Icons.close : Icons.edit),
-                label: Text(_isEditMode ? 'ביטול' : 'עריכה'),
+                icon: Icon(_isEditMode ? Icons.check : Icons.edit),
+                label: Text(_isEditMode ? 'אישור' : 'עריכה'),
               ),
             ],
           ),
@@ -576,6 +576,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
       return Card(
         child: ReorderableListView.builder(
           shrinkWrap: true,
+
           physics: const NeverScrollableScrollPhysics(),
           itemCount: _currentElements.length,
           onReorder: (oldIndex, newIndex) {
@@ -654,6 +655,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
           final isUserElement = element.isUserElement;
 
           return ListTile(
+            contentPadding: EdgeInsets.symmetric(horizontal: 5),
             leading: CircleAvatar(
               backgroundColor: isUserElement
                   ? Colors.blue[100]

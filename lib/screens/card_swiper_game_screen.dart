@@ -59,7 +59,7 @@ class _SwitchCardGameScreenState extends State<SwitchCardGameScreen>
       end: 0.0,
     ).animate(_timerAnimationController);
 
-    _checkShowRules();
+    // _checkShowRules();
   }
 
   @override
@@ -71,16 +71,16 @@ class _SwitchCardGameScreenState extends State<SwitchCardGameScreen>
     super.dispose();
   }
 
-  void _checkShowRules() async {
-    final prefs = await SharedPreferences.getInstance();
-    final dontShowAgain = prefs.getBool('card_game_rules_dont_show') ?? false;
-
-    if (!dontShowAgain && mounted) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _showRulesDialog(isFirstTime: true);
-      });
-    }
-  }
+  // void _checkShowRules() async {
+  //   final prefs = await SharedPreferences.getInstance();
+  //   final dontShowAgain = prefs.getBool('card_game_rules_dont_show') ?? false;
+  //
+  //   if (!dontShowAgain && mounted) {
+  //     WidgetsBinding.instance.addPostFrameCallback((_) {
+  //       _showRulesDialog(isFirstTime: true);
+  //     });
+  //   }
+  // }
 
   void _showRulesDialog({bool isFirstTime = false}) {
     showDialog(
