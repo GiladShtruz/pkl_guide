@@ -382,35 +382,7 @@ class ItemModel extends HiveObject {
     save();
   }
 
-  void updateOriginalOnUpgrade(ItemModel newItem) {
-    originalTitle = newItem.originalTitle;
-    originalDetail = newItem.originalDetail;
-    originalLink = newItem.originalLink;
-    originalClassification = newItem.originalClassification;
-    originalEquipment = newItem.originalEquipment;
 
-    // Keep only user elements from current model
-    final currentUserElements = userElements;
-
-    // Clear and rebuild with new original + existing user elements
-    elementTexts.clear();
-    isUserElementList.clear();
-
-    // Add new original elements
-    for (var elem in newItem.originalElements) {
-      elementTexts.add(elem.text);
-      isUserElementList.add(false);
-    }
-
-    // Add back user elements
-    for (var elem in currentUserElements) {
-      elementTexts.add(elem.text);
-      isUserElementList.add(true);
-    }
-
-    category = newItem.category;
-    save();
-  }
 
   Map<String, dynamic> toJson() {
     return {
@@ -434,95 +406,5 @@ class ItemModel extends HiveObject {
       'isUserCreated': isUserCreated,
       'isUserChanged': isUserChanged,
     };
-  }
-
-  factory ItemModel.fromJson(Map<String, dynamic> json, {String? categoryType}) {
-    // Initialize the lists for the new format
-    List<String> texts = [];
-    List<bool> types = [];
-
-    // Check if we already have the new format
-    if (json['elementTexts'] != null && json['isUserElementList'] != null) {
-      texts = List<String>.from(json['elementTexts']);
-      types = List<bool>.from(json['isUserElementList']);
-    }
-    // Also check for intermediate format with 'elementTypes'
-    else if (json['elementTexts'] != null && json['elementTypes'] != null) {
-      texts = List<String>.from(json['elementTexts']);
-      types = List<bool>.from(json['elementTypes']);
-    }
-    // Migration from old format
-    else {
-      // Add original elements
-      if (json['originalElements'] != null) {
-        for (var item in json['originalElements']) {
-          texts.add(item.toString());
-          types.add(false);  // original element
-        }
-      } else if (json['originalItems'] != null) {
-        for (var item in json['originalItems']) {
-          texts.add(item.toString());
-          types.add(false);
-        }
-      } else if (json['items'] != null && json['userElements'] == null) {
-        // Very old format where items contained everything
-        for (var item in json['items']) {
-          texts.add(item.toString());
-          types.add(false);
-        }
-      }
-
-      // Add user elements
-      if (json['userElements'] != null) {
-        for (var item in json['userElements']) {
-          if (item is String) {
-            texts.add(item);
-            types.add(true);  // user element
-          } else if (item is Map<String, dynamic>) {
-            // Handle ItemElement format from transition period
-            texts.add(item['element'] ?? item['text'] ?? '');
-            types.add(item['isUserElement'] ?? true);
-          }
-        }
-      } else if (json['userAddedItems'] != null) {
-        for (var item in json['userAddedItems']) {
-          texts.add(item.toString());
-          types.add(true);
-        }
-      }
-    }
-
-    // Create ItemElement list for constructor
-    List<ElementModel> elements = [];
-    for (int i = 0; i < texts.length; i++) {
-      elements.add(ElementModel(
-        texts[i],
-        i < types.length ? types[i] : false,
-      ));
-    }
-
-    return ItemModel(
-      id: json['id'] ?? DateTime.now().millisecondsSinceEpoch % 100000000,
-      category: categoryType ?? json['category'] ?? '',
-      originalTitle: json['originalTitle'] ?? json['title'] ?? '',
-      userTitle: json['userTitle'],
-      originalDetail: json['originalDetail'] ?? json['detail'],
-      userDetail: json['userDetail'],
-      originalLink: json['originalLink'] ?? json['link'],
-      userLink: json['userLink'],
-      originalClassification: json['originalClassification'] ?? json['classification'],
-      userClassification: json['userClassification'],
-      originalEquipment: json['originalEquipment'] ?? json['equipment'],
-      userEquipment: json['userEquipment'],
-      elements: elements,
-      isElementsChanged: json['isElementsChanged'] ??
-          types.any((type) => type),  // Check if any user elements exist
-      lastAccessed: json['lastAccessed'] != null
-          ? DateTime.tryParse(json['lastAccessed'])
-          : null,
-      clickCount: json['clickCount'] ?? 0,
-      isUserCreated: json['isUserCreated'] ?? false,
-      isUserChanged: json['isUserChanged'] ?? false,
-    );
   }
 }

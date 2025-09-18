@@ -26,15 +26,10 @@ class StorageService {
     settingsBox = await Hive.openBox(settingsBoxName);
   }
 
-
   Future<void> saveAllData(List<ItemModel> items) async {
-    final entries = {
-      for (var item in items) item.id : item
-    };
+    final entries = {for (var item in items) item.id: item};
     await appDataBox.putAll(entries);
   }
-
-
 
   // Future<void> saveAppData(List<ItemModel> items) async {
   //   appDataBox.putAll(entries);
@@ -131,7 +126,6 @@ class StorageService {
       await item.save();
     }
   }
-
 
   // Reset methods
   Future<void> resetItemTitle(int itemId) async {
@@ -243,7 +237,6 @@ class StorageService {
         .toList();
   }
 
-
   Future<void> updateFromOnline(Map<String, dynamic> jsonData) async {
     final categories = jsonData['categories'] ?? {};
     JsonService jsonService = JsonService(this);
@@ -291,8 +284,7 @@ class StorageService {
     });
   }
 
-
-// Export user data to JSON
+  // Export user data to JSON
   Map<String, dynamic> exportUserData() {
     final exportData = <String, dynamic>{
       'exportDate': DateTime.now().toIso8601String(),
@@ -307,8 +299,6 @@ class StorageService {
     for (var item in appDataBox.values) {
       if (item.isUserCreated) {
         // User created items - export everything
-
-
 
         // המרה למחרוזת JSON
 
@@ -325,7 +315,7 @@ class StorageService {
           'userClassification': item.userClassification,
           'originalEquipment': item.originalEquipment,
           'userEquipment': item.userEquipment,
-          'elements': jsonEncode(item.elements.map((e) => e.toJson()).toList()),
+          'elements': item.elements.map((e) => e.toJson()).toList(),
           'lastAccessed': item.lastAccessed?.toIso8601String(),
           'clickCount': item.clickCount,
           'isUserCreated': true,
@@ -358,8 +348,8 @@ class StorageService {
         if (item.userEquipment != null) {
           modifiedData['userEquipment'] = item.userEquipment;
         }
-        if (item.userElements.isNotEmpty) {
-          modifiedData['userElements'] = item.userElements;
+        if (item.isElementsChanged) {
+          modifiedData['elements'] = item.elements.map((e) => e.toJson()).toList();
         }
 
         itemsData.add(modifiedData);
@@ -381,10 +371,6 @@ class StorageService {
     return exportData;
   }
 
-
-
-
-
   // Import user data from JSON
   Future<void> importUserData(Map<String, dynamic> importData) async {
     try {
@@ -396,6 +382,8 @@ class StorageService {
           final itemId = itemJson['id'] as int;
           final isUserCreated = itemJson['isUserCreated'] ?? false;
           final isUserChanged = itemJson['isUserChanged'] ?? false;
+          final dataElements = itemJson['elements'];
+          List<ElementModel> elements = dataElements is List ? dataElements.map((e) => ElementModel(e["element"], e["isUserElement"])).toList() : [];
 
           if (isUserCreated) {
             // Create new user item
@@ -412,12 +400,7 @@ class StorageService {
               userClassification: itemJson['userClassification'],
               originalEquipment: itemJson['originalEquipment'],
               userEquipment: itemJson['userEquipment'],
-              elements: itemJson['elements'] != null
-                  ? (itemJson['elements'] as List)
-                  .map((e) => ElementModel.fromJson(e))
-                  .toList()
-                  : [],
-
+              elements: elements,
               lastAccessed: itemJson['lastAccessed'] != null
                   ? DateTime.tryParse(itemJson['lastAccessed'])
                   : null,
@@ -449,10 +432,13 @@ class StorageService {
               if (itemJson['userEquipment'] != null) {
                 existingItem.userEquipment = itemJson['userEquipment'];
               }
-              if (itemJson['elements'] != null || itemJson['elements'] != []) {
-                existingItem.itemElements = (itemJson['elements'] as List)
-                    .map((e) => ElementModel.fromJson(e))
-                    .toList();
+              if (itemJson['elements'] != null) {
+                List<ElementModel> elements = [];
+                final dataElements = itemJson['elements'];
+                if (dataElements is List) {
+                  elements = dataElements.map((e) => ElementModel(e["element"], e["isUserElement"])).toList();
+                }
+                existingItem.itemElements = elements;
               }
               // Update usage data
               if (itemJson['clickCount'] != null) {
