@@ -212,6 +212,15 @@ class StorageService {
     return settingsBox.get('json_version');
   }
 
+  // set isElementsChanged
+  Future<void> setElementsChanged(int itemId, bool isChanged) async {
+    final item = appDataBox.get(itemId);
+    if (item != null) {
+      item.isElementsChanged = isChanged;
+      await item.save();
+    }
+  }
+
   // Get all items (now from single box)
   List<ItemModel> getAllCategoryItems({CategoryType? category}) {
     return appDataBox.values.where((item) {
@@ -349,6 +358,7 @@ class StorageService {
           modifiedData['userEquipment'] = item.userEquipment;
         }
         if (item.isElementsChanged) {
+          print(modifiedData['elements']);
           modifiedData['elements'] = item.elements.map((e) => e.toJson()).toList();
         }
 
