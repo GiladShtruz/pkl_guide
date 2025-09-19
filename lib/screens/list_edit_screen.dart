@@ -195,7 +195,6 @@ class _ListEditScreenState extends State<ListEditScreen> {
     return WillPopScope(
       onWillPop: _onWillPop,
       child: Scaffold(
-        backgroundColor: Colors.grey[50],
         appBar: AppBar(
           title: const Text('עריכת רשימה'),
           centerTitle: true,
@@ -399,15 +398,19 @@ class _ListEditScreenState extends State<ListEditScreen> {
           backgroundColor: _selectedIndices.isNotEmpty ? Colors.red : Colors.grey,
           child: const Icon(Icons.delete),
         )
-            : FloatingActionButton(
+            :
+        FloatingActionButton.extended(
           onPressed: () async {
             await _saveChanges();
             Navigator.pop(context, true); // Force refresh
 
           },
-          backgroundColor: Colors.green,
-          child: const Icon(Icons.save),
+          label: const Text('שמור'),
+          icon: const Icon(Icons.save),
         ),
+
+
+
         floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       ),
     );
@@ -510,6 +513,7 @@ class _ListEditScreenState extends State<ListEditScreen> {
           final item = _currentItems[index];
 
           return ListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical:0),
             leading: CircleAvatar(
               backgroundColor: _getCategoryColor(item.category),
               child: Text(

@@ -61,7 +61,6 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
       appBar: AppBar(
         title: Text(widget.list.name),
         centerTitle: true,
@@ -170,11 +169,13 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
                   final item = _items[index];
 
                   return Card(
+
                     margin: const EdgeInsets.only(bottom: 8),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: ListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical:0),
                       leading: CircleAvatar(
                         backgroundColor: _getCategoryColor(item.category),
                         child: Icon(

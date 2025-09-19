@@ -46,11 +46,7 @@ class ItemCard extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           child: Row(
             children: [
-              if (showCheckbox)
-                Checkbox(
-                  value: isSelected,
-                  onChanged: (_) => appProvider.toggleItemSelection(item.id),
-                ),
+
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -95,12 +91,9 @@ class ItemCard extends StatelessWidget {
                         if (item.category == 'riddles' && item.strElements.isNotEmpty)
                           Container(
                             margin: const EdgeInsets.only(left: 8),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 2,
-                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                             decoration: BoxDecoration(
-                              color: Colors.orange[100],
+                              color: Theme.of(context).colorScheme.secondaryContainer,
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
@@ -108,10 +101,11 @@ class ItemCard extends StatelessWidget {
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
-                                color: Colors.orange[800],
+                                color: Theme.of(context).colorScheme.onSecondaryContainer,
                               ),
                             ),
                           ),
+
                         // Show user added items count
                         if (item.userElements.isNotEmpty)
                           Container(
@@ -183,23 +177,34 @@ class ItemCard extends StatelessWidget {
                           ],
                         ),
                       ),
-                    if (item.classification != null)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 4),
-                        child: Chip(
-                          label: Text(
-                            item.classification!,
-                            style: const TextStyle(fontSize: 12),
-                          ),
-                          backgroundColor: Colors.grey[200],
-                          padding: EdgeInsets.zero,
-                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        ),
-                      ),
+
                   ],
                 ),
               ),
-              const Icon(Icons.arrow_forward_ios, size: 16),
+              if (item.classification != null && item.classification != "")
+
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Chip(
+                    label: Text(
+                      item.classification!,
+                      // style: const TextStyle(fontSize: 12),
+                    ),
+                    // backgroundColor: Colors.grey[200],
+                    padding: EdgeInsets.zero,
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                ),
+              const SizedBox(width: 5),
+              showCheckbox ?
+                Checkbox(
+                  value: isSelected,
+                  onChanged: (_) => appProvider.toggleItemSelection(item.id),
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    visualDensity: VisualDensity.compact
+                ) : const Icon(Icons.arrow_forward_ios, size: 16),
+
+
             ],
           ),
         ),

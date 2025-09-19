@@ -125,7 +125,6 @@ class _ListsScreenState extends State<ListsScreen> {
         return true;
       },
       child: Scaffold(
-        backgroundColor: Colors.grey[50],
         appBar: AppBar(
           title: const Text('רשימות'),
           centerTitle: true,

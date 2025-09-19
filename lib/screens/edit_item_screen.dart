@@ -21,6 +21,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
   late TextEditingController _detailController;
   late TextEditingController _linkController;
   late TextEditingController _equipmentController;
+  late TextEditingController _classificationController;
   late TextEditingController _newItemController;
 
   final FocusNode _addElementsFocusNode = FocusNode();
@@ -49,6 +50,9 @@ class _EditItemScreenState extends State<EditItemScreen> {
     _equipmentController = TextEditingController(
       text: widget.item.equipment ?? '',
     );
+    _classificationController = TextEditingController(
+      text: widget.item.classification ?? '',
+    );
     _newItemController = TextEditingController();
 
     // Add listeners for changes
@@ -56,6 +60,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
     _detailController.addListener(_markChanged);
     _linkController.addListener(_markChanged);
     _equipmentController.addListener(_markChanged);
+    _classificationController.addListener(_markChanged);
   }
 
   void _markChanged() {
@@ -72,6 +77,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
     _detailController.dispose();
     _linkController.dispose();
     _equipmentController.dispose();
+    _classificationController.dispose();
     _newItemController.dispose();
     _addElementsFocusNode.dispose();
     super.dispose();
@@ -124,6 +130,14 @@ class _EditItemScreenState extends State<EditItemScreen> {
       );
     }
 
+    // Save classification changes
+    if (_classificationController.text != (widget.item.originalClassification ?? '')) {
+      await _storageService.updateItemClassification(
+        widget.item.id,
+        _classificationController.text.isNotEmpty ? _classificationController.text : null,
+      );
+    }
+
     // Save elements order if changed
     // if (_currentElements != widget.item.elements)
     if (_isChangeElements) {
@@ -139,10 +153,10 @@ class _EditItemScreenState extends State<EditItemScreen> {
   }
 
   void _resetData(
-    CategoryEntry categoryEntry,
-    String title,
-    String content,
-  ) async {
+      CategoryEntry categoryEntry,
+      String title,
+      String content,
+      ) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -187,9 +201,15 @@ class _EditItemScreenState extends State<EditItemScreen> {
             _equipmentController.text = widget.item.originalEquipment ?? '';
           });
           break;
+        case CategoryEntry.classification:
+          await _storageService.resetItemClassification(widget.item.id);
+          setState(() {
+            _classificationController.text = widget.item.originalClassification ?? '';
+          });
+          break;
         case CategoryEntry.elements:
-          // await _storageService.resetElements(widget.item.id);
-          // _isChangeElements = false;
+        // await _storageService.resetElements(widget.item.id);
+        // _isChangeElements = false;
           setState(() {
             _currentElements = List.from(widget.item.elements);
             _isChangeElements = false;
@@ -304,23 +324,23 @@ class _EditItemScreenState extends State<EditItemScreen> {
           centerTitle: true,
           leading: _isEditMode
               ? IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () {
-                    setState(() {
-                      _isEditMode = false;
-                      _selectedIndices.clear();
-                    });
-                  },
-                )
+            icon: const Icon(Icons.close),
+            onPressed: () {
+              setState(() {
+                _isEditMode = false;
+                _selectedIndices.clear();
+              });
+            },
+          )
               : IconButton(
-                  icon: const Icon(Icons.arrow_back),
-                  onPressed: () async {
-                    if (_hasChanges) {
-                      await _saveChanges();
-                    }
-                    Navigator.pop(context);
-                  },
-                ),
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () async {
+              if (_hasChanges) {
+                await _saveChanges();
+              }
+              Navigator.pop(context);
+            },
+          ),
           actions: [
             if (widget.item.isUserCreated)
               IconButton(
@@ -431,7 +451,8 @@ class _EditItemScreenState extends State<EditItemScreen> {
                       border: OutlineInputBorder(),
                       prefixIcon: Icon(Icons.sports_soccer),
                     ),
-                    maxLines: 2,
+                    keyboardType: TextInputType.multiline,
+                    maxLines: null, // מאפשר שורות רבות
                   ),
                   if (widget.item.userEquipment != null)
                     TextButton.icon(
@@ -439,6 +460,35 @@ class _EditItemScreenState extends State<EditItemScreen> {
                         CategoryEntry.equipment,
                         "שחזר רשימת ציוד",
                         "האם לשחזר את רשימת הציוד המקורית?",
+                      ),
+                      icon: const Icon(Icons.restore, size: 16),
+                      label: const Text('שחזר למקור'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.orange,
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // Classification (מיקום) field with reset button
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextField(
+                    controller: _classificationController,
+                    decoration: const InputDecoration(
+                      labelText: 'מיקום',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.location_on),
+                    ),
+                  ),
+                  if (widget.item.userClassification != null)
+                    TextButton.icon(
+                      onPressed: () => _resetData(
+                        CategoryEntry.classification,
+                        "שחזר מיקום",
+                        "האם לשחזר את המיקום המקורי?",
                       ),
                       icon: const Icon(Icons.restore, size: 16),
                       label: const Text('שחזר למקור'),
@@ -459,23 +509,25 @@ class _EditItemScreenState extends State<EditItemScreen> {
         ),
         floatingActionButton: _isEditMode
             ? FloatingActionButton(
-                onPressed: _selectedIndices.isNotEmpty
-                    ? _deleteSelectedElements
-                    : null,
-                backgroundColor: _selectedIndices.isNotEmpty
-                    ? Colors.red
-                    : Colors.grey,
-                child: const Icon(Icons.delete),
-              )
-            : FloatingActionButton(
-                onPressed: () async {
-                  await _saveChanges();
-                  Navigator.pop(context, true); // Force refresh
+          onPressed: _selectedIndices.isNotEmpty
+              ? _deleteSelectedElements
+              : null,
+          backgroundColor: _selectedIndices.isNotEmpty
+              ? Colors.red
+              : Colors.grey,
+          child: const Icon(Icons.delete),
+        )
+            : FloatingActionButton.extended(
+          onPressed: () async {
+            await _saveChanges();
+            Navigator.pop(context, true); // Force refresh
+          },
+          label: const Text('שמור'),
+          icon: const Icon(Icons.save),
+        ),
 
-                },
-                backgroundColor: Colors.green,
-                child: const Icon(Icons.save),
-              ),
+
+
         floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       ),
     );
@@ -628,14 +680,14 @@ class _EditItemScreenState extends State<EditItemScreen> {
               ),
               onTap: canDelete
                   ? () {
-                      setState(() {
-                        if (_selectedIndices.contains(index)) {
-                          _selectedIndices.remove(index);
-                        } else {
-                          _selectedIndices.add(index);
-                        }
-                      });
-                    }
+                setState(() {
+                  if (_selectedIndices.contains(index)) {
+                    _selectedIndices.remove(index);
+                  } else {
+                    _selectedIndices.add(index);
+                  }
+                });
+              }
                   : null,
             );
           },
@@ -670,10 +722,10 @@ class _EditItemScreenState extends State<EditItemScreen> {
             title: Text(element.text),
             trailing: isUserElement
                 ? const Chip(
-                    label: Text('נוסף', style: TextStyle(fontSize: 12)),
-                    backgroundColor: Colors.blue,
-                    labelStyle: TextStyle(color: Colors.white),
-                  )
+              label: Text('נוסף', style: TextStyle(fontSize: 12)),
+              backgroundColor: Colors.blue,
+              labelStyle: TextStyle(color: Colors.white),
+            )
                 : null,
           );
         },

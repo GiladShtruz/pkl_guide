@@ -412,12 +412,18 @@ class _SwitchCardGameScreenState extends State<SwitchCardGameScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[900],
+
       appBar: AppBar(
-        title: Text(widget.item.name),
+        title: Text(widget.item.name, style: TextStyle(color: Colors.white),),
         centerTitle: true,
         backgroundColor: Colors.transparent,
         elevation: 0,
         foregroundColor: Colors.white,
+          systemOverlayStyle: const SystemUiOverlayStyle(
+            statusBarColor: Colors.deepPurple, // צבע החלק העליון (סטטוס בר)
+            statusBarIconBrightness: Brightness.light, // צבע האייקונים באנדרואיד
+            statusBarBrightness: Brightness.dark, // צבע האייקונים ב־iOS
+          ),
         actions: [
           IconButton(
             icon: const Icon(Icons.info_outline),
@@ -425,6 +431,7 @@ class _SwitchCardGameScreenState extends State<SwitchCardGameScreen>
           ),
         ],
       ),
+
       body: SafeArea(
         child: Column(
           children: [

@@ -72,7 +72,6 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     final totalItems = widget.item.strElements.length;
 
     return Scaffold(
-      backgroundColor: Colors.grey[50],
       appBar: AppBar(
         title: Column(
           children: [
@@ -148,7 +147,8 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                         ],
                       ),
                     ),
-                  // Detail card
+
+                  // Detail card - כרטיס הסבר גדול
                   if (widget.item.detail != null &&
                       widget.item.detail!.isNotEmpty)
                     _buildInfoCard(
@@ -156,23 +156,47 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                       content: widget.item.detail!,
                       icon: Icons.description,
                     ),
-                  if (widget.item.equipment != null &&
-                      widget.item.equipment!.isNotEmpty)
-                    _buildInfoCard(
-                      title: 'ציוד נדרש',
-                      content: widget.item.equipment!,
-                      icon: Icons.sports_soccer,
+
+                  // כרטיסיות קומפקטיות למיקום וציוד
+                  if ((widget.item.equipment != null && widget.item.equipment!.isNotEmpty) ||
+                      (widget.item.classification != null && widget.item.classification!.isNotEmpty))
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 16),
+                      child: Row(
+                        children: [
+                          // כרטיס ציוד נדרש
+                          if (widget.item.equipment != null && widget.item.equipment!.isNotEmpty)
+                            Expanded(
+                              child: _buildCompactInfoCard(
+                                title: 'ציוד נדרש',
+                                content: widget.item.equipment!,
+                                icon: Icons.sports_soccer,
+                                color: Colors.teal,
+                              ),
+                            ),
+
+                          // רווח בין הכרטיסים אם שניהם קיימים
+                          if (widget.item.equipment != null &&
+                              widget.item.equipment!.isNotEmpty &&
+                              widget.item.classification != null &&
+                              widget.item.classification!.isNotEmpty)
+                            const SizedBox(width: 8),
+
+                          // כרטיס מיקום
+                          if (widget.item.classification != null && widget.item.classification!.isNotEmpty)
+                            Expanded(
+                              child: _buildCompactInfoCard(
+                                title: 'מיקום',
+                                content: widget.item.classification!,
+                                icon: Icons.location_on,
+                                color: Colors.deepOrange,
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
 
-                  // Classification
-                  if (widget.item.classification != null &&
-                      widget.item.classification!.isNotEmpty)
-                    _buildInfoCard(
-                      title: 'מיקום',
-                      content: widget.item.classification!,
-                      icon: Icons.location_on,
-                    ),
-
+                  // קישור
                   if (widget.item.link != null && widget.item.link!.isNotEmpty)
                     _buildInfoCard(
                       title: 'קישור',
@@ -378,19 +402,19 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
       ),
       floatingActionButton: isPantomime || isAlias
           ? FloatingActionButton.extended(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) =>
-                        SwitchCardGameScreen(item: widget.item),
-                  ),
-                );
-              },
-              label: const Text('התחל משחק'),
-              icon: const Icon(Icons.play_arrow),
-              backgroundColor: Colors.green,
-            )
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) =>
+                  SwitchCardGameScreen(item: widget.item),
+            ),
+          );
+        },
+        label: const Text('התחל משחק'),
+        icon: const Icon(Icons.play_arrow),
+        backgroundColor: Colors.green,
+      )
           : null,
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
@@ -437,6 +461,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     }
   }
 
+  // כרטיס מידע רגיל - לתוכן ארוך
   Widget _buildInfoCard({
     required String title,
     required String content,
@@ -460,18 +485,69 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
           content,
           style: isLink
               ? const TextStyle(
-                  color: Colors.blue,
-                  decoration: TextDecoration.underline,
-                )
+            color: Colors.blue,
+            decoration: TextDecoration.underline,
+          )
               : TextStyle(),
         ),
         trailing: isLink
             ? IconButton(
-                icon: const Icon(Icons.copy, size: 20),
-                onPressed: () => _copyToClipboard(widget.item.link!),
-              )
+          icon: const Icon(Icons.copy, size: 20),
+          onPressed: () => _copyToClipboard(widget.item.link!),
+        )
             : null,
         onTap: isLink ? () => _launchURL(widget.item.link!) : null,
+      ),
+    );
+  }
+
+  // כרטיס מידע קומפקטי - למיקום וציוד
+  Widget _buildCompactInfoCard({
+    required String title,
+    required String content,
+    required IconData icon,
+    required Color color,
+  }) {
+    return Card(
+      elevation: 2,
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: color.withOpacity(0.3),
+            width: 1,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, size: 18, color: color),
+                const SizedBox(width: 6),
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                    color: color,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              content,
+              style: const TextStyle(
+                fontSize: 14,
+                height: 1.3,
+              ),
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
       ),
     );
   }

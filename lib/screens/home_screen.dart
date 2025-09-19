@@ -164,7 +164,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     return Scaffold(
-      backgroundColor: Colors.grey[50],
       appBar: _currentIndex == 0 ? AppBar(
         title: const Text('פק״ל למדריך'),
         centerTitle: true,

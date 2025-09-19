@@ -149,7 +149,6 @@ class _CategoryItemsScreenState extends State<CategoryItemsScreen> {
         return true;
       },
       child: Scaffold(
-        backgroundColor: Colors.grey[50],
         appBar: AppBar(
           title: Text(widget.classification ?? widget.category.displayName),
           centerTitle: true,
@@ -249,7 +248,7 @@ class _CategoryItemsScreenState extends State<CategoryItemsScreen> {
           ),
           backgroundColor: _isSelectionMode
               ? Colors.blue
-              : Theme.of(context).primaryColor,
+              : widget.category.displayName == "חידות" ? Colors.orange : Theme.of(context).primaryColor,
         ),
         floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       ),

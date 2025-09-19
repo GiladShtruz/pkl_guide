@@ -52,7 +52,6 @@ class _GamesClassificationScreenState extends State<GamesClassificationScreen> {
       });
 
     return Scaffold(
-      backgroundColor: Colors.grey[50],
       appBar: AppBar(
         title: const Text('משחקים'),
         centerTitle: true,

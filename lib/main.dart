@@ -68,6 +68,8 @@ class MyApp extends StatelessWidget {
       //   useMaterial3: true,
       // ),
       theme: AppTheme.lightTheme,
+  darkTheme: AppTheme.darkTheme,
+  themeMode: ThemeMode.system, // or .light / .dark
       home: const HomeScreen(),
     );
   }

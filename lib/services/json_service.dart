@@ -122,6 +122,7 @@ class JsonService {
 
       // Step 3: Download new data
       if (newVersion > currentVersion) {
+        print("download data!!!");
         final dataResponse = await http.get(Uri.parse(dataUrl));
         if (dataResponse.statusCode != 200) {
           print('Failed to download data');
