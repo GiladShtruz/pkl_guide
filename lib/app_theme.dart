@@ -68,6 +68,38 @@ class AppTheme {
           borderRadius: BorderRadius.circular(16),
         ),
       ),
+      // בתוך AppTheme.lightTheme
+      bottomNavigationBarTheme: BottomNavigationBarThemeData(
+        backgroundColor: colorScheme.surface,
+        selectedItemColor: colorScheme.primary,
+        unselectedItemColor: colorScheme.onSurface.withOpacity(0.7),
+        showUnselectedLabels: true,
+        type: BottomNavigationBarType.fixed,
+        selectedIconTheme: IconThemeData(color: colorScheme.primary, size: 28),
+        unselectedIconTheme: IconThemeData(color: colorScheme.onSurface.withOpacity(0.7), size: 24),
+        selectedLabelStyle: TextStyle(color: colorScheme.primary, fontWeight: FontWeight.w600),
+        unselectedLabelStyle: TextStyle(color: colorScheme.onSurface.withOpacity(0.7)),
+      ),
+
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: colorScheme.surface,
+        indicatorColor: colorScheme.primaryContainer,
+        iconTheme: WidgetStateProperty.resolveWith<IconThemeData>((states) {
+          if (states.contains(WidgetState.selected)) {
+            return IconThemeData(color: colorScheme.primary);
+          }
+          return IconThemeData(color: colorScheme.onSurface.withOpacity(0.7));
+        }),
+        labelTextStyle: WidgetStateProperty.resolveWith<TextStyle>((states) {
+          if (states.contains(WidgetState.selected)) {
+            return TextStyle(
+              color: colorScheme.primary,
+              fontWeight: FontWeight.bold,
+            );
+          }
+          return TextStyle(color: colorScheme.onSurface.withOpacity(0.7));
+        }),
+      ),
 
       // Elevated Button Theme
       elevatedButtonTheme: ElevatedButtonThemeData(
@@ -346,25 +378,26 @@ class AppTheme {
         iconColor: colorScheme.onSurfaceVariant,
         textColor: colorScheme.onSurface,
       ),
-      navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: colorScheme.surface,
-        indicatorColor: colorScheme.primaryContainer,
-        iconTheme: WidgetStateProperty.resolveWith<IconThemeData>((states) {
-          if (states.contains(WidgetState.selected)) {
-            return IconThemeData(color: colorScheme.onPrimaryContainer);
-          }
-          return IconThemeData(color: colorScheme.onSurfaceVariant);
-        }),
-        labelTextStyle: WidgetStateProperty.resolveWith<TextStyle>((states) {
-          if (states.contains(WidgetState.selected)) {
-            return TextStyle(
-              color: colorScheme.onPrimaryContainer,
-              fontWeight: FontWeight.bold,
-            );
-          }
-          return TextStyle(color: colorScheme.onSurfaceVariant);
-        }),
-      ),
+        navigationBarTheme: NavigationBarThemeData(
+          backgroundColor: colorScheme.surface,
+          indicatorColor: colorScheme.primaryContainer,
+          iconTheme: WidgetStateProperty.resolveWith<IconThemeData>((states) {
+            if (states.contains(WidgetState.selected)) {
+              return IconThemeData(color: colorScheme.primary); // צבע ברור כשנבחר
+            }
+            return IconThemeData(color: colorScheme.onSurfaceVariant);
+          }),
+          labelTextStyle: WidgetStateProperty.resolveWith<TextStyle>((states) {
+            if (states.contains(WidgetState.selected)) {
+              return TextStyle(
+                color: colorScheme.primary, // אותו צבע כמו האייקון
+                fontWeight: FontWeight.bold,
+              );
+            }
+            return TextStyle(color: colorScheme.onSurfaceVariant);
+          }),
+        ),
+
 
       // Dialog Theme
       dialogTheme: DialogThemeData(
@@ -392,6 +425,7 @@ class AppTheme {
         ),
         behavior: SnackBarBehavior.floating,
       ),
+
 
       // Text Theme
       textTheme: TextTheme(

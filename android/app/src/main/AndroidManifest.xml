@@ -4,7 +4,7 @@
 
 
     <application
-        android:label="פקל למדריך"
+        android:label="פק&quot;ל למדריך"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

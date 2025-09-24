@@ -180,10 +180,11 @@ class SearchScreenState extends State<SearchScreen> {
         double? fontSize,
       }) {
     final defaultStyle = TextStyle(
-      color: Colors.grey[700],
+      color: Theme.of(context).colorScheme.onBackground, // <-- צבע מותאם ל-theme
       fontWeight: isTitle ? FontWeight.bold : FontWeight.normal,
       fontSize: fontSize ?? (isTitle ? 18 : 14),
     );
+
 
     // תמיד נחזיר RichText, גם כשאין התאמה
     if (query.isEmpty || !text.toLowerCase().contains(query.toLowerCase())) {

@@ -12,25 +12,30 @@ class CustomBottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BottomNavigationBar(
-      currentIndex: currentIndex,
-      onTap: onTap,
-      items: const [
-        BottomNavigationBarItem(
-          icon: Icon(Icons.home),
+    return NavigationBar(
+      selectedIndex: currentIndex,
+      onDestinationSelected: onTap,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      indicatorColor: Theme.of(context).colorScheme.primaryContainer,
+      destinations: const [
+        NavigationDestination(
+          icon: Icon(Icons.home_outlined),
+          selectedIcon: Icon(Icons.home),
           label: 'בית',
         ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.search),
+        NavigationDestination(
+          icon: Icon(Icons.search_outlined),
+          selectedIcon: Icon(Icons.search),
           label: 'חיפוש',
         ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.bookmark),
+        NavigationDestination(
+          icon: Icon(Icons.bookmark_outline),
+          selectedIcon: Icon(Icons.bookmark),
           label: 'רשימות',
         ),
       ],
-      selectedItemColor: Theme.of(context).primaryColor,
-      unselectedItemColor: Colors.grey,
     );
+
+
   }
 }

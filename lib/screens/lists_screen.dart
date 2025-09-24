@@ -126,7 +126,8 @@ class _ListsScreenState extends State<ListsScreen> {
       },
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('רשימות'),
+          title: Text('רשימות',
+          style: TextStyle(color: Theme.of(context).colorScheme.onBackground),),
           centerTitle: true,
           automaticallyImplyLeading: false,
           actions: [
@@ -202,7 +203,7 @@ class _ListsScreenState extends State<ListsScreen> {
             return Card(
               margin: const EdgeInsets.only(bottom: 12),
               elevation: list.isDefault ? 4 : 2,
-              color: list.isDefault ? Colors.red[50] : null,
+              color: (list.isDefault &&  Theme.of(context).brightness == Brightness.light) ? Colors.red[50] : null,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
                 side: isSelected
@@ -269,9 +270,10 @@ class _ListsScreenState extends State<ListsScreen> {
                           children: [
                             Text(
                               list.name,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
+                                color: Theme.of(context).colorScheme.onBackground
                               ),
                             ),
                             // Don't show description for favorites list
@@ -288,7 +290,7 @@ class _ListsScreenState extends State<ListsScreen> {
                           ],
                         ),
                       ),
-                      Column(
+                      Row(
                         children: [
                           Container(
                             padding: const EdgeInsets.symmetric(
@@ -304,7 +306,7 @@ class _ListsScreenState extends State<ListsScreen> {
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
-                                color: Theme.of(context).primaryColor,
+                                color: Theme.of(context).colorScheme.onBackground,
                               ),
                             ),
                           ),

@@ -64,8 +64,9 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isPantomime = widget.item.name.toLowerCase().contains('פנטומימה');
-    final isAlias = widget.item.name.toLowerCase().contains('נחש את המילה');
+    // final isPantomime = widget.item.name.toLowerCase().contains('פנטומימה');
+    // final isAlias = widget.item.name.toLowerCase().contains('נחש את המילה');
+    final isCardGame = widget.item.classification?.toLowerCase().contains("אינטראקטיבי") ?? false;
     final hasModifications = widget.item.hasUserModifications;
     final originalCount = widget.item.originalElements.length;
     final userAddedCount = widget.item.userElements.length;
@@ -160,41 +161,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                   // כרטיסיות קומפקטיות למיקום וציוד
                   if ((widget.item.equipment != null && widget.item.equipment!.isNotEmpty) ||
                       (widget.item.classification != null && widget.item.classification!.isNotEmpty))
-                    Container(
-                      margin: const EdgeInsets.only(bottom: 16),
-                      child: Row(
-                        children: [
-                          // כרטיס ציוד נדרש
-                          if (widget.item.equipment != null && widget.item.equipment!.isNotEmpty)
-                            Expanded(
-                              child: _buildCompactInfoCard(
-                                title: 'ציוד נדרש',
-                                content: widget.item.equipment!,
-                                icon: Icons.sports_soccer,
-                                color: Colors.teal,
-                              ),
-                            ),
-
-                          // רווח בין הכרטיסים אם שניהם קיימים
-                          if (widget.item.equipment != null &&
-                              widget.item.equipment!.isNotEmpty &&
-                              widget.item.classification != null &&
-                              widget.item.classification!.isNotEmpty)
-                            const SizedBox(width: 8),
-
-                          // כרטיס מיקום
-                          if (widget.item.classification != null && widget.item.classification!.isNotEmpty)
-                            Expanded(
-                              child: _buildCompactInfoCard(
-                                title: 'מיקום',
-                                content: widget.item.classification!,
-                                icon: Icons.location_on,
-                                color: Colors.deepOrange,
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
+                    _buildLocationEquipmentCards(),
 
                   // קישור
                   if (widget.item.link != null && widget.item.link!.isNotEmpty)
@@ -281,61 +248,74 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                   final item = widget.item.strElements[index];
                   final isUserAdded = index >= originalCount;
 
+                  // Replace the riddle display section in ItemDetailScreen
+
+// In the build method, update the riddle display part:
+
                   if (widget.item.category == 'riddles') {
-                    // Riddles display
+                    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
                     return Container(
                       margin: const EdgeInsets.only(bottom: 12),
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: isUserAdded
-                            ? Colors.blue[50]
-                            : Colors.orange[50],
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: isUserAdded
-                              ? Colors.blue[200]!
-                              : Colors.orange[200]!,
-                          width: 1,
-                        ),
-                      ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            width: 32,
-                            height: 32,
-                            decoration: BoxDecoration(
-                              color: isUserAdded ? Colors.blue : Colors.orange,
-                              shape: BoxShape.circle,
+                      child: Card(
+                        elevation: 2,
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: isDarkMode
+                                  ? (isUserAdded ? Colors.blue[700]! : Colors.orange[700]!)
+                                  : (isUserAdded ? Colors.blue[200]! : Colors.orange[200]!),
+                              width: 1,
                             ),
-                            child: Center(
-                              child: Text(
-                                '${index + 1}',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                width: 32,
+                                height: 32,
+                                decoration: BoxDecoration(
+                                  color: isDarkMode
+                                      ? (isUserAdded ? Colors.blue[400] : Colors.orange[400])
+                                      : (isUserAdded ? Colors.blue : Colors.orange),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    '${index + 1}',
+                                    style: TextStyle(
+                                      color: isDarkMode ? Colors.black87 : Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                    ),
+                                  ),
                                 ),
                               ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              item,
-                              style: const TextStyle(fontSize: 16, height: 1.4),
-                            ),
-                          ),
-                          if (isUserAdded)
-                            Container(
-                              margin: const EdgeInsets.only(left: 8),
-                              child: const Icon(
-                                Icons.person,
-                                size: 16,
-                                color: Colors.blue,
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  item,
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    height: 1.4,
+                                    color: Theme.of(context).textTheme.bodyLarge?.color,
+                                  ),
+                                ),
                               ),
-                            ),
-                        ],
+                              if (isUserAdded)
+                                Container(
+                                  margin: const EdgeInsets.only(left: 8),
+                                  child: Icon(
+                                    Icons.person,
+                                    size: 16,
+                                    color: isDarkMode ? Colors.blue[400] : Colors.blue,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
                       ),
                     );
                   } else {
@@ -400,7 +380,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
           const SliverToBoxAdapter(child: SizedBox(height: 80)),
         ],
       ),
-      floatingActionButton: isPantomime || isAlias
+      floatingActionButton: isCardGame
           ? FloatingActionButton.extended(
         onPressed: () {
           Navigator.push(
@@ -501,12 +481,142 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     );
   }
 
+  // פונקציה שבודקת את אורך הטקסט ומחליטה על התצוגה
+  Widget _buildLocationEquipmentCards() {
+    final hasEquipment = widget.item.equipment != null && widget.item.equipment!.isNotEmpty;
+    final hasClassification = widget.item.classification != null && widget.item.classification!.isNotEmpty;
+
+    // בודק אם הטקסט ארוך (יותר מ-50 תווים או שיש לו שברי שורה)
+    final isEquipmentLong = hasEquipment &&
+        (widget.item.equipment!.length > 50 || widget.item.equipment!.contains('\n'));
+    final isClassificationLong = hasClassification &&
+        (widget.item.classification!.length > 50 || widget.item.classification!.contains('\n'));
+
+    // אם שניהם קיימים ולפחות אחד מהם ארוך - תצוגה אנכית
+    final useVerticalLayout = (hasEquipment && hasClassification) &&
+        (isEquipmentLong || isClassificationLong);
+
+    // אם רק אחד קיים או שניהם קצרים
+    if (!useVerticalLayout) {
+      // תצוגה אופקית (זה לצד זה)
+      return Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        child: Row(
+          children: [
+            if (hasEquipment)
+              Expanded(
+                child: _buildCompactInfoCard(
+                  title: 'ציוד נדרש',
+                  content: widget.item.equipment!,
+                  icon: Icons.sports_soccer,
+                  color: Colors.teal,
+                  maxLines: isEquipmentLong ? null : 3,
+                ),
+              ),
+
+            if (hasEquipment && hasClassification)
+              const SizedBox(width: 8),
+
+            if (hasClassification)
+              Expanded(
+                child: _buildCompactInfoCard(
+                  title: 'מיקום',
+                  content: widget.item.classification!,
+                  icon: Icons.location_on,
+                  color: Colors.deepOrange,
+                  maxLines: isClassificationLong ? null : 3,
+                ),
+              ),
+          ],
+        ),
+      );
+    } else {
+      // תצוגה אנכית (אחד מתחת לשני)
+      return Column(
+        children: [
+          if (hasEquipment)
+            Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              child: _buildExpandedInfoCard(
+                title: 'ציוד נדרש',
+                content: widget.item.equipment!,
+                icon: Icons.sports_soccer,
+                color: Colors.teal,
+              ),
+            ),
+
+          if (hasClassification)
+            Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              child: _buildExpandedInfoCard(
+                title: 'מיקום',
+                content: widget.item.classification!,
+                icon: Icons.location_on,
+                color: Colors.deepOrange,
+              ),
+            ),
+        ],
+      );
+    }
+  }
+
+  // כרטיס מידע מורחב - לתצוגה אנכית
+  Widget _buildExpandedInfoCard({
+    required String title,
+    required String content,
+    required IconData icon,
+    required Color color,
+  }) {
+    return Card(
+      elevation: 2,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: color.withOpacity(0.3),
+            width: 1,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, size: 20, color: color),
+                const SizedBox(width: 8),
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: color,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              content,
+              style: const TextStyle(
+                fontSize: 15,
+                height: 1.4,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   // כרטיס מידע קומפקטי - למיקום וציוד
   Widget _buildCompactInfoCard({
     required String title,
     required String content,
     required IconData icon,
     required Color color,
+    int? maxLines,
   }) {
     return Card(
       elevation: 2,
@@ -543,8 +653,8 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                 fontSize: 14,
                 height: 1.3,
               ),
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
+              maxLines: maxLines,
+              overflow: maxLines != null ? TextOverflow.ellipsis : null,
             ),
           ],
         ),
