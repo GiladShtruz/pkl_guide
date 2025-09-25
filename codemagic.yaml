@@ -13,6 +13,7 @@ workflows:
         bundle_identifier: com.gilad.pklGuide
       vars:
         APP_STORE_APPLE_ID: "giladsh22@gmail.com"
+        BUNDLE_ID: "com.gilad.pklGuide"
 
     scripts:
       # התקנת Flutter dependencies
@@ -29,7 +30,19 @@ workflows:
           flutter clean
           flutter pub get
 
-      # הגדרת Code Signing
+      # יצירת Certificates ו-Provisioning Profiles
+      - name: Fetch signing files
+        script: |
+          app-store-connect fetch-signing-files "$BUNDLE_ID" \
+            --type IOS_APP_STORE \
+            --create
+
+      # הוספת Certificates ל-keychain
+      - name: Add certificates to keychain
+        script: |
+          keychain add-certificates
+
+      # הגדרת השימוש ב-profiles
       - name: Set up code signing
         script: |
           xcode-project use-profiles
@@ -43,9 +56,8 @@ workflows:
       # בנייה לחנות
       - name: Flutter build IPA for TestFlight
         script: |
-          BUILD_NUMBER=$(($(app-store-connect get-latest-testflight-build-number "com.gilad.pklGuide") + 1))
           flutter build ipa --release \
-            --build-number=$BUILD_NUMBER \
+            --build-number=$(($(app-store-connect get-latest-testflight-build-number "$BUNDLE_ID") + 1)) \
             --export-options-plist=/Users/builder/export_options.plist
 
     artifacts:
