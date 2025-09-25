@@ -7,9 +7,7 @@ workflows:
       xcode: latest
       cocoapods: default
       vars:
-        # Bundle ID
         BUNDLE_ID: "com.gilad.pklGuide"
-        # Your Apple ID email
         APP_STORE_CONNECT_APPLE_ID: "giladsh22@gmail.com"
 
     scripts:
@@ -18,30 +16,37 @@ workflows:
         script: |
           flutter packages pub get
 
+      # חשוב! יצירת קבצי Flutter iOS לפני CocoaPods
+      - name: Flutter precache and prepare iOS
+        script: |
+          flutter precache --ios
+          cd ios
+          flutter pub get
+          cd ..
+          flutter build ios-framework --output=ios/Flutter/Generated.xcconfig || true
+
       # עדכון Bundle ID
       - name: Set Bundle ID
         script: |
           cd ios
           agvtool new-version -all $(($BUILD_NUMBER + 1))
-          sed -i '' 's/PRODUCT_BUNDLE_IDENTIFIER = .*/PRODUCT_BUNDLE_IDENTIFIER = '"$BUNDLE_ID"';/g' Runner.xcodeproj/project.pbxproj
 
-      # התקנת CocoaPods
+      # התקנת CocoaPods - אחרי שיש את כל קבצי Flutter
       - name: Install pods
         script: |
-          cd ios && pod install
+          cd ios
+          pod repo update
+          pod install
 
-      # בנייה עם Automatic Code Signing
-      - name: Flutter build ipa
+      # בנייה בלי code signing לבינתיים
+      - name: Flutter build iOS
         script: |
           cd $CM_BUILD_DIR
-          flutter build ipa --release \
-            --build-name=1.0.$BUILD_NUMBER \
-            --build-number=$BUILD_NUMBER \
-            --export-options-plist=/Users/builder/export_options.plist
+          flutter build ios --debug --no-codesign
 
     artifacts:
-      - build/ios/ipa/*.ipa
-      - build/ios/xcarchive/*.xcarchive
+      - build/ios/iphoneos/**/*.app
+      - build/ios/iphonesimulator/**/*.app
       - flutter_drive.log
 
     publishing:
