@@ -320,17 +320,26 @@ class AppTheme {
 
       // Floating Action Button Theme
       floatingActionButtonTheme: FloatingActionButtonThemeData(
-        backgroundColor: colorScheme.primary, // Solid purple color
-        foregroundColor: Colors.white,
-        elevation: 6,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        extendedTextStyle: const TextStyle(
-          fontWeight: FontWeight.w600,
-          letterSpacing: 0.5,
-        ),
+      backgroundColor: Colors.purple, // יתעדכן לפי מצב בהיר/כהה
+      foregroundColor: Colors.white,        // טקסט ואייקון לבנים
+      elevation: 6,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
       ),
+
+      // התאמות ל־extended
+      extendedTextStyle: const TextStyle(
+        fontWeight: FontWeight.w600,
+        fontSize: 16,
+        letterSpacing: 0.5,
+      ),
+      extendedIconLabelSpacing: 8.0, // ריווח בין אייקון לטקסט
+      extendedPadding: const EdgeInsets.symmetric(
+        horizontal: 20,
+        vertical: 12,
+      ),
+    ),
+
 
       // Input Decoration Theme
       inputDecorationTheme: InputDecorationTheme(

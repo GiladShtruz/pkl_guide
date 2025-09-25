@@ -246,9 +246,7 @@ class _CategoryItemsScreenState extends State<CategoryItemsScreen> {
                 ? Icons.bookmark_add
                 : Icons.add,
           ),
-          backgroundColor: _isSelectionMode
-              ? Colors.blue
-              : widget.category.displayName == "חידות" ? Colors.orange : Theme.of(context).primaryColor,
+          backgroundColor: _isSelectionMode ? Colors.blue : widget.category.categoryColor,
         ),
         floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       ),

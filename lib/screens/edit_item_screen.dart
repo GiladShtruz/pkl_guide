@@ -1,4 +1,5 @@
 // lib/screens/edit_item_screen.dart
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:pkl_guide/models/category.dart';
 import 'package:pkl_guide/models/element_model.dart';
@@ -17,6 +18,9 @@ class EditItemScreen extends StatefulWidget {
 }
 
 class _EditItemScreenState extends State<EditItemScreen> {
+  bool _isInitializing = true;
+  bool _isChangingMode = false;
+
   late TextEditingController _nameController;
   late TextEditingController _detailController;
   late TextEditingController _linkController;
@@ -40,10 +44,15 @@ class _EditItemScreenState extends State<EditItemScreen> {
     super.initState();
     _storageService = context.read<StorageService>();
 
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initializeData();
+    });
+  }
+  Future<void> _initializeData() async {
     // Initialize elements list
     _currentElements = List.from(widget.item.elements);
 
-    // Use current values (user modified or original)
+    // Initialize controllers
     _nameController = TextEditingController(text: widget.item.name);
     _detailController = TextEditingController(text: widget.item.detail ?? '');
     _linkController = TextEditingController(text: widget.item.link ?? '');
@@ -55,13 +64,19 @@ class _EditItemScreenState extends State<EditItemScreen> {
     );
     _newItemController = TextEditingController();
 
-    // Add listeners for changes
+    // Add listeners
     _nameController.addListener(_markChanged);
     _detailController.addListener(_markChanged);
     _linkController.addListener(_markChanged);
     _equipmentController.addListener(_markChanged);
     _classificationController.addListener(_markChanged);
+
+    setState(() {
+      _isInitializing = false;
+    });
   }
+
+
 
   void _markChanged() {
     if (!_hasChanges) {
@@ -227,6 +242,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
       setState(() {
         _currentElements.insert(0, ElementModel(_newItemController.text, true));
         _hasChanges = true;
+        _isChangeElements = true;
       });
 
       _newItemController.clear();
@@ -349,7 +365,9 @@ class _EditItemScreenState extends State<EditItemScreen> {
               ),
           ],
         ),
-        body: SingleChildScrollView(
+        body: _isInitializing
+            ? const Center(child: CircularProgressIndicator())
+        : SingleChildScrollView(
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -587,16 +605,27 @@ class _EditItemScreenState extends State<EditItemScreen> {
                   style: TextButton.styleFrom(foregroundColor: Colors.orange),
                 ),
               TextButton.icon(
-                onPressed: () {
+                onPressed: _isChangingMode
+                    ? null :   () async {
+                  setState(() {
+                    _isChangingMode = true;
+                  });
+                  // TODO: maybe delete it
+                  await Future.delayed(const Duration(milliseconds: 50));
+
                   setState(() {
                     _isEditMode = !_isEditMode;
                     if (!_isEditMode) {
                       _selectedIndices.clear();
+
                     }
+                    _isChangingMode = false;
                   });
                 },
-                icon: Icon(_isEditMode ? Icons.check : Icons.edit),
-                label: Text(_isEditMode ? 'אישור' : 'עריכה'),
+                icon: Icon(_isChangingMode ? Icons.hourglass_bottom_sharp : _isEditMode ? Icons.check : Icons.edit),
+                label:  Text(_isChangingMode
+                    ? 'טוען...'
+                    : (_isEditMode ? 'אישור' : 'עריכה')),
               ),
             ],
           ),
@@ -605,6 +634,8 @@ class _EditItemScreenState extends State<EditItemScreen> {
       const SizedBox(height: 8),
 
       // Content list
+
+
       _buildElementsList(),
     ];
   }
@@ -625,110 +656,128 @@ class _EditItemScreenState extends State<EditItemScreen> {
     }
 
     if (_isEditMode) {
+      // חישוב גובה דינמי - מקסימום חצי מהמסך
+      final screenHeight = MediaQuery.of(context).size.height;
+      final maxHeight = screenHeight * 0.5;
+      final estimatedItemHeight = 72.0; // גובה משוער של ListTile
+      final calculatedHeight = min(maxHeight, _currentElements.length * estimatedItemHeight);
+
       return Card(
-        child: ReorderableListView.builder(
-          shrinkWrap: true,
+        child: Container(
+          height: calculatedHeight,
+          child: ReorderableListView.builder(
+            itemCount: _currentElements.length,
+            onReorder: (oldIndex, newIndex) {
+              setState(() {
+                if (newIndex > oldIndex) {
+                  newIndex -= 1;
+                }
+                final element = _currentElements.removeAt(oldIndex);
+                _currentElements.insert(newIndex, element);
+                _isChangeElements = true;
+                _hasChanges = true;
+              });
+            },
+            itemBuilder: (context, index) {
+              final element = _currentElements[index];
+              final isSelected = _selectedIndices.contains(index);
+              final canDelete = element.isUserElement;
 
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: _currentElements.length,
-          onReorder: (oldIndex, newIndex) {
-            setState(() {
-              if (newIndex > oldIndex) {
-                newIndex -= 1;
-              }
-              final element = _currentElements.removeAt(oldIndex);
-              _currentElements.insert(newIndex, element);
-              _isChangeElements = true;
-              _hasChanges = true;
-
-            });
-          },
-          itemBuilder: (context, index) {
-            final element = _currentElements[index];
-            final isSelected = _selectedIndices.contains(index);
-            final canDelete = element.isUserElement;
-
-            return ListTile(
-              contentPadding: EdgeInsets.only(left: 0, right: 5),
-              // minVerticalPadding: 0,
-              key: ValueKey('$index-${element.text}'),
-              leading: Icon(Icons.drag_handle, color: Colors.grey[600]),
-              title: Text(element.text),
-              trailing: Wrap(
-                spacing: 0,
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_upward),
-                    onPressed: index > 0 ? () => _moveToTop(index) : null,
-                    tooltip: 'הזז לראש הרשימה',
-                  ),
-
-                  if (canDelete)
-                    Checkbox(
-                      value: isSelected,
-                      onChanged: (value) {
-                        setState(() {
-                          if (value == true) {
-                            _selectedIndices.add(index);
-                          } else {
-                            _selectedIndices.remove(index);
-                          }
-                        });
-                      },
+              return ListTile(
+                contentPadding: EdgeInsets.only(left: 0, right: 5),
+                key: ValueKey('$index-${element.text}'),
+                leading: Icon(Icons.drag_handle, color: Colors.grey[600]),
+                title: Text(element.text),
+                trailing: Wrap(
+                  spacing: 0,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.arrow_upward),
+                      onPressed: index > 0 ? () => _moveToTop(index) : null,
+                      tooltip: 'הזז לראש הרשימה',
                     ),
-                ],
-              ),
-              onTap: canDelete
-                  ? () {
-                setState(() {
-                  if (_selectedIndices.contains(index)) {
-                    _selectedIndices.remove(index);
-                  } else {
-                    _selectedIndices.add(index);
-                  }
-                });
-              }
-                  : null,
-            );
-          },
+                    if (canDelete)
+                      Checkbox(
+                        value: isSelected,
+                        onChanged: (value) {
+                          setState(() {
+                            if (value == true) {
+                              _selectedIndices.add(index);
+                            } else {
+                              _selectedIndices.remove(index);
+                            }
+                          });
+                        },
+                      ),
+                  ],
+                ),
+                onTap: canDelete
+                    ? () {
+                  setState(() {
+                    if (_selectedIndices.contains(index)) {
+                      _selectedIndices.remove(index);
+                    } else {
+                      _selectedIndices.add(index);
+                    }
+                  });
+                }
+                    : null,
+              );
+            },
+          ),
         ),
       );
     }
 
-    // Normal view (not edit mode)
+    // Normal view (not edit mode) - נשאר כמו שהיה
     return Card(
-      child: ListView.separated(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        itemCount: _currentElements.length,
-        separatorBuilder: (context, index) => const Divider(height: 1),
-        itemBuilder: (context, index) {
-          final element = _currentElements[index];
-          final isUserElement = element.isUserElement;
+      child: Container(
+        // הגבל את הגובה גם במצב רגיל לרשימות גדולות
+        constraints: BoxConstraints(
+          maxHeight: _currentElements.length > 50
+              ? MediaQuery.of(context).size.height * 0.5
+              : double.infinity,
+        ),
+        child: ListView.builder(
+          shrinkWrap: _currentElements.length <= 50,
+          physics: _currentElements.length <= 50
+              ? const NeverScrollableScrollPhysics()
+              : const AlwaysScrollableScrollPhysics(),
+          itemCount: _currentElements.length,
+          itemBuilder: (context, index) {
+            final element = _currentElements[index];
+            final isUserElement = element.isUserElement;
 
-          return ListTile(
-            contentPadding: EdgeInsets.symmetric(horizontal: 5),
-            leading: CircleAvatar(
-              backgroundColor: isUserElement
-                  ? Colors.blue[100]
-                  : Colors.grey[200],
-              child: Text(
-                '${index + 1}',
-                style: TextStyle(
-                  color: isUserElement ? Colors.blue : Colors.grey[700],
+            return Column(
+              children: [
+                ListTile(
+                  contentPadding: EdgeInsets.symmetric(horizontal: 5),
+                  leading: CircleAvatar(
+                    backgroundColor: isUserElement
+                        ? Colors.blue[100]
+                        : Colors.grey[200],
+                    child: Text(
+                      '${index + 1}',
+                      style: TextStyle(
+                        color: isUserElement ? Colors.blue : Colors.grey[700],
+                      ),
+                    ),
+                  ),
+                  title: Text(element.text),
+                  trailing: isUserElement
+                      ? const Chip(
+                    label: Text('נוסף', style: TextStyle(fontSize: 12)),
+                    backgroundColor: Colors.blue,
+                    labelStyle: TextStyle(color: Colors.white),
+                  )
+                      : null,
                 ),
-              ),
-            ),
-            title: Text(element.text),
-            trailing: isUserElement
-                ? const Chip(
-              label: Text('נוסף', style: TextStyle(fontSize: 12)),
-              backgroundColor: Colors.blue,
-              labelStyle: TextStyle(color: Colors.white),
-            )
-                : null,
-          );
-        },
+                if (index < _currentElements.length - 1)
+                  const Divider(height: 1),
+              ],
+            );
+          },
+        ),
       ),
     );
   }

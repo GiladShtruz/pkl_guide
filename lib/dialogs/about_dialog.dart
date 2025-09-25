@@ -5,7 +5,7 @@ class AboutDialogWidget extends StatelessWidget {
   const AboutDialogWidget({super.key});
 
   void _launchPrivacyPolicy() async {
-    final uri = Uri.parse('https://example.com/privacy-policy'); // Replace with actual URL
+    final uri = Uri.parse('https://drive.google.com/file/d/1_qDY-4Oit85Vz5225CNzrd7VbGc3N_qg/view?usp=sharing'); // Replace with actual URL
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
@@ -26,7 +26,7 @@ class AboutDialogWidget extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             const Text(
-              'אפליקציה לשמירת ושימוש במשחקים, חידות, פעילויות וקטעים למדריכים.',
+              'שלום לכולם, אני גילעד שטרוזמן ואני פיתחתי את האפליקציה שלפניכם.\nאפליקציה לשמירת ושימוש במשחקים, חידות, פעילויות וקטעים למדריכים.',
               style: TextStyle(fontSize: 14),
             ),
             const SizedBox(height: 16),
@@ -44,14 +44,9 @@ class AboutDialogWidget extends StatelessWidget {
               '• ייבוא וייצוא תכנים',
               style: TextStyle(fontSize: 14),
             ),
-            const SizedBox(height: 16),
-            const Divider(),
-            const SizedBox(height: 8),
-            const Text(
-              '© 2024 כל הזכויות שמורות',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
-              textAlign: TextAlign.center,
-            ),
+            // const SizedBox(height: 16),
+            // const Divider(),
+            // const SizedBox(height: 8),
           ],
         ),
       ),

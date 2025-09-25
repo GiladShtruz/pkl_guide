@@ -86,13 +86,13 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
         ),
         centerTitle: true,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.adb),
-            onPressed: (){
-              print("widget.item.isUserChanged");
-              print(widget.item.isUserChanged);
-            },
-          ),
+          // IconButton(
+          //   icon: const Icon(Icons.adb),
+          //   onPressed: (){
+          //     print("widget.item.isUserChanged");
+          //     print(widget.item.isUserChanged);
+          //   },
+          // ),
           IconButton(
             icon: const Icon(Icons.bookmark_border),
             onPressed: _openListsDialog,

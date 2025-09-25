@@ -32,7 +32,20 @@ class _GamesClassificationScreenState extends State<GamesClassificationScreen> {
 
     // Group games by classification
     for (var game in allGames) {
-      final classification = game.classification ?? 'אחר';
+      // final classification = game.classification ?? 'אחר';
+
+      final classification;
+      if (game.classification == null){
+        classification = 'כללי';
+      }
+      else if(game.classification == ""){
+        classification = 'כללי';
+      }
+      else{
+        classification = game.classification;
+      }
+
+
       _classifications.add(classification);
       _categorizedGames.putIfAbsent(classification, () => []).add(game);
     }

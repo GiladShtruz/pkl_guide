@@ -24,16 +24,19 @@ CategoryType getCategoryType(String categoryKey) {
 
 
 enum CategoryType {
-  games('משחקים', Icons.casino),
-  activities('פעילויות', Icons.group),
-  riddles('חידות', Icons.psychology),
-  texts('קטעים', Icons.description);
+  games('משחקים', Icons.casino, Colors.purple),
+  activities('פעילויות', Icons.group, Colors.blue),
+  riddles('חידות', Icons.psychology, Colors.orange),
+  texts('קטעי קריאה', Icons.description, Colors.green);
 
   final String displayName;
   final IconData icon;
+  final Color categoryColor;
 
-  const CategoryType(this.displayName, this.icon);
+  const CategoryType(this.displayName, this.icon, this.categoryColor);
 }
+
+
 
 
 
