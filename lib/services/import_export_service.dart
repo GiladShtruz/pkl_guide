@@ -57,7 +57,8 @@ class ImportExportService {
 
         // Add elements if exist
         if (item.userElements.isNotEmpty) {
-          addition += '\nפריטים: ${item.userElements.join(', ')}';
+          List<String> strUserElements = item.userElements.map((element) => element.text).toList();
+          addition += '\nפריטים: ${strUserElements.join(', ')}';
         }
 
         additions.add(addition);
@@ -94,7 +95,9 @@ class ImportExportService {
         }
 
         if (item.userElements.isNotEmpty) {
-          modification += '\nהוספתי פריטים: ${item.userElements.join(', ')}';
+          List<String> strUserElements = item.userElements.map((element) => element.text).toList();
+
+          modification += '\nהוספתי פריטים: ${strUserElements.join(', ')}';
           hasChanges = true;
         }
 

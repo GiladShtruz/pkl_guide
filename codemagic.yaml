@@ -1,14 +1,18 @@
 workflows:
-  ios-dev-build:
-    name: iOS Development Build
+  ios-testflight:
+    name: iOS TestFlight Build
     max_build_duration: 60
+    integrations:
+      app_store_connect: codemagic
     environment:
       flutter: stable
       xcode: latest
       cocoapods: default
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.gilad.pklGuide
       vars:
-        BUNDLE_ID: "com.gilad.pklGuide"
-        APP_STORE_CONNECT_APPLE_ID: "giladsh22@gmail.com"
+        APP_STORE_APPLE_ID: "giladsh22@gmail.com"
 
     scripts:
       # התקנת Flutter dependencies
@@ -20,20 +24,15 @@ workflows:
       - name: Clean iOS build
         script: |
           cd ios
-          rm -rf Pods
-          rm -rf .symlinks
-          rm -rf Flutter/Flutter.framework
-          rm -rf Flutter/Flutter.podspec
-          rm -rf Podfile.lock
+          rm -rf Pods Podfile.lock
           cd ..
           flutter clean
           flutter pub get
 
-      # עדכון build number
-      - name: Set build number
+      # הגדרת Code Signing
+      - name: Set up code signing
         script: |
-          cd ios
-          agvtool new-version -all $(($BUILD_NUMBER + 1))
+          xcode-project use-profiles
 
       # התקנת CocoaPods
       - name: Install pods
@@ -41,14 +40,16 @@ workflows:
           cd ios
           pod install --repo-update
 
-      # בנייה
-      - name: Flutter build iOS
+      # בנייה לחנות
+      - name: Flutter build IPA for TestFlight
         script: |
-          flutter build ios --debug --no-codesign
+          BUILD_NUMBER=$(($(app-store-connect get-latest-testflight-build-number "com.gilad.pklGuide") + 1))
+          flutter build ipa --release \
+            --build-number=$BUILD_NUMBER \
+            --export-options-plist=/Users/builder/export_options.plist
 
     artifacts:
-      - build/ios/**/*.app
-      - build/ios/**/*.dSYM
+      - build/ios/ipa/*.ipa
 
     publishing:
       email:
@@ -57,3 +58,9 @@ workflows:
         notify:
           success: true
           failure: true
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        beta_groups:
+          - "App Store Connect Users"
+        submit_to_app_store: false
