@@ -14,40 +14,41 @@ workflows:
       # התקנת Flutter dependencies
       - name: Get Flutter packages
         script: |
-          flutter packages pub get
-
-      # חשוב! יצירת קבצי Flutter iOS לפני CocoaPods
-      - name: Flutter precache and prepare iOS
-        script: |
-          flutter precache --ios
-          cd ios
           flutter pub get
-          cd ..
-          flutter build ios-framework --output=ios/Flutter/Generated.xcconfig || true
 
-      # עדכון Bundle ID
-      - name: Set Bundle ID
+      # ניקוי והכנת iOS
+      - name: Clean iOS build
+        script: |
+          cd ios
+          rm -rf Pods
+          rm -rf .symlinks
+          rm -rf Flutter/Flutter.framework
+          rm -rf Flutter/Flutter.podspec
+          rm -rf Podfile.lock
+          cd ..
+          flutter clean
+          flutter pub get
+
+      # עדכון build number
+      - name: Set build number
         script: |
           cd ios
           agvtool new-version -all $(($BUILD_NUMBER + 1))
 
-      # התקנת CocoaPods - אחרי שיש את כל קבצי Flutter
+      # התקנת CocoaPods
       - name: Install pods
         script: |
           cd ios
-          pod repo update
-          pod install
+          pod install --repo-update
 
-      # בנייה בלי code signing לבינתיים
+      # בנייה
       - name: Flutter build iOS
         script: |
-          cd $CM_BUILD_DIR
           flutter build ios --debug --no-codesign
 
     artifacts:
-      - build/ios/iphoneos/**/*.app
-      - build/ios/iphonesimulator/**/*.app
-      - flutter_drive.log
+      - build/ios/**/*.app
+      - build/ios/**/*.dSYM
 
     publishing:
       email:
