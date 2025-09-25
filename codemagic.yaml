@@ -12,16 +12,14 @@ workflows:
         distribution_type: app_store
         bundle_identifier: com.gilad.pklGuide
       vars:
-        APP_STORE_APPLE_ID: "giladsh22@gmail.com"
         BUNDLE_ID: "com.gilad.pklGuide"
-
+    cache:
+      cache_paths:
+        - $HOME/.pub-cache
+        - ios/Pods
     scripts:
-      # התקנת Flutter dependencies
       - name: Get Flutter packages
-        script: |
-          flutter pub get
-
-      # ניקוי והכנת iOS
+        script: flutter pub get
       - name: Clean iOS build
         script: |
           cd ios
@@ -29,40 +27,27 @@ workflows:
           cd ..
           flutter clean
           flutter pub get
-
-      # יצירת Certificates ו-Provisioning Profiles
       - name: Fetch signing files
         script: |
           app-store-connect fetch-signing-files "$BUNDLE_ID" \
             --type IOS_APP_STORE \
             --create
-
-      # הוספת Certificates ל-keychain
       - name: Add certificates to keychain
-        script: |
-          keychain add-certificates
-
-      # הגדרת השימוש ב-profiles
+        script: keychain add-certificates
       - name: Set up code signing
-        script: |
-          xcode-project use-profiles
-
-      # התקנת CocoaPods
+        script: xcode-project use-profiles
       - name: Install pods
         script: |
           cd ios
           pod install --repo-update
-
-      # בנייה לחנות
       - name: Flutter build IPA for TestFlight
         script: |
           flutter build ipa --release \
-            --build-number=$(($(app-store-connect get-latest-testflight-build-number "$BUNDLE_ID") + 1)) \
-            --export-options-plist=/Users/builder/export_options.plist
-
+            --build-number=$(($(app-store-connect get-latest-testflight-build-number "$BUNDLE_ID") + 1))
     artifacts:
       - build/ios/ipa/*.ipa
-
+      - build/ios/**/*.app
+      - build/ios/**/*.dSYM
     publishing:
       email:
         recipients:
