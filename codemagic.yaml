@@ -2,16 +2,14 @@ workflows:
   ios-testflight:
     name: iOS TestFlight Build
     max_build_duration: 60
-    # מחקתי את השורות האלה:
-    # integrations:
-    #   app_store_connect: codemagic
     environment:
       flutter: stable
       xcode: latest
       cocoapods: default
       vars:
         BUNDLE_ID: "com.gilad.pklGuide"
-        APP_STORE_APPLE_ID: "giladsh22@gmail.com"
+        APP_STORE_APPLE_ID: "giladsh22@gmail.com" #3
+        APP_SPECIFIC_PASSWORD: "@env:APP_SPECIFIC_PASSWORD"  # נגדיר בעוד רגע
     scripts:
       # התקנת Flutter dependencies
       - name: Get Flutter packages
@@ -67,7 +65,6 @@ workflows:
 
     artifacts:
       - build/ios/ipa/*.ipa
-      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
 
     publishing:
       email:
@@ -77,7 +74,6 @@ workflows:
           success: true
           failure: true
       app_store_connect:
-        # מחקתי גם את auth: integration
+        apple_id: "giladsh22@gmail.com"
+        password: "@env:APP_SPECIFIC_PASSWORD"  # משתמש במשתנה סביבה
         submit_to_testflight: true
-        beta_groups:
-          - "App Store Connect Users"
