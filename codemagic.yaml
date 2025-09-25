@@ -2,15 +2,14 @@ workflows:
   ios-testflight:
     name: iOS TestFlight Build
     max_build_duration: 60
-    integrations:
-      app_store_connect: codemagic
+
     environment:
       flutter: stable
       xcode: latest
       cocoapods: default
       vars:
         BUNDLE_ID: "com.gilad.pklGuide"
-        APP_STORE_APPLE_ID: "giladsh22@gmail.com" #1
+        APP_STORE_APPLE_ID: "giladsh22@gmail.com" #2
     scripts:
       # התקנת Flutter dependencies
       - name: Get Flutter packages
@@ -76,7 +75,7 @@ workflows:
           success: true
           failure: true
       app_store_connect:
-        auth: integration
+        # מחקתי גם את auth: integration
         submit_to_testflight: true
         beta_groups:
           - "App Store Connect Users"
