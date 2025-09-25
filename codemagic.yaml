@@ -8,18 +8,16 @@ workflows:
       flutter: stable
       xcode: latest
       cocoapods: default
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.gilad.pklGuide
       vars:
         BUNDLE_ID: "com.gilad.pklGuide"
-    cache:
-      cache_paths:
-        - $HOME/.pub-cache
-        - ios/Pods
+        APP_STORE_APPLE_ID: "giladsh22@gmail.com"
     scripts:
+      # התקנת Flutter dependencies
       - name: Get Flutter packages
-        script: flutter pub get
+        script: |
+          flutter pub get
+
+      # ניקוי והכנת iOS
       - name: Clean iOS build
         script: |
           cd ios
@@ -27,27 +25,49 @@ workflows:
           cd ..
           flutter clean
           flutter pub get
-      - name: Fetch signing files
+
+      # אתחול Keychain
+      - name: Initialize keychain
+        script: |
+          keychain initialize
+
+      # יצירת והורדת certificates ו-profiles
+      - name: Fetch App Store signing files
         script: |
           app-store-connect fetch-signing-files "$BUNDLE_ID" \
             --type IOS_APP_STORE \
+            --platform IOS \
             --create
-      - name: Add certificates to keychain
-        script: keychain add-certificates
-      - name: Set up code signing
-        script: xcode-project use-profiles
+
+      # הוספת certificates ל-keychain
+      - name: Setup keychain
+        script: |
+          keychain add-certificates
+
+      # הגדרת Xcode לשימוש ב-profiles
+      - name: Set up Xcode project
+        script: |
+          xcode-project use-profiles
+
+      # התקנת CocoaPods
       - name: Install pods
         script: |
           cd ios
           pod install --repo-update
-      - name: Flutter build IPA for TestFlight
+
+      # בנייה לחנות
+      - name: Flutter build IPA
         script: |
+          BUILD_NUMBER=$(($(app-store-connect get-latest-testflight-build-number "$BUNDLE_ID" 2>/dev/null || echo 0) + 1))
+          
           flutter build ipa --release \
-            --build-number=$(($(app-store-connect get-latest-testflight-build-number "$BUNDLE_ID") + 1))
+            --build-number=$BUILD_NUMBER \
+            --export-options-plist=/Users/builder/export_options.plist
+
     artifacts:
       - build/ios/ipa/*.ipa
-      - build/ios/**/*.app
-      - build/ios/**/*.dSYM
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
+
     publishing:
       email:
         recipients:
@@ -60,4 +80,3 @@ workflows:
         submit_to_testflight: true
         beta_groups:
           - "App Store Connect Users"
-        submit_to_app_store: false
