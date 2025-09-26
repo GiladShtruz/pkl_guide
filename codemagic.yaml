@@ -8,9 +8,8 @@ workflows:
       flutter: stable
       xcode: latest
       cocoapods: default
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.gilad.pklGuide
+      groups:
+        - default  # הוספתי את זה!
       vars:
         BUNDLE_ID: "com.gilad.pklGuide"
     scripts:
@@ -18,8 +17,26 @@ workflows:
         script: |
           flutter pub get
 
-      - name: Set up code signing
+      - name: Create and fetch signing files
         script: |
+          # אתחול keychain
+          keychain initialize
+          
+          # יצירת certificate private key חדש
+          CERT_KEY=/tmp/cert_key.pem
+          openssl genrsa -out $CERT_KEY 2048
+          
+          # יצירת או הורדת signing files עם ה-key החדש
+          app-store-connect fetch-signing-files "$BUNDLE_ID" \
+            --type IOS_APP_STORE \
+            --platform IOS \
+            --certificate-key=@file:$CERT_KEY \
+            --create
+          
+          # הוספת certificates
+          keychain add-certificates
+          
+          # שימוש ב-profiles
           xcode-project use-profiles
 
       - name: Install pods
@@ -37,7 +54,7 @@ workflows:
     publishing:
       email:
         recipients:
-          - myName@gmail.com  # שנה!
+          - giladsh22@gmail.com  # שנה למייל שלך!
         notify:
           success: true
       app_store_connect:
