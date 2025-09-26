@@ -8,16 +8,18 @@ workflows:
       flutter: stable
       xcode: latest
       cocoapods: default
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.gilad.pklGuide
       vars:
-        BUNDLE_ID: "com.gilad.pklGuide" #5
-    cache:
-      cache_paths:
-        - $HOME/.pub-cache
-        - ios/Pods
+        BUNDLE_ID: "com.gilad.pklGuide"
     scripts:
+      # התקנת Flutter packages
       - name: Get Flutter packages
-        script: flutter pub get
+        script: |
+          flutter pub get
 
+      # ניקוי והכנה
       - name: Clean iOS build
         script: |
           cd ios
@@ -26,38 +28,35 @@ workflows:
           flutter clean
           flutter pub get
 
-      - name: Setup iOS project for automatic signing
-        script: |
-          cd ios
-          # הגדרת automatic code signing ב-Xcode
-          xcode-project automatic-code-signing enable \
-            --team-id "$(app-store-connect get-teams | head -1 | awk '{print $1}')"
-
+      # התקנת CocoaPods
       - name: Install pods
         script: |
           cd ios
           pod install --repo-update
 
-      - name: Flutter build IPA with automatic signing
+      # הגדרת Code Signing
+      - name: Set up code signing
+        script: |
+          xcode-project use-profiles
+
+      # בנייה
+      - name: Flutter build IPA
         script: |
           BUILD_NUMBER=$(($(app-store-connect get-latest-testflight-build-number "$BUNDLE_ID" 2>/dev/null || echo 0) + 1))
           
           flutter build ipa --release \
             --build-number=$BUILD_NUMBER
+
     artifacts:
       - build/ios/ipa/*.ipa
-      - build/ios/**/*.app
-      - build/ios/**/*.dSYM
+
     publishing:
       email:
         recipients:
           - giladsh22@gmail.com
         notify:
           success: true
-          failuWre: true
+          failure: true
       app_store_connect:
-        auth: integration  # זה משתמש בשם מה-integrations
+        auth: integration
         submit_to_testflight: true
-        beta_groups:
-          - "App Store Connect Users"  # ודא שקבוצה זו קיימת ב-App Store Connect
-        submit_to_app_store: false
