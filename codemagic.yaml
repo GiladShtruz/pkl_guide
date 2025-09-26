@@ -3,56 +3,42 @@ workflows:
     name: iOS TestFlight Build
     max_build_duration: 60
     integrations:
-      app_store_connect: Apple API Key  # ודא שזה תואם לשם ב-CodeMagic UI
+      app_store_connect: Apple API Key #1
     environment:
       flutter: stable
       xcode: latest
       cocoapods: default
-      vars:
-        BUNDLE_ID: "com.gilad.pklGuide"
-    cache:
-      cache_paths:
-        - $HOME/.pub-cache
-        - ios/Pods
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.gilad.pklGuide
     scripts:
       - name: Get Flutter packages
-        script: flutter pub get
-      - name: Clean iOS build
         script: |
-          cd ios
-          rm -rf Pods Podfile.lock
-          cd ..
-          flutter clean
           flutter pub get
-      - name: Initialize keychain
-        script: keychain initialize
-      - name: Add certificates to keychain
-        script: keychain add-certificates
-      - name: Set up code signing
-        script: xcode-project use-profiles
+
       - name: Install pods
         script: |
           cd ios
-          pod install --repo-update
-      - name: Flutter build IPA for TestFlight
+          pod install
+
+      - name: Set up code signing
         script: |
-          BUILD_NUMBER=$(($(app-store-connect get-latest-testflight-build-number "$BUNDLE_ID" 2>/dev/null || echo 0) + 1))
+          xcode-project use-profiles
+
+      - name: Flutter build IPA
+        script: |
           flutter build ipa --release \
-            --build-number=$BUILD_NUMBER
+            --build-number=$(($(app-store-connect get-latest-testflight-build-number "com.gilad.pklGuide" 2>/dev/null || echo 0) + 1))
+
     artifacts:
       - build/ios/ipa/*.ipa
-      - build/ios/**/*.app
-      - build/ios/**/*.dSYM
+
     publishing:
       email:
         recipients:
           - giladsh22@gmail.com
         notify:
           success: true
-          failure: true
       app_store_connect:
         auth: integration
         submit_to_testflight: true
-        beta_groups:
-          - "App Store Connect Users"
-        submit_to_app_store: false
