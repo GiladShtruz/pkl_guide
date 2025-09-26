@@ -8,13 +8,22 @@ workflows:
       flutter: stable
       xcode: latest
       cocoapods: default
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.gilad.pklGuide
       vars:
         BUNDLE_ID: "com.gilad.pklGuide"
+    cache:
+      cache_paths:
+        - $HOME/.pub-cache
+        - ios/Pods
     scripts:
+      # התקנת Flutter packages
       - name: Get Flutter packages
         script: |
           flutter pub get
 
+      # ניקוי והכנה
       - name: Clean iOS build
         script: |
           cd ios
@@ -23,60 +32,29 @@ workflows:
           flutter clean
           flutter pub get
 
-      - name: Create certificate if needed
+      # הגדרת Code Signing - השתמש ב-certificates שהעלית
+      - name: Set up code signing
         script: |
-          # Codemagic יוצר Certificate אוטומטית!
-          keychain initialize
-          
-          # יצירת private key
-          PRIVATE_KEY_PATH=$(mktemp)
-          ssh-keygen -t rsa -b 2048 -m PEM -f $PRIVATE_KEY_PATH -q -N ""
-          
-          # יצירת CSR
-          CSR_PATH=$(mktemp)
-          openssl req -new -key $PRIVATE_KEY_PATH -out $CSR_PATH \
-            -subj "/CN=Codemagic Distribution/C=US/O=Codemagic"
-          
-          # יצירת Certificate דרך Apple API
-          echo "Creating distribution certificate..."
-          app-store-connect certificates create \
-            --type IOS_DISTRIBUTION \
-            --certificate-signing-request @file:$CSR_PATH \
-            --private-key @file:$PRIVATE_KEY_PATH \
-            --save || echo "Certificate might already exist"
-          
-          # יצירת Provisioning Profile
-          echo "Creating provisioning profile..."
-          app-store-connect provisioning-profiles create \
-            --type IOS_APP_STORE \
-            --bundle-id "$BUNDLE_ID" \
-            --profile-name "Codemagic PKL Guide" \
-            --certificate-resource-id "@all" \
-            --save || echo "Profile might already exist"
-          
-          # הורדת הכל
-          app-store-connect fetch-signing-files "$BUNDLE_ID" \
-            --type IOS_APP_STORE \
-            --certificate-key @file:$PRIVATE_KEY_PATH \
-            --create
-          
-          keychain add-certificates
           xcode-project use-profiles
 
+      # התקנת CocoaPods
       - name: Install pods
         script: |
           cd ios
           pod install --repo-update
 
+      # בנייה ל-TestFlight
       - name: Flutter build IPA
         script: |
           BUILD_NUMBER=$(($(app-store-connect get-latest-testflight-build-number "$BUNDLE_ID" 2>/dev/null || echo 0) + 1))
           
           flutter build ipa --release \
-            --build-number=$BUILD_NUMBER
+            --build-number=$BUILD_NUMBER \
+            --export-options-plist=/Users/builder/export_options.plist
 
     artifacts:
       - build/ios/ipa/*.ipa
+      - build/ios/**/*.dSYM
 
     publishing:
       email:
@@ -84,7 +62,9 @@ workflows:
           - giladsh22@gmail.com
         notify:
           success: true
-          failure: true
+          failure: false
       app_store_connect:
         auth: integration
         submit_to_testflight: true
+        beta_groups:
+          - "App Store Connect Users"
