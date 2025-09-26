@@ -8,32 +8,19 @@ workflows:
       flutter: stable
       xcode: latest
       cocoapods: default
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.gilad.pklGuide
       vars:
         BUNDLE_ID: "com.gilad.pklGuide"
-        XCODE_WORKSPACE: "ios/Runner.xcworkspace"
-        XCODE_SCHEME: "Runner"
     scripts:
       - name: Get Flutter packages
         script: |
           flutter pub get
 
-      - name: Setup code signing
+      - name: Set up code signing
         script: |
-          # אתחול keychain
-          keychain initialize
-          
-          # הורדת signing files
-          app-store-connect fetch-signing-files "$BUNDLE_ID" \
-            --type IOS_APP_STORE \
-            --platform IOS
-          
-          # הוספה ל-keychain
-          keychain add-certificates
-          
-          # שימוש ב-profiles
-          xcode-project use-profiles \
-            --project ios/Runner.xcodeproj \
-            --targets Runner
+          xcode-project use-profiles
 
       - name: Install pods
         script: |
@@ -42,11 +29,7 @@ workflows:
 
       - name: Flutter build IPA
         script: |
-          BUILD_NUMBER=$(($(app-store-connect get-latest-testflight-build-number "$BUNDLE_ID" 2>/dev/null || echo 0) + 1))
-          
-          flutter build ipa --release \
-            --build-number=$BUILD_NUMBER \
-            --export-options-plist=/Users/builder/export_options.plist
+          flutter build ipa --release --build-number=1
 
     artifacts:
       - build/ios/ipa/*.ipa
@@ -54,7 +37,7 @@ workflows:
     publishing:
       email:
         recipients:
-          - giladsh22@gmail.com
+          - myName@gmail.com  # שנה!
         notify:
           success: true
       app_store_connect:
