@@ -11,12 +11,10 @@ workflows:
       vars:
         BUNDLE_ID: "com.gilad.pklGuide"
     scripts:
-      # התקנת Flutter packages
       - name: Get Flutter packages
         script: |
           flutter pub get
 
-      # ניקוי והכנה
       - name: Clean iOS build
         script: |
           cd ios
@@ -25,43 +23,57 @@ workflows:
           flutter clean
           flutter pub get
 
-      # יצירת Certificate ו-Provisioning Profile
-      - name: Fetch and create signing files
+      - name: Create certificate if needed
         script: |
-          # אתחול keychain
+          # Codemagic יוצר Certificate אוטומטית!
           keychain initialize
           
           # יצירת private key
-          PRIVATE_KEY_PATH=/tmp/cert_key
+          PRIVATE_KEY_PATH=$(mktemp)
           ssh-keygen -t rsa -b 2048 -m PEM -f $PRIVATE_KEY_PATH -q -N ""
           
-          # ניסיון להוריד או ליצור signing files
+          # יצירת CSR
+          CSR_PATH=$(mktemp)
+          openssl req -new -key $PRIVATE_KEY_PATH -out $CSR_PATH \
+            -subj "/CN=Codemagic Distribution/C=US/O=Codemagic"
+          
+          # יצירת Certificate דרך Apple API
+          echo "Creating distribution certificate..."
+          app-store-connect certificates create \
+            --type IOS_DISTRIBUTION \
+            --certificate-signing-request @file:$CSR_PATH \
+            --private-key @file:$PRIVATE_KEY_PATH \
+            --save || echo "Certificate might already exist"
+          
+          # יצירת Provisioning Profile
+          echo "Creating provisioning profile..."
+          app-store-connect provisioning-profiles create \
+            --type IOS_APP_STORE \
+            --bundle-id "$BUNDLE_ID" \
+            --profile-name "Codemagic PKL Guide" \
+            --certificate-resource-id "@all" \
+            --save || echo "Profile might already exist"
+          
+          # הורדת הכל
           app-store-connect fetch-signing-files "$BUNDLE_ID" \
             --type IOS_APP_STORE \
-            --certificate-key=@file:$PRIVATE_KEY_PATH \
-            --platform IOS \
+            --certificate-key @file:$PRIVATE_KEY_PATH \
             --create
           
-          # הוספת certificates
           keychain add-certificates
-          
-          # שימוש ב-profiles
           xcode-project use-profiles
 
-      # התקנת CocoaPods
       - name: Install pods
         script: |
           cd ios
           pod install --repo-update
 
-      # בנייה
       - name: Flutter build IPA
         script: |
           BUILD_NUMBER=$(($(app-store-connect get-latest-testflight-build-number "$BUNDLE_ID" 2>/dev/null || echo 0) + 1))
           
           flutter build ipa --release \
-            --build-number=$BUILD_NUMBER \
-            --export-options-plist=/Users/builder/export_options.plist
+            --build-number=$BUILD_NUMBER
 
     artifacts:
       - build/ios/ipa/*.ipa
