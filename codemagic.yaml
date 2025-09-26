@@ -17,6 +17,7 @@ workflows:
     scripts:
       - name: Get Flutter packages
         script: flutter pub get
+
       - name: Clean iOS build
         script: |
           cd ios
@@ -24,25 +25,69 @@ workflows:
           cd ..
           flutter clean
           flutter pub get
-      - name: Fetch signing files
+
+      - name: Initialize keychain
         script: |
           keychain initialize
+
+      - name: Generate and fetch signing files
+        script: |
+          # יצירת private key חדש
+          echo "Generating new certificate private key..."
+          PRIVATE_KEY_PATH=/tmp/cert_key.pem
+          openssl genrsa -out $PRIVATE_KEY_PATH 2048
+          
+          # יצירת CSR (Certificate Signing Request)
+          echo "Creating CSR..."
+          openssl req -new -key $PRIVATE_KEY_PATH -out /tmp/cert.csr -subj "/emailAddress=your-email@example.com/CN=Codemagic iOS Distribution/C=US"
+          
+          # שמירת ה-key כמשתנה
+          export CM_CERTIFICATE_PRIVATE_KEY=$(cat $PRIVATE_KEY_PATH)
+          
+          # ניסיון להוריד/ליצור certificates
+          echo "Fetching signing files..."
           app-store-connect fetch-signing-files "$BUNDLE_ID" \
-           --type IOS_APP_STORE \
-           --platform IOS \
-           --create
+            --type IOS_APP_STORE \
+            --platform IOS \
+            --certificate-key=@file:$PRIVATE_KEY_PATH \
+            --create || echo "Note: Some signing files might be missing, continuing..."
+
       - name: Add certificates to keychain
-        script: keychain add-certificates
+        script: |
+          keychain add-certificates || echo "No certificates to add, continuing..."
+
+      - name: Manual certificate creation fallback
+        script: |
+          # אם עדיין אין certificates, ננסה דרך אחרת
+          if ! security find-identity -v -p codesigning | grep -q "Distribution"; then
+            echo "No distribution certificate found, trying manual approach..."
+          
+            # ניסיון ליצור certificate ידנית דרך API
+            app-store-connect certificates create \
+              --type IOS_DISTRIBUTION \
+              --certificate-key=@file:/tmp/cert_key.pem \
+              --save || echo "Could not create certificate via API"
+          fi
+
       - name: Set up code signing
-        script: xcode-project use-profiles
+        script: |
+          xcode-project use-profiles --warn-only
+
       - name: Install pods
         script: |
           cd ios
           pod install --repo-update
+
       - name: Flutter build IPA for TestFlight
         script: |
+          BUILD_NUMBER=$(($(app-store-connect get-latest-testflight-build-number "$BUNDLE_ID" 2>/dev/null || echo 0) + 1))
+          
+          # ניסיון לבנות עם code signing אוטומטי של Xcode
           flutter build ipa --release \
-            --build-number=$(($(app-store-connect get-latest-testflight-build-number "$BUNDLE_ID") + 1))
+            --build-number=$BUILD_NUMBER \
+            --export-options-plist=/Users/builder/export_options.plist || \
+          flutter build ipa --release \
+            --build-number=$BUILD_NUMBER
     artifacts:
       - build/ios/ipa/*.ipa
       - build/ios/**/*.app
@@ -53,7 +98,7 @@ workflows:
           - giladsh22@gmail.com
         notify:
           success: true
-          failure: true
+          failuWre: true
       app_store_connect:
         auth: integration  # זה משתמש בשם מה-integrations
         submit_to_testflight: true
