@@ -8,9 +8,6 @@ workflows:
       flutter: stable
       xcode: latest
       cocoapods: default
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.gilad.pklGuide
       vars:
         BUNDLE_ID: "com.gilad.pklGuide"
     scripts:
@@ -28,16 +25,34 @@ workflows:
           flutter clean
           flutter pub get
 
+      # יצירת Certificate ו-Provisioning Profile
+      - name: Fetch and create signing files
+        script: |
+          # אתחול keychain
+          keychain initialize
+          
+          # יצירת private key
+          PRIVATE_KEY_PATH=/tmp/cert_key
+          ssh-keygen -t rsa -b 2048 -m PEM -f $PRIVATE_KEY_PATH -q -N ""
+          
+          # ניסיון להוריד או ליצור signing files
+          app-store-connect fetch-signing-files "$BUNDLE_ID" \
+            --type IOS_APP_STORE \
+            --certificate-key=@file:$PRIVATE_KEY_PATH \
+            --platform IOS \
+            --create
+          
+          # הוספת certificates
+          keychain add-certificates
+          
+          # שימוש ב-profiles
+          xcode-project use-profiles
+
       # התקנת CocoaPods
       - name: Install pods
         script: |
           cd ios
           pod install --repo-update
-
-      # הגדרת Code Signing
-      - name: Set up code signing
-        script: |
-          xcode-project use-profiles
 
       # בנייה
       - name: Flutter build IPA
@@ -45,7 +60,8 @@ workflows:
           BUILD_NUMBER=$(($(app-store-connect get-latest-testflight-build-number "$BUNDLE_ID" 2>/dev/null || echo 0) + 1))
           
           flutter build ipa --release \
-            --build-number=$BUILD_NUMBER
+            --build-number=$BUILD_NUMBER \
+            --export-options-plist=/Users/builder/export_options.plist
 
     artifacts:
       - build/ios/ipa/*.ipa
