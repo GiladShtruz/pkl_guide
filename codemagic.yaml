@@ -8,11 +8,8 @@ workflows:
       flutter: stable
       xcode: latest
       cocoapods: default
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.gilad.pklGuide
       vars:
-        BUNDLE_ID: "com.gilad.pklGuide"
+        BUNDLE_ID: "com.gilad.pklGuide" #4
     cache:
       cache_paths:
         - $HOME/.pub-cache
