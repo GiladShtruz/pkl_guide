@@ -8,9 +8,6 @@ workflows:
       flutter: stable
       xcode: latest
       cocoapods: default
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.gilad.pklGuide
       vars:
         BUNDLE_ID: "com.gilad.pklGuide"
     cache:
@@ -18,12 +15,8 @@ workflows:
         - $HOME/.pub-cache
         - ios/Pods
     scripts:
-      # התקנת Flutter packages
       - name: Get Flutter packages
-        script: |
-          flutter pub get
-
-      # ניקוי והכנה
+        script: flutter pub get
       - name: Clean iOS build
         script: |
           cd ios
@@ -31,40 +24,28 @@ workflows:
           cd ..
           flutter clean
           flutter pub get
-
-      # הגדרת Code Signing - השתמש ב-certificates שהעלית
+      - name: Initialize keychain
+        script: keychain initialize
+      - name: Add certificates to keychain
+        script: keychain add-certificates
       - name: Set up code signing
-        script: |
-          xcode-project use-profiles
-
-      # התקנת CocoaPods
+        script: xcode-project use-profiles
       - name: Install pods
         script: |
           cd ios
           pod install --repo-update
-
-      # בנייה ל-TestFlight
-      - name: Flutter build IPA
+      - name: Flutter build IPA for TestFlight
         script: |
           BUILD_NUMBER=$(($(app-store-connect get-latest-testflight-build-number "$BUNDLE_ID" 2>/dev/null || echo 0) + 1))
-          
           flutter build ipa --release \
-            --build-number=$BUILD_NUMBER \
-            --export-options-plist=/Users/builder/export_options.plist
-
+            --build-number=$BUILD_NUMBER
     artifacts:
       - build/ios/ipa/*.ipa
+      - build/ios/**/*.app
       - build/ios/**/*.dSYM
-
     publishing:
       email:
         recipients:
           - giladsh22@gmail.com
         notify:
-          success: true
-          failure: false
-      app_store_connect:
-        auth: integration
-        submit_to_testflight: true
-        beta_groups:
-          - "App Store Connect Users"
+          success
