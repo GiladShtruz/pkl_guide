@@ -3,32 +3,50 @@ workflows:
     name: iOS TestFlight Build
     max_build_duration: 60
     integrations:
-      app_store_connect: Apple API Key #1
+      app_store_connect: Apple API Key
     environment:
       flutter: stable
       xcode: latest
       cocoapods: default
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.gilad.pklGuide
+      vars:
+        BUNDLE_ID: "com.gilad.pklGuide"
+        XCODE_WORKSPACE: "ios/Runner.xcworkspace"
+        XCODE_SCHEME: "Runner"
     scripts:
       - name: Get Flutter packages
         script: |
           flutter pub get
+
+      - name: Setup code signing
+        script: |
+          # אתחול keychain
+          keychain initialize
+          
+          # הורדת signing files
+          app-store-connect fetch-signing-files "$BUNDLE_ID" \
+            --type IOS_APP_STORE \
+            --platform IOS
+          
+          # הוספה ל-keychain
+          keychain add-certificates
+          
+          # שימוש ב-profiles
+          xcode-project use-profiles \
+            --project ios/Runner.xcodeproj \
+            --targets Runner
 
       - name: Install pods
         script: |
           cd ios
           pod install
 
-      - name: Set up code signing
-        script: |
-          xcode-project use-profiles
-
       - name: Flutter build IPA
         script: |
+          BUILD_NUMBER=$(($(app-store-connect get-latest-testflight-build-number "$BUNDLE_ID" 2>/dev/null || echo 0) + 1))
+          
           flutter build ipa --release \
-            --build-number=$(($(app-store-connect get-latest-testflight-build-number "com.gilad.pklGuide" 2>/dev/null || echo 0) + 1))
+            --build-number=$BUILD_NUMBER \
+            --export-options-plist=/Users/builder/export_options.plist
 
     artifacts:
       - build/ios/ipa/*.ipa
