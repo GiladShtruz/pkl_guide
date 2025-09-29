@@ -520,7 +520,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
             if (hasClassification)
               Expanded(
                 child: _buildCompactInfoCard(
-                  title: 'מיקום',
+                  title: 'סיווג',
                   content: widget.item.classification!,
                   icon: Icons.location_on,
                   color: Colors.deepOrange,
@@ -549,7 +549,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
             Container(
               margin: const EdgeInsets.only(bottom: 16),
               child: _buildExpandedInfoCard(
-                title: 'מיקום',
+                title: 'סיווג',
                 content: widget.item.classification!,
                 icon: Icons.location_on,
                 color: Colors.deepOrange,

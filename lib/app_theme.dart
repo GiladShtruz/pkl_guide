@@ -37,26 +37,25 @@ class AppTheme {
       scaffoldBackgroundColor: colorScheme.background,
 
       // AppBar Theme
-      appBarTheme: AppBarTheme(
-        backgroundColor: colorScheme.background,
-        foregroundColor: colorScheme.onBackground,
-        elevation: 0,
-        scrolledUnderElevation: 3,
-
-        systemOverlayStyle: SystemUiOverlayStyle(
-          statusBarColor: Colors.deepPurple, // צבע לחלק העליון (Status Bar)
-          statusBarIconBrightness: Brightness.dark, // צבע האייקונים למעלה (אנדרואיד)
-          statusBarBrightness: Brightness.dark, // צבע האייקונים (iOS)
+        appBarTheme: AppBarTheme(
+          backgroundColor: colorScheme.background,
+          foregroundColor: colorScheme.onBackground,
+          elevation: 0,
+          scrolledUnderElevation: 3,
+          systemOverlayStyle: SystemUiOverlayStyle(
+            statusBarColor: Colors.transparent, // תמיד שקוף ב-iOS
+            statusBarIconBrightness: Brightness.dark, // אייקונים כהים לרקע בהיר
+            statusBarBrightness: Brightness.light, // iOS - רקע בהיר
+          ),
+          surfaceTintColor: colorScheme.surfaceTint,
+          centerTitle: true,
+          titleTextStyle: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+            color: colorScheme.onBackground,
+            fontFamily: 'Heebo',
+          ),
         ),
-        surfaceTintColor: colorScheme.surfaceTint,
-        centerTitle: true,
-        titleTextStyle: TextStyle(
-          fontSize: 20,
-          fontWeight: FontWeight.w600,
-          color: colorScheme.onBackground,
-          fontFamily: 'Heebo',
-        ),
-      ),
 
       // Card Theme - with purple tint
       cardTheme: CardThemeData(
@@ -267,21 +266,25 @@ class AppTheme {
       brightness: Brightness.dark,
 
       // AppBar Theme
-      appBarTheme: AppBarTheme(
-        backgroundColor: colorScheme.background,
-        foregroundColor: colorScheme.onBackground,
-        elevation: 0,
-        scrolledUnderElevation: 3,
-        surfaceTintColor: colorScheme.surfaceTint,
-        centerTitle: true,
-        systemOverlayStyle: SystemUiOverlayStyle.light,
-        titleTextStyle: TextStyle(
-          fontSize: 20,
-          fontWeight: FontWeight.w600,
-          color: colorScheme.onBackground,
-          fontFamily: 'Heebo',
+        appBarTheme: AppBarTheme(
+          backgroundColor: colorScheme.background,
+          foregroundColor: colorScheme.onBackground,
+          elevation: 0,
+          scrolledUnderElevation: 3,
+          surfaceTintColor: colorScheme.surfaceTint,
+          centerTitle: true,
+          systemOverlayStyle: SystemUiOverlayStyle(
+            statusBarColor: Colors.transparent, // תמיד שקוף ב-iOS
+            statusBarIconBrightness: Brightness.light, // אייקונים בהירים לרקע כהה
+            statusBarBrightness: Brightness.dark, // iOS - רקע כהה
+          ),
+          titleTextStyle: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+            color: colorScheme.onBackground,
+            fontFamily: 'Heebo',
+          ),
         ),
-      ),
 
       // Card Theme - slightly elevated from background
       cardTheme: CardThemeData(

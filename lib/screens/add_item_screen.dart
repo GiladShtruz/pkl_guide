@@ -10,10 +10,12 @@ import '../services/storage_service.dart';
 
 class AddItemScreen extends StatefulWidget {
   final CategoryType category;
+  final String? classification;
 
   const AddItemScreen({
     super.key,
     required this.category,
+    this.classification
   });
 
   @override
@@ -25,7 +27,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
   final _nameController = TextEditingController();
   final _detailController = TextEditingController();
   final _linkController = TextEditingController();
-  final _classificationController = TextEditingController();
+  late final _classificationController = TextEditingController(text: widget.classification ?? "");
   final _equipmentController = TextEditingController();
   final _contentController = TextEditingController();
   final List<ElementModel> _contentList = [];
@@ -164,6 +166,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
                   controller: _classificationController,
                   decoration: const InputDecoration(
                     labelText: 'סיווג (אופציונלי)',
+
                     border: OutlineInputBorder(),
                     hintText: 'לדוגמה: כיתה, בחוץ, שטח',
                   ),

@@ -13,51 +13,36 @@ class AboutDialogWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('אודות פק״ל למדריך'),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'גרסה 1.0.0',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'שלום לכולם, אני גילעד שטרוזמן ואני פיתחתי את האפליקציה שלפניכם.\nאפליקציה לשמירת ושימוש במשחקים, חידות, פעילויות וקטעים למדריכים.',
-              style: TextStyle(fontSize: 14),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'האפליקציה מאפשרת:',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              '• ארגון תכנים לפי קטגוריות\n'
-              '• הוספת תכנים אישיים\n'
-              '• מועדפים ורשימות אישיות\n'
-              '• חיפוש מהיר\n'
-              '• משחקים ייחודיים אינטראקטיביים\n'
-              '• ייבוא וייצוא תכנים',
-              style: TextStyle(fontSize: 14),
-            ),
-            // const SizedBox(height: 16),
-            // const Divider(),
-            // const SizedBox(height: 8),
-          ],
+    return AboutDialog(
+
+      // applicationIcon: const Icon(Icons.info_outline), // Optional: Add your app icon here
+      // applicationLegalese: '© 2025 גילעד שטרוזמן. כל הזכויות שמורות.',
+      children: [
+        // const SizedBox(height: 16),
+        const Text(
+          'שלום, אני גילעד שטרוזמן ואני מפתח האפליקציה שלפניכם.\n'
+              'האפליקציה מיועדת לכל המדריכים באשר הם. כאן תוכלו למצוא מאגר עשיר של חידות, משחקים והפעלות עבור פעולות שאתם מעבירים לחניכים שלכם.',
+          style: TextStyle(fontSize: 14),
         ),
-      ),
-      actions: [
+        const SizedBox(height: 16),
+        const Text(
+          'בין האפשרויות שהאפליקציה מציעה:',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          '• עריכה ויצירה של תכנים קיימים וחדשים\n'
+              '• סימון תכנים מועדפים לנגישות מהירה\n'
+              '• יצירת רשימות מותאמות אישית ממספר תכנים\n'
+              '• חיפוש מהיר ונוח\n'
+              '• משחקים אינטראקטיביים ייחודיים\n'
+              '• ייבוא וייצוא תכנים – להעברה נוחה בין מכשירים או לשיתוף עם חברים',
+          style: TextStyle(fontSize: 14),
+        ),
+        const SizedBox(height: 16),
         TextButton(
           onPressed: _launchPrivacyPolicy,
-          child: const Text('מדיניות פרטיות'),
-        ),
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('סגור'),
+          child: const Text('Privacy Policy'),
         ),
       ],
     );

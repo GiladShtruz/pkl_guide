@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/list_model.dart';
@@ -25,6 +26,7 @@ class _ListEditScreenState extends State<ListEditScreen> {
 
   bool _isEditMode = false;
   bool _hasChanges = false;
+  bool _isChangingMode = false;
 
   final Set<int> _selectedIndices = {};
   late List<ItemModel> _currentItems;
@@ -90,8 +92,6 @@ class _ListEditScreenState extends State<ListEditScreen> {
     setState(() {
       _hasChanges = false;
     });
-
-
   }
 
   void _deleteList() async {
@@ -118,12 +118,11 @@ class _ListEditScreenState extends State<ListEditScreen> {
     if (confirmed == true) {
       await _listsService.deleteList(widget.list.id);
       if (mounted) {
-        Navigator.pop(context, true); // Return true to indicate list was deleted
-        Navigator.pop(context); // Pop back to lists screen
+        // Pop with special result 'deleted' to signal list was deleted
+        Navigator.pop(context, 'deleted');
       }
     }
   }
-
   void _deleteSelectedItems() async {
     if (_selectedIndices.isEmpty) return;
 
@@ -173,27 +172,26 @@ class _ListEditScreenState extends State<ListEditScreen> {
     }
   }
 
-  Future<bool> _onWillPop() async {
-    if (_isEditMode) {
-      setState(() {
-        _isEditMode = false;
-        _selectedIndices.clear();
-      });
-      return false;
-    }
 
-    if (_hasChanges) {
-      await _saveChanges();
-    }
-
-    Navigator.pop(context, true); // Always return true to force refresh
-    return false;
-  }
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: _onWillPop,
+    return PopScope(
+      canPop: false, // Prevent default popping to control it manually
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return; // If already popped, do nothing
+        if (_isEditMode) {
+          setState(() {
+            _isEditMode = false;
+            _selectedIndices.clear();
+          });
+          return; // Prevent popping
+        }
+        if (_hasChanges) {
+          await _saveChanges();
+        }
+        Navigator.pop(context, true); // Force pop with true to trigger refresh
+      },
       child: Scaffold(
         appBar: AppBar(
           title: const Text('עריכת רשימה'),
@@ -301,63 +299,6 @@ class _ListEditScreenState extends State<ListEditScreen> {
 
               const SizedBox(height: 16),
 
-              // List info
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'מידע על הרשימה',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.grey,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text('מספר פריטים:'),
-                          Text(
-                            '${_currentItems.length}',
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text('תאריך יצירה:'),
-                          Text(
-                            '${widget.list.createdAt.day}/${widget.list.createdAt.month}/${widget.list.createdAt.year}',
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                        ],
-                      ),
-                      if (widget.list.lastModified != null) ...[
-                        const SizedBox(height: 8),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text('עדכון אחרון:'),
-                            Text(
-                              '${widget.list.lastModified!.day}/${widget.list.lastModified!.month}/${widget.list.lastModified!.year}',
-                              style: const TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 24),
-
               // Items section
               if (_currentItems.isNotEmpty) ...[
                 Row(
@@ -371,21 +312,46 @@ class _ListEditScreenState extends State<ListEditScreen> {
                       ),
                     ),
                     TextButton.icon(
-                      onPressed: () {
+                      onPressed: _isChangingMode
+                          ? null
+                          : () async {
+                        setState(() {
+                          _isChangingMode = true;
+                        });
+
+                        await Future.delayed(const Duration(milliseconds: 50));
+
                         setState(() {
                           _isEditMode = !_isEditMode;
                           if (!_isEditMode) {
                             _selectedIndices.clear();
                           }
+                          _isChangingMode = false;
                         });
                       },
-                      icon: Icon(_isEditMode ? Icons.close : Icons.edit),
-                      label: Text(_isEditMode ? 'ביטול' : 'עריכה'),
+                      icon: Icon(_isChangingMode
+                          ? Icons.hourglass_bottom_sharp
+                          : (_isEditMode ? Icons.check : Icons.edit)),
+                      label: Text(_isChangingMode
+                          ? 'טוען...'
+                          : (_isEditMode ? 'אישור' : 'עריכה')),
                     ),
                   ],
                 ),
                 const SizedBox(height: 8),
                 _buildItemsList(),
+              ] else ...[
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(32),
+                    child: Center(
+                      child: Text(
+                        "הרשימה ריקה",
+                        style: TextStyle(color: Colors.grey[600]),
+                      ),
+                    ),
+                  ),
+                ),
               ],
 
               const SizedBox(height: 80),
@@ -398,63 +364,124 @@ class _ListEditScreenState extends State<ListEditScreen> {
           backgroundColor: _selectedIndices.isNotEmpty ? Colors.red : Colors.grey,
           child: const Icon(Icons.delete),
         )
-            :
-        FloatingActionButton.extended(
+            : FloatingActionButton.extended(
           onPressed: () async {
             await _saveChanges();
             Navigator.pop(context, true); // Force refresh
-
           },
           label: const Text('שמור'),
           icon: const Icon(Icons.save),
         ),
-
-
-
         floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       ),
     );
   }
 
   Widget _buildItemsList() {
-    if (_currentItems.isEmpty) {
+    if (_isEditMode) {
+      // חישוב גובה דינמי - מקסימום חצי מהמסך
+      final screenHeight = MediaQuery.of(context).size.height;
+      final maxHeight = screenHeight * 0.5;
+      final estimatedItemHeight = 88.0; // גובה משוער של ListTile עם subtitle
+      final calculatedHeight = min(maxHeight, _currentItems.length * estimatedItemHeight);
+
       return Card(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Center(
-            child: Text(
-              "הרשימה ריקה",
-              style: TextStyle(color: Colors.grey[600]),
-            ),
+        child: Container(
+          height: calculatedHeight,
+          child: ReorderableListView.builder(
+            itemCount: _currentItems.length,
+            onReorder: (oldIndex, newIndex) {
+              setState(() {
+                if (newIndex > oldIndex) {
+                  newIndex -= 1;
+                }
+                final item = _currentItems.removeAt(oldIndex);
+                _currentItems.insert(newIndex, item);
+                _hasChanges = true;
+              });
+            },
+            itemBuilder: (context, index) {
+              final item = _currentItems[index];
+              final isSelected = _selectedIndices.contains(index);
+
+              return ListTile(
+                contentPadding: const EdgeInsets.only(left: 0, right: 5),
+                key: ValueKey('${item.id}'),
+                leading: Icon(Icons.drag_handle, color: Colors.grey[600]),
+                title: Text(item.name),
+                subtitle: item.detail != null
+                    ? Text(
+                  item.detail!,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                )
+                    : null,
+                trailing: Wrap(
+                  spacing: 0,
+                  children: [
+                    _getCategoryChip(item.category),
+                    IconButton(
+                      icon: const Icon(Icons.arrow_upward),
+                      onPressed: index > 0 ? () => _moveToTop(index) : null,
+                      tooltip: 'הזז לראש הרשימה',
+                    ),
+                    Checkbox(
+                      value: isSelected,
+                      onChanged: (value) {
+                        setState(() {
+                          if (value == true) {
+                            _selectedIndices.add(index);
+                          } else {
+                            _selectedIndices.remove(index);
+                          }
+                        });
+                      },
+                    ),
+                  ],
+                ),
+                onTap: () {
+                  setState(() {
+                    if (_selectedIndices.contains(index)) {
+                      _selectedIndices.remove(index);
+                    } else {
+                      _selectedIndices.add(index);
+                    }
+                  });
+                },
+              );
+            },
           ),
         ),
       );
     }
 
-    if (_isEditMode) {
-      return Card(
-        child: ReorderableListView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
+    // Normal view (not edit mode) - נשאר עם הגבלת גובה לרשימות גדולות
+    return Card(
+      child: Container(
+        constraints: BoxConstraints(
+          maxHeight: _currentItems.length > 50
+              ? MediaQuery.of(context).size.height * 0.5
+              : double.infinity,
+        ),
+        child: ListView.separated(
+          shrinkWrap: _currentItems.length <= 50,
+          physics: _currentItems.length <= 50
+              ? const NeverScrollableScrollPhysics()
+              : const AlwaysScrollableScrollPhysics(),
           itemCount: _currentItems.length,
-          onReorder: (oldIndex, newIndex) {
-            setState(() {
-              if (newIndex > oldIndex) {
-                newIndex -= 1;
-              }
-              final item = _currentItems.removeAt(oldIndex);
-              _currentItems.insert(newIndex, item);
-              _hasChanges = true;
-            });
-          },
+          separatorBuilder: (context, index) => const Divider(height: 1),
           itemBuilder: (context, index) {
             final item = _currentItems[index];
-            final isSelected = _selectedIndices.contains(index);
 
             return ListTile(
-              contentPadding: const EdgeInsets.only(left: 0, right: 5),
-              key: ValueKey('${item.id}'),
-              leading: Icon(Icons.drag_handle, color: Colors.grey[600]),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+              leading: CircleAvatar(
+                backgroundColor: _getCategoryColor(item.category),
+                child: Text(
+                  '${index + 1}',
+                  style: const TextStyle(color: Colors.white),
+                ),
+              ),
               title: Text(item.name),
               subtitle: item.detail != null
                   ? Text(
@@ -463,75 +490,10 @@ class _ListEditScreenState extends State<ListEditScreen> {
                 overflow: TextOverflow.ellipsis,
               )
                   : null,
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _getCategoryChip(item.category),
-                  const SizedBox(width: 8),
-                  IconButton(
-                    icon: const Icon(Icons.arrow_upward),
-                    onPressed: index > 0 ? () => _moveToTop(index) : null,
-                    tooltip: 'הזז לראש הרשימה',
-                  ),
-                  Checkbox(
-                    value: isSelected,
-                    onChanged: (value) {
-                      setState(() {
-                        if (value == true) {
-                          _selectedIndices.add(index);
-                        } else {
-                          _selectedIndices.remove(index);
-                        }
-                      });
-                    },
-                  ),
-                ],
-              ),
-              onTap: () {
-                setState(() {
-                  if (_selectedIndices.contains(index)) {
-                    _selectedIndices.remove(index);
-                  } else {
-                    _selectedIndices.add(index);
-                  }
-                });
-              },
+              trailing: _getCategoryChip(item.category),
             );
           },
         ),
-      );
-    }
-
-    // Normal view (not edit mode)
-    return Card(
-      child: ListView.separated(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        itemCount: _currentItems.length,
-        separatorBuilder: (context, index) => const Divider(height: 1),
-        itemBuilder: (context, index) {
-          final item = _currentItems[index];
-
-          return ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical:0),
-            leading: CircleAvatar(
-              backgroundColor: _getCategoryColor(item.category),
-              child: Text(
-                '${index + 1}',
-                style: const TextStyle(color: Colors.white),
-              ),
-            ),
-            title: Text(item.name),
-            subtitle: item.detail != null
-                ? Text(
-              item.detail!,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            )
-                : null,
-            trailing: _getCategoryChip(item.category),
-          );
-        },
       ),
     );
   }

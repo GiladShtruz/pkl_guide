@@ -14,7 +14,7 @@ class AppProvider extends ChangeNotifier {
   final Set<int> _selectedItems = {};
 
   SortingMethod getSortingMethod(CategoryType category) {
-    return _sortingMethods[category] ?? SortingMethod.original;
+    return _sortingMethods[category] ?? SortingMethod.lastAccessed;
   }
 
   void setSortingMethod(CategoryType category, SortingMethod method) {

@@ -116,13 +116,15 @@ class _ListsScreenState extends State<ListsScreen> {
   Widget build(BuildContext context) {
     final lists = _getSortedLists();
 
-    return WillPopScope(
-      onWillPop: () async {
+    return PopScope(
+      canPop: true, // Allows popping by default
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return; // If already popped, do nothing
         if (_isEditMode) {
           _toggleEditMode();
-          return false;
+          return; // Prevent popping
         }
-        return true;
+        // Allow default pop behavior when not in edit mode
       },
       child: Scaffold(
         appBar: AppBar(

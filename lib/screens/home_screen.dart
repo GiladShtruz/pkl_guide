@@ -203,7 +203,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     Icon(Icons.upload_file),
                     SizedBox(width: 8),
-                    Text('ייבוא'),
+                    Text('ייבוא נתונים'),
                   ],
                 ),
               ),
@@ -213,7 +213,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     Icon(Icons.download),
                     SizedBox(width: 8),
-                    Text('ייצוא'),
+                    Text('ייצוא נתונים'),
                   ],
                 ),
               ),
@@ -405,7 +405,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             TextButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('ייצא'),
+              child: const Text('ייצוא נתונים'),
             ),
           ],
         ),

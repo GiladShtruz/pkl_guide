@@ -98,19 +98,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
     super.dispose();
   }
 
-  Future<bool> _onWillPop() async {
-    if (_isEditMode) {
-      setState(() {
-        _isEditMode = false;
-        _selectedIndices.clear();
-      });
-      return false;
-    }
-    if (_hasChanges) {
-      await _saveChanges();
-    }
-    return true;
-  }
+
 
   Future<void> _saveChanges() async {
     // Save title changes
@@ -275,12 +263,13 @@ class _EditItemScreenState extends State<EditItemScreen> {
       if (confirmed == true) {
         await _storageService.deleteItem(widget.item.id);
         if (mounted) {
-          Navigator.pop(context);
+          // Pop twice: once from edit screen, once from detail screen
+          Navigator.pop(context, true); // Return to detail screen with result
+          Navigator.pop(context, true); // Return to category items screen with result
         }
       }
     }
   }
-
   void _deleteSelectedElements() async {
     if (_selectedIndices.isEmpty) return;
 
@@ -332,8 +321,21 @@ class _EditItemScreenState extends State<EditItemScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: _onWillPop,
+    return PopScope(
+      canPop: true, // Allows popping by default
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return; // If already popped, do nothing
+        if (_isEditMode) {
+          setState(() {
+            _isEditMode = false;
+            _selectedIndices.clear();
+          });
+          return; // Prevent popping
+        }
+        if (_hasChanges) {
+          await _saveChanges();
+        }
+      },
       child: Scaffold(
         appBar: AppBar(
           title: const Text('עריכת פריט'),
@@ -496,7 +498,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
                   TextField(
                     controller: _classificationController,
                     decoration: const InputDecoration(
-                      labelText: 'מיקום',
+                      labelText: 'סיווג',
                       border: OutlineInputBorder(),
                       prefixIcon: Icon(Icons.location_on),
                     ),
@@ -505,7 +507,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
                     TextButton.icon(
                       onPressed: () => _resetData(
                         CategoryEntry.classification,
-                        "שחזר מיקום",
+                        "שחזר סיווג",
                         "האם לשחזר את המיקום המקורי?",
                       ),
                       icon: const Icon(Icons.restore, size: 16),

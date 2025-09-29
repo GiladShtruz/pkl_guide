@@ -43,9 +43,17 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
       ),
     );
 
+    // If list was deleted, pop back to lists screen immediately
+    if (result == 'deleted') {
+      if (mounted) {
+        Navigator.pop(context);
+      }
+      return;
+    }
+
     // Always refresh when returning from edit screen
     if (result == true) {
-      // If list was deleted, pop this screen
+      // Double-check if list still exists
       if (!_listsService.listExists(widget.list.id)) {
         if (mounted) {
           Navigator.pop(context);
@@ -57,7 +65,6 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
     // Refresh the screen regardless of result
     _loadItems();
   }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
