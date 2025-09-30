@@ -33,7 +33,7 @@ class _SwitchCardGameScreenState extends State<SwitchCardGameScreen>
   bool _isPlaying = false;
   bool _isPaused = false;
   int _remainingSeconds = 10;
-  int _totalSeconds = 60;
+  final int _totalSeconds = 60;
   Timer? _timer;
 
   late AnimationController _timerAnimationController;

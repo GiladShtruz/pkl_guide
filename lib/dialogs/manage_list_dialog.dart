@@ -5,21 +5,21 @@ import '../services/lists_service.dart';
 import '../services/storage_service.dart';
 import 'create_list_dialog.dart';
 
-class AddToListsDialog extends StatefulWidget {
+class ManageListDialog extends StatefulWidget {
   final List<int> itemIds;
   final String? itemName;
 
-  const AddToListsDialog({
+  const ManageListDialog({
     super.key,
     required this.itemIds,
     this.itemName,
   });
 
   @override
-  State<AddToListsDialog> createState() => _AddToListsDialogState();
+  State<ManageListDialog> createState() => _ManageListDialogState();
 }
 
-class _AddToListsDialogState extends State<AddToListsDialog> {
+class _ManageListDialogState extends State<ManageListDialog> {
   late ListsService _listsService;
   late StorageService _storageService;
   final Set<int> _selectedLists = {};

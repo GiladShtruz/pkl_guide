@@ -10,7 +10,7 @@ import '../services/storage_service.dart';
 import '../services/lists_service.dart';
 import '../screens/edit_item_screen.dart';
 
-import '../dialogs/add_to_lists_dialog.dart';
+import '../dialogs/manage_list_dialog.dart';
 
 class ItemDetailScreen extends StatefulWidget {
   final ItemModel item;
@@ -25,6 +25,9 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
   late ListsService _listsService;
   late StorageService _storageService;
 
+  // Set to track selected element indices
+  final Set<int> _selectedIndices = {};
+
   @override
   void initState() {
     super.initState();
@@ -33,6 +36,16 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
 
     // Update access count
     _storageService.updateItemAccess(widget.item.id);
+  }
+
+  void _toggleSelection(int index) {
+    setState(() {
+      if (_selectedIndices.contains(index)) {
+        _selectedIndices.remove(index);
+      } else {
+        _selectedIndices.add(index);
+      }
+    });
   }
 
   void _openLink() async {
@@ -47,7 +60,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
   void _openListsDialog() async {
     final result = await showDialog<bool>(
       context: context,
-      builder: (context) => AddToListsDialog(
+      builder: (context) => ManageListDialog(
         itemIds: [widget.item.id],
         itemName: widget.item.name,
       ),
@@ -243,42 +256,115 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                   final element = allElements[index];
                   final itemText = element.text;
                   final isUserAdded = element.isUserElement;
+                  final isSelected = _selectedIndices.contains(index);
 
                   if (widget.item.category == 'riddles') {
                     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      child: Card(
-                        elevation: 2,
-                        child: Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: isDarkMode
-                                  ? (isUserAdded ? Colors.blue[700]! : Colors.orange[700]!)
-                                  : (isUserAdded ? Colors.blue[200]! : Colors.orange[200]!),
-                              width: 1,
+                    return GestureDetector(
+                      onTap: () => _toggleSelection(index),
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        child: Card(
+                          elevation: 2,
+                          child: Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: isSelected
+                                    ? Colors.green
+                                    : (isDarkMode
+                                    ? (isUserAdded ? Colors.blue[700]! : Colors.orange[700]!)
+                                    : (isUserAdded ? Colors.blue[200]! : Colors.orange[200]!)),
+                                width: isSelected ? 3 : 1,
+                              ),
+                            ),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  width: 32,
+                                  height: 32,
+                                  decoration: BoxDecoration(
+                                    color: isDarkMode
+                                        ? (isUserAdded ? Colors.blue[400] : Colors.orange[400])
+                                        : (isUserAdded ? Colors.blue : Colors.orange),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      '${index + 1}',
+                                      style: TextStyle(
+                                        color: isDarkMode ? Colors.black87 : Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    itemText,
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      height: 1.4,
+                                      color: Theme.of(context).textTheme.bodyLarge?.color,
+                                    ),
+                                  ),
+                                ),
+                                if (isUserAdded)
+                                  Container(
+                                    margin: const EdgeInsets.only(left: 8),
+                                    child: Icon(
+                                      Icons.person,
+                                      size: 16,
+                                      color: isDarkMode ? Colors.blue[400] : Colors.blue,
+                                    ),
+                                  ),
+                              ],
                             ),
                           ),
+                        ),
+                      ),
+                    );
+                  } else {
+                    // Games and activities display
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(12), // חשוב כדי שיתאים לעיגוליות
+                        onTap: () => _toggleSelection(index),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
+                          decoration: BoxDecoration(
+                            border: isSelected
+                                ? Border.all(color: Colors.green, width: 3)
+                                : null,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                           child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Container(
-                                width: 32,
-                                height: 32,
+                                width: 36,
+                                height: 36,
                                 decoration: BoxDecoration(
-                                  color: isDarkMode
-                                      ? (isUserAdded ? Colors.blue[400] : Colors.orange[400])
-                                      : (isUserAdded ? Colors.blue : Colors.orange),
-                                  shape: BoxShape.circle,
+                                  color: isUserAdded
+                                      ? Colors.blue.withOpacity(0.15)
+                                      : _getCategoryColor().withOpacity(0.15),
+                                  borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Center(
                                   child: Text(
                                     '${index + 1}',
                                     style: TextStyle(
-                                      color: isDarkMode ? Colors.black87 : Colors.white,
+                                      color: isUserAdded
+                                          ? Colors.blue
+                                          : _getCategoryColor(),
                                       fontWeight: FontWeight.bold,
                                       fontSize: 14,
                                     ),
@@ -289,80 +375,24 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                               Expanded(
                                 child: Text(
                                   itemText,
-                                  style: TextStyle(
+                                  style: const TextStyle(
                                     fontSize: 16,
-                                    height: 1.4,
-                                    color: Theme.of(context).textTheme.bodyLarge?.color,
+                                    height: 1.3,
                                   ),
                                 ),
                               ),
                               if (isUserAdded)
-                                Container(
-                                  margin: const EdgeInsets.only(left: 8),
-                                  child: Icon(
-                                    Icons.person,
-                                    size: 16,
-                                    color: isDarkMode ? Colors.blue[400] : Colors.blue,
-                                  ),
+                                const Icon(
+                                  Icons.person,
+                                  size: 16,
+                                  color: Colors.blue,
                                 ),
                             ],
                           ),
                         ),
                       ),
                     );
-                  } else {
-                    // Games and activities display
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 10,
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 36,
-                              height: 36,
-                              decoration: BoxDecoration(
-                                color: isUserAdded
-                                    ? Colors.blue.withOpacity(0.15)
-                                    : _getCategoryColor().withOpacity(0.15),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Center(
-                                child: Text(
-                                  '${index + 1}',
-                                  style: TextStyle(
-                                    color: isUserAdded
-                                        ? Colors.blue
-                                        : _getCategoryColor(),
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                itemText,
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  height: 1.3,
-                                ),
-                              ),
-                            ),
-                            if (isUserAdded)
-                              const Icon(
-                                Icons.person,
-                                size: 16,
-                                color: Colors.blue,
-                              ),
-                          ],
-                        ),
-                      ),
-                    );
+
                   }
                 },
               ),
