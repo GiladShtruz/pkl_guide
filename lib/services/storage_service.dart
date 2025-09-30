@@ -249,6 +249,7 @@ class StorageService {
   Future<void> updateFromOnline(Map<String, dynamic> jsonData) async {
     final categories = jsonData['categories'] ?? {};
     JsonService jsonService = JsonService(this);
+    Set<int> idsRemovedFromData = appDataBox.keys.cast<int>().toSet();
     categories.forEach((categoryName, categoryItems) {
       final categoryHebName = getCategoryType(categoryName);
 
@@ -256,41 +257,32 @@ class StorageService {
         for (var itemData in categoryItems) {
           final newItem = jsonService.parseItem(itemData, categoryHebName);
           if (newItem != null) {
-            final curItem = appDataBox.get(newItem.id);
-            if (curItem != null) {
-              curItem.category = newItem.category;
-              curItem.originalTitle = newItem.originalTitle;
-              curItem.originalDetail = newItem.originalDetail;
-              curItem.originalLink = newItem.originalLink;
-              curItem.originalClassification = newItem.originalClassification;
-              curItem.originalEquipment = newItem.originalEquipment;
-
-              // update elements:
-              if (newItem.isElementsChanged) {
-                Set<ElementModel> combinedElements = {
-                  ...curItem.elements,
-                  ...newItem.elements,
-                };
-                for (var element in combinedElements) {
-                  // add new elements
-                  if (!curItem.elements.contains(element)) {
-                    curItem.elements.add(element);
-                  }
-                  // remove elements
-                  if (curItem.elements.contains(element) &&
-                      !newItem.elements.contains(element)) {
-                    curItem.elements.remove(element);
-                  }
-                }
-              } else {
-                curItem.itemElements = newItem.elements;
+            idsRemovedFromData.remove(newItem.id);
+            // update elements:
+            final oldItem = appDataBox.get(newItem.id);
+            if (oldItem != null && oldItem.isElementsChanged) {
+              // in order to get smallest run time
+              Set<ElementModel> curOriginalElements = oldItem.elements.toSet();
+              Set<ElementModel> newOriginalElements = newItem.originalElements.toSet();
+              List<ElementModel> itemsToDelete = curOriginalElements.difference(newOriginalElements).toList();
+              List<ElementModel> itemsToAdd = newOriginalElements.difference(curOriginalElements).toList();
+              for (var item in itemsToDelete) {
+                oldItem.removeElementAt(oldItem.findElementIndex(item.text));
               }
-              appDataBox.put(curItem.id, curItem);
+              for (var item in itemsToAdd) {
+                oldItem.addElement(item.text);
+              }
+              newItem.itemElements = oldItem.elements;
             }
+            appDataBox.put(newItem.id, newItem);
           }
         }
       }
     });
+
+    for (var id in idsRemovedFromData) {
+      appDataBox.delete(id);
+    }
   }
 
   // Export user data to JSON
@@ -359,7 +351,9 @@ class StorageService {
         }
         if (item.isElementsChanged) {
           print(modifiedData['elements']);
-          modifiedData['elements'] = item.elements.map((e) => e.toJson()).toList();
+          modifiedData['elements'] = item.elements
+              .map((e) => e.toJson())
+              .toList();
         }
 
         itemsData.add(modifiedData);
@@ -393,7 +387,11 @@ class StorageService {
           final isUserCreated = itemJson['isUserCreated'] ?? false;
           final isUserChanged = itemJson['isUserChanged'] ?? false;
           final dataElements = itemJson['elements'];
-          List<ElementModel> elements = dataElements is List ? dataElements.map((e) => ElementModel(e["element"], e["isUserElement"])).toList() : [];
+          List<ElementModel> elements = dataElements is List
+              ? dataElements
+                    .map((e) => ElementModel(e["element"], e["isUserElement"]))
+                    .toList()
+              : [];
 
           if (isUserCreated) {
             // Create new user item
@@ -446,7 +444,11 @@ class StorageService {
                 List<ElementModel> elements = [];
                 final dataElements = itemJson['elements'];
                 if (dataElements is List) {
-                  elements = dataElements.map((e) => ElementModel(e["element"], e["isUserElement"])).toList();
+                  elements = dataElements
+                      .map(
+                        (e) => ElementModel(e["element"], e["isUserElement"]),
+                      )
+                      .toList();
                 }
                 existingItem.itemElements = elements;
               }

@@ -16,7 +16,7 @@ class JsonService {
       'https://drive.google.com/uc?export=download&id=1gx4d_8yPdlaMhlcDzdyK-sCBcT66HD5r';
 
   JsonService(this.storageService);
-
+// first on open app:
   Future<void> loadFromLocalJson() async {
     try {
       // Load JSON from assets
@@ -74,7 +74,7 @@ class JsonService {
       }).then((result) {
         if (result != null && result['shouldUpdate'] == true) {
           // Update found and downloaded - save to storage
-          _saveUpdateData(result['data'], result['version']);
+          _saveUpdatedData(result['data'], result['version']);
         }
       }).catchError((error) {
         print('Background update check failed: $error');
@@ -146,7 +146,7 @@ class JsonService {
   }
 
   /// Save update data to storage (runs on main thread)
-  Future<void> _saveUpdateData(Map<String, dynamic> jsonData, int version) async {
+  Future<void> _saveUpdatedData(Map<String, dynamic> jsonData, int version) async {
     try {
       print('Saving update data with version: $version');
       await storageService.updateFromOnline(jsonData);
