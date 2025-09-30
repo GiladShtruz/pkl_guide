@@ -129,7 +129,7 @@ class _ListsScreenState extends State<ListsScreen> {
       child: Scaffold(
         appBar: AppBar(
           title: Text('רשימות',
-          style: TextStyle(color: Theme.of(context).colorScheme.onBackground),),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface),),
           centerTitle: true,
           automaticallyImplyLeading: false,
           actions: [
@@ -275,7 +275,7 @@ class _ListsScreenState extends State<ListsScreen> {
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
-                                color: Theme.of(context).colorScheme.onBackground
+                                color: Theme.of(context).colorScheme.onSurface
                               ),
                             ),
                             // Don't show description for favorites list
@@ -308,7 +308,7 @@ class _ListsScreenState extends State<ListsScreen> {
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
-                                color: Theme.of(context).colorScheme.onBackground,
+                                color: Theme.of(context).colorScheme.onSurface,
                               ),
                             ),
                           ),

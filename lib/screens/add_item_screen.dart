@@ -1,5 +1,4 @@
 // lib/screens/add_item_screen.dart
-import 'dart:ffi';
 
 import 'package:flutter/material.dart';
 import 'package:pkl_guide/models/element_model.dart';

@@ -180,7 +180,7 @@ class SearchScreenState extends State<SearchScreen> {
         double? fontSize,
       }) {
     final defaultStyle = TextStyle(
-      color: Theme.of(context).colorScheme.onBackground, // <-- צבע מותאם ל-theme
+      color: Theme.of(context).colorScheme.onSurface, // <-- צבע מותאם ל-theme
       fontWeight: isTitle ? FontWeight.bold : FontWeight.normal,
       fontSize: fontSize ?? (isTitle ? 18 : 14),
     );

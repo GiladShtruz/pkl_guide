@@ -9,7 +9,7 @@ import '../providers/app_provider.dart';
 import '../widgets/item_card.dart';
 import '../screens/item_detail_screen.dart';
 import '../screens/add_item_screen.dart';
-import '../dialogs/add_to_lists_dialog.dart';
+import '../dialogs/manage_list_dialog.dart';
 
 class CategoryItemsScreen extends StatefulWidget {
   final CategoryType category;
@@ -168,7 +168,7 @@ class _CategoryItemsScreenState extends State<CategoryItemsScreen> {
 
     final result = await showDialog<bool>(
       context: context,
-      builder: (context) => AddToListsDialog(
+      builder: (context) => ManageListDialog(
         itemIds: selectedItems,
         itemName: selectedItems.length == 1
             ? _items.firstWhere((i) => i.id == selectedItems.first).name
@@ -219,7 +219,7 @@ class _CategoryItemsScreenState extends State<CategoryItemsScreen> {
       totalItems += _filteredRegularItems.length;
     }
 
-    return PopScope(  // במקום WillPopScope
+    return PopScope(
       canPop: !_isSearching && !_isSelectionMode,  // מאפשר swipe רק כשלא במצבים מיוחדים
       onPopInvokedWithResult: (didPop, result) {
         if (!didPop) {
@@ -404,12 +404,12 @@ class _CategoryItemsScreenState extends State<CategoryItemsScreen> {
           onPressed: _isSelectionMode
               ? _addToLists
               : () => _addNewItem(),
+          backgroundColor: _isSelectionMode ? Colors.blue : widget.category.categoryColor,
           child: Icon(
             _isSelectionMode
                 ? Icons.bookmark_add
                 : Icons.add,
           ),
-          backgroundColor: _isSelectionMode ? Colors.blue : widget.category.categoryColor,
         ),
         floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       ),

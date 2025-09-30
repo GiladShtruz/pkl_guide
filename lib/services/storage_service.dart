@@ -1,6 +1,4 @@
-import 'dart:convert';
 
-import 'package:flutter/cupertino.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:pkl_guide/models/element_model.dart';
 import 'package:pkl_guide/services/json_service.dart';
@@ -246,11 +244,96 @@ class StorageService {
         .toList();
   }
 
+  // Future<void> updateFromOnline(Map<String, dynamic> jsonData) async {
+  //   final categories = jsonData['categories'] ?? {};
+  //   final jsonService = JsonService(this);
+  //   final existingIds = appDataBox.keys.cast<int>().toSet();
+  //   final processedIds = <int>{};
+  //
+  //   for (final entry in categories.entries) {
+  //     final categoryHebName = getCategoryType(entry.key);
+  //     final categoryItems = entry.value;
+  //
+  //     if (categoryItems is! List) continue;
+  //
+  //     for (final itemData in categoryItems) {
+  //       final newItem = jsonService.parseItem(itemData, categoryHebName);
+  //       if (newItem == null) continue;
+  //
+  //       processedIds.add(newItem.id);
+  //
+  //       await _updateOrAddItem(newItem);
+  //     }
+  //   }
+  //
+  //   // מחיקת פריטים שלא קיימים יותר
+  //   final idsToRemove = existingIds.difference(processedIds);
+  //   for (final id in idsToRemove) {
+  //     await appDataBox.delete(id);
+  //   }
+  // }
+
+  // Future<void> _updateOrAddItem(ItemModel newItem) async {
+  //   final oldItem = appDataBox.get(newItem.id);
+  //
+  //   if (oldItem == null || !oldItem.isElementsChanged) {
+  //     // פריט חדש או ללא שינויים - פשוט שומרים
+  //     await appDataBox.put(newItem.id, newItem);
+  //     return;
+  //   }
+  //
+  //   // יש פריט קיים עם שינויים - צריך למזג
+  //   final updatedElements = _mergeElements(
+  //     oldElements: oldItem.elements,
+  //     oldOriginalElements: oldItem.originalElements,
+  //     newElements: newItem.elements, // original Element at all
+  //     itemName: oldItem.name
+  //   );
+  //
+  //   newItem.itemElements = updatedElements;
+  //   await appDataBox.put(newItem.id, newItem);
+  // }
+  //
+  // List<ElementModel> _mergeElements({
+  //   required List<ElementModel> oldElements,
+  //   required List<ElementModel> oldOriginalElements,
+  //   required List<ElementModel> newElements,
+  //
+  //   required String itemName, // delete only for debug
+  // }) {
+  //
+  //
+  //   Set<ElementModel> oldOriginalElementsSet = oldOriginalElements.toSet();
+  //   Set<ElementModel> newElementsSet = newElements.toSet();
+  //   List<ElementModel> itemsToDelete = oldOriginalElementsSet.difference(newElementsSet).toList();
+  //   List<ElementModel> itemsToAdd = newElementsSet.difference(oldOriginalElementsSet).toList();
+  //
+  //   // דיבאג אופציונלי
+  //   if (itemName.contains("פנטומימה")) {
+  //     print("=== מיזוג אלמנטים: $itemName ===");
+  //     print("נוכחיים: ${oldOriginalElementsSet.map((e) => e.text).toList()}");
+  //     print("חדשים: ${newElementsSet.map((e) => e.text).toList()}");
+  //     print("למחוק: ${itemsToDelete.map((e) => e.text).toList()}");
+  //     print("להוסיף: ${itemsToAdd.map((e) => e.text).toList()}");
+  //   }
+  //
+  //   // יצירת רשימה חדשה עם השינויים
+  //   final result = List<ElementModel>.from(oldElements);
+  //
+  //   for (final element in itemsToDelete) {
+  //     result.removeWhere((e) => e.text == element.text);
+  //   }
+  //
+  //   result.addAll(itemsToAdd);
+  //
+  //   return result;
+  // }
+  //
   Future<void> updateFromOnline(Map<String, dynamic> jsonData) async {
     final categories = jsonData['categories'] ?? {};
     JsonService jsonService = JsonService(this);
     Set<int> idsRemovedFromData = appDataBox.keys.cast<int>().toSet();
-    categories.forEach((categoryName, categoryItems) {
+    categories.forEach((categoryName, categoryItems) async {
       final categoryHebName = getCategoryType(categoryName);
 
       if (categoryItems is List) {
@@ -260,21 +343,45 @@ class StorageService {
             idsRemovedFromData.remove(newItem.id);
             // update elements:
             final oldItem = appDataBox.get(newItem.id);
-            if (oldItem != null && oldItem.isElementsChanged) {
+            if (oldItem == null){ // its new item
+              await appDataBox.put(newItem.id, newItem);
+              continue;
+            }
+            // update item:
+            // set old item name:
+            oldItem.originalTitle = oldItem.name;
+            oldItem.originalDetail = oldItem.detail;
+            oldItem.originalLink = oldItem.link;
+            oldItem.originalClassification = oldItem.classification;
+            oldItem.originalEquipment = oldItem.equipment;
+            // set elements:
+            if (oldItem.isElementsChanged) {
               // in order to get smallest run time
-              Set<ElementModel> curOriginalElements = oldItem.elements.toSet();
-              Set<ElementModel> newOriginalElements = newItem.originalElements.toSet();
-              List<ElementModel> itemsToDelete = curOriginalElements.difference(newOriginalElements).toList();
-              List<ElementModel> itemsToAdd = newOriginalElements.difference(curOriginalElements).toList();
+
+              Set<String> curOriginalTexts = oldItem.originalElements.map((e) => e.text).toSet();
+              Set<String> newOriginalTexts = newItem.originalElements.map((e) => e.text).toSet();
+              List<String> itemsToDelete = curOriginalTexts.difference(newOriginalTexts).toList();
+              List<String> itemsToAdd = newOriginalTexts.difference(curOriginalTexts).toList();
+              if (oldItem.name.contains("פנטומימה")) {
+                print("פנטומימה הגענו");
+                print(curOriginalTexts);
+                print(newOriginalTexts);
+                print(itemsToDelete);
+                print(itemsToAdd);
+              }
+              List<ElementModel> result = List<ElementModel>.from(oldItem.elements);
               for (var item in itemsToDelete) {
-                oldItem.removeElementAt(oldItem.findElementIndex(item.text));
+                result.removeWhere((e) => e.text == item);
               }
               for (var item in itemsToAdd) {
-                oldItem.addElement(item.text);
+                result.add(ElementModel(item, false));
               }
-              newItem.itemElements = oldItem.elements;
+              oldItem.itemElements = result;
             }
-            appDataBox.put(newItem.id, newItem);
+            else{
+              oldItem.itemElements = newItem.elements;
+            }
+            appDataBox.put(oldItem.id, oldItem);
           }
         }
       }

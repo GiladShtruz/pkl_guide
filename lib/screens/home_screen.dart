@@ -1,13 +1,8 @@
-import 'dart:convert';
-import 'dart:io';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
-import 'package:share_plus/share_plus.dart';
 import '../models/category.dart';
+import '../providers/app_provider.dart';
 import '../services/import_export_service.dart';
 import '../services/storage_service.dart';
 import '../services/json_service.dart';
@@ -19,12 +14,10 @@ import '../screens/category_items_screen.dart';
 import '../screens/games_classification_screen.dart';
 import '../screens/search_screen.dart';
 import '../screens/lists_screen.dart';
-import '../dialogs/update_dialog.dart';
 import '../dialogs/about_dialog.dart';
 
 //
 
-import '../services/storage_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -35,7 +28,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
-  bool _hasUpdate = false;
+  final bool _hasUpdate = false;
   Map<String, dynamic>? _updateInfo;
   bool _isInitialLoad = true;
   final GlobalKey<SearchScreenState> _searchKey = GlobalKey<SearchScreenState>();
@@ -88,7 +81,105 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
 
+  Future<void> _showThemeDialog() async {
+    final storageService = context.read<StorageService>();
+    final appProvider = context.read<AppProvider>();
 
+    final currentTheme = storageService.settingsBox.get('theme_mode', defaultValue: 'system') as String;
+
+    final selectedTheme = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('בחר ערכת נושא'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            RadioListTile<String>(
+              title: const Row(
+                children: [
+                  Icon(Icons.light_mode, size: 20),
+                  SizedBox(width: 8),
+                  Text('בהיר'),
+                ],
+              ),
+              value: 'light',
+              groupValue: currentTheme,
+              onChanged: (value) => Navigator.pop(context, value),
+            ),
+            RadioListTile<String>(
+              title: const Row(
+                children: [
+                  Icon(Icons.dark_mode, size: 20),
+                  SizedBox(width: 8),
+                  Text('כהה'),
+                ],
+              ),
+              value: 'dark',
+              groupValue: currentTheme,
+              onChanged: (value) => Navigator.pop(context, value),
+            ),
+            RadioListTile<String>(
+              title: const Row(
+                children: [
+                  Icon(Icons.settings_suggest, size: 20),
+                  SizedBox(width: 8),
+                  Text('תואם למכשיר'),
+                ],
+              ),
+              value: 'system',
+              groupValue: currentTheme,
+              onChanged: (value) => Navigator.pop(context, value),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('ביטול'),
+          ),
+        ],
+      ),
+    );
+
+    if (selectedTheme != null && selectedTheme != currentTheme) {
+      await storageService.settingsBox.put('theme_mode', selectedTheme);
+
+      final themeMode = _getThemeModeFromString(selectedTheme);
+      appProvider.setThemeMode(themeMode);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('ערכת הנושא שונתה ל${_getThemeNameInHebrew(selectedTheme)}'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
+  }
+
+  String _getThemeNameInHebrew(String theme) {
+    switch (theme) {
+      case 'light':
+        return 'בהיר';
+      case 'dark':
+        return 'כהה';
+      case 'system':
+        return 'תואם למכשיר';
+      default:
+        return '';
+    }
+  }
+
+  ThemeMode _getThemeModeFromString(String theme) {
+    switch (theme) {
+      case 'light':
+        return ThemeMode.light;
+      case 'dark':
+        return ThemeMode.dark;
+      case 'system':
+      default:
+        return ThemeMode.system;
+    }
+  }
   Future<void> _forceReloadData() async {
     // Clear all data
     final storageService = context.read<StorageService>();
@@ -191,6 +282,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 case 'reset':
                   await _handleReset();
                   break;
+                case 'theme':
+                  _showThemeDialog();
+                  break;
                 case 'about':
                   _showAbout();
                   break;
@@ -227,16 +321,27 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
               ),
+
               const PopupMenuItem(
-                value: 'reload',
+                value: 'theme',
                 child: Row(
                   children: [
-                    Icon(Icons.refresh),
+                    Icon(Icons.palette_outlined),
                     SizedBox(width: 8),
-                    Text('טען מחדש'),
+                    Text('ערכת נושא'),
                   ],
                 ),
               ),
+              // const PopupMenuItem(
+              //   value: 'reload',
+              //   child: Row(
+              //     children: [
+              //       Icon(Icons.refresh),
+              //       SizedBox(width: 8),
+              //       Text('טען מחדש'),
+              //     ],
+              //   ),
+              // ),
               // const PopupMenuItem(
               //   value: 'reset',
               //   child: Row(

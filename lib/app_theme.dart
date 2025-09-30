@@ -13,14 +13,12 @@ class AppTheme {
       tertiaryContainer: Color(0xFFFFD8E4),
       error: Color(0xFFBA1A1A),
       errorContainer: Color(0xFFFFDAD6),
-      surface: Color(0xFFFEF7FF), // Light purple tint for cards
-      background: Color(0xFFF6F2F7), // Soft purple-gray background
-      surfaceVariant: Color(0xFFE7E0EC),
+      surface: Color(0xFFFEF7FF), // Soft purple-gray background
+      surfaceContainerHighest: Color(0xFFE7E0EC),
       onPrimary: Colors.white,
       onSecondary: Colors.white,
       onTertiary: Colors.white,
       onSurface: Color(0xFF1C1B1F),
-      onBackground: Color(0xFF1C1B1F),
       onError: Colors.white,
       outline: Color(0xFF79747E),
       outlineVariant: Color(0xFFCAC4D0),
@@ -34,12 +32,12 @@ class AppTheme {
       useMaterial3: true,
       colorScheme: colorScheme,
       fontFamily: 'Heebo',
-      scaffoldBackgroundColor: colorScheme.background,
+      scaffoldBackgroundColor: colorScheme.surface,
 
       // AppBar Theme
         appBarTheme: AppBarTheme(
-          backgroundColor: colorScheme.background,
-          foregroundColor: colorScheme.onBackground,
+          backgroundColor: colorScheme.surface,
+          foregroundColor: colorScheme.onSurface,
           elevation: 0,
           scrolledUnderElevation: 3,
           systemOverlayStyle: SystemUiOverlayStyle(
@@ -52,7 +50,7 @@ class AppTheme {
           titleTextStyle: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.w600,
-            color: colorScheme.onBackground,
+            color: colorScheme.onSurface,
             fontFamily: 'Heebo',
           ),
         ),
@@ -141,7 +139,7 @@ class AppTheme {
       // Input Decoration Theme
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: colorScheme.surfaceVariant.withOpacity(0.3),
+        fillColor: colorScheme.surfaceContainerHighest.withOpacity(0.3),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -214,17 +212,17 @@ class AppTheme {
 
       // Text Theme
       textTheme: TextTheme(
-        headlineLarge: TextStyle(color: colorScheme.onBackground),
-        headlineMedium: TextStyle(color: colorScheme.onBackground),
-        headlineSmall: TextStyle(color: colorScheme.onBackground),
-        titleLarge: TextStyle(color: colorScheme.onBackground),
-        titleMedium: TextStyle(color: colorScheme.onBackground),
-        titleSmall: TextStyle(color: colorScheme.onBackground),
-        bodyLarge: TextStyle(color: colorScheme.onBackground),
-        bodyMedium: TextStyle(color: colorScheme.onBackground),
+        headlineLarge: TextStyle(color: colorScheme.onSurface),
+        headlineMedium: TextStyle(color: colorScheme.onSurface),
+        headlineSmall: TextStyle(color: colorScheme.onSurface),
+        titleLarge: TextStyle(color: colorScheme.onSurface),
+        titleMedium: TextStyle(color: colorScheme.onSurface),
+        titleSmall: TextStyle(color: colorScheme.onSurface),
+        bodyLarge: TextStyle(color: colorScheme.onSurface),
+        bodyMedium: TextStyle(color: colorScheme.onSurface),
         bodySmall: TextStyle(color: colorScheme.onSurfaceVariant),
-        labelLarge: TextStyle(color: colorScheme.onBackground),
-        labelMedium: TextStyle(color: colorScheme.onBackground),
+        labelLarge: TextStyle(color: colorScheme.onSurface),
+        labelMedium: TextStyle(color: colorScheme.onSurface),
         labelSmall: TextStyle(color: colorScheme.onSurfaceVariant),
       ),
     );
@@ -241,14 +239,12 @@ class AppTheme {
       tertiaryContainer: Color(0xFF633B48),
       error: Color(0xFFFFB4AB),
       errorContainer: Color(0xFF93000A),
-      surface: Color(0xFF1C1B1F), // Dark surface
-      background: Color(0xFF141316), // Very dark background
-      surfaceVariant: Color(0xFF49454F),
+      surface: Color(0xFF1C1B1F), // Very dark background
+      surfaceContainerHighest: Color(0xFF49454F),
       onPrimary: Color(0xFF381E72),
       onSecondary: Color(0xFF332D41),
       onTertiary: Color(0xFF492532),
       onSurface: Color(0xFFE6E1E5),
-      onBackground: Color(0xFFE6E1E5),
       onError: Color(0xFF690005),
       outline: Color(0xFF938F99),
       outlineVariant: Color(0xFF49454F),
@@ -262,13 +258,13 @@ class AppTheme {
       useMaterial3: true,
       colorScheme: colorScheme,
       fontFamily: 'Heebo',
-      scaffoldBackgroundColor: colorScheme.background,
+      scaffoldBackgroundColor: colorScheme.surface,
       brightness: Brightness.dark,
 
       // AppBar Theme
         appBarTheme: AppBarTheme(
-          backgroundColor: colorScheme.background,
-          foregroundColor: colorScheme.onBackground,
+          backgroundColor: colorScheme.surface,
+          foregroundColor: colorScheme.onSurface,
           elevation: 0,
           scrolledUnderElevation: 3,
           surfaceTintColor: colorScheme.surfaceTint,
@@ -281,7 +277,7 @@ class AppTheme {
           titleTextStyle: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.w600,
-            color: colorScheme.onBackground,
+            color: colorScheme.onSurface,
             fontFamily: 'Heebo',
           ),
         ),
@@ -347,7 +343,7 @@ class AppTheme {
       // Input Decoration Theme
       inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: colorScheme.surfaceVariant.withOpacity(0.2),
+      fillColor: colorScheme.surfaceContainerHighest.withOpacity(0.2),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
@@ -441,17 +437,17 @@ class AppTheme {
 
       // Text Theme
       textTheme: TextTheme(
-        headlineLarge: TextStyle(color: colorScheme.onBackground),
-        headlineMedium: TextStyle(color: colorScheme.onBackground),
-        headlineSmall: TextStyle(color: colorScheme.onBackground),
-        titleLarge: TextStyle(color: colorScheme.onBackground),
-        titleMedium: TextStyle(color: colorScheme.onBackground),
-        titleSmall: TextStyle(color: colorScheme.onBackground),
-        bodyLarge: TextStyle(color: colorScheme.onBackground),
-        bodyMedium: TextStyle(color: colorScheme.onBackground),
+        headlineLarge: TextStyle(color: colorScheme.onSurface),
+        headlineMedium: TextStyle(color: colorScheme.onSurface),
+        headlineSmall: TextStyle(color: colorScheme.onSurface),
+        titleLarge: TextStyle(color: colorScheme.onSurface),
+        titleMedium: TextStyle(color: colorScheme.onSurface),
+        titleSmall: TextStyle(color: colorScheme.onSurface),
+        bodyLarge: TextStyle(color: colorScheme.onSurface),
+        bodyMedium: TextStyle(color: colorScheme.onSurface),
         bodySmall: TextStyle(color: colorScheme.onSurfaceVariant),
-        labelLarge: TextStyle(color: colorScheme.onBackground),
-        labelMedium: TextStyle(color: colorScheme.onBackground),
+        labelLarge: TextStyle(color: colorScheme.onSurface),
+        labelMedium: TextStyle(color: colorScheme.onSurface),
         labelSmall: TextStyle(color: colorScheme.onSurfaceVariant),
       ),
     );

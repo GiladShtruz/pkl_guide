@@ -13,6 +13,18 @@ class AppProvider extends ChangeNotifier {
   bool _isSelectionMode = false;
   final Set<int> _selectedItems = {};
 
+  // ← הוסף את זה
+  ThemeMode _themeMode = ThemeMode.system;
+
+  // ← הוסף את זה
+  ThemeMode get themeMode => _themeMode;
+
+  // ← הוסף את זה
+  void setThemeMode(ThemeMode mode) {
+    _themeMode = mode;
+    notifyListeners();
+  }
+
   SortingMethod getSortingMethod(CategoryType category) {
     return _sortingMethods[category] ?? SortingMethod.lastAccessed;
   }
@@ -47,4 +59,3 @@ class AppProvider extends ChangeNotifier {
     notifyListeners();
   }
 }
-

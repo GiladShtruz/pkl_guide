@@ -1,4 +1,3 @@
-
 import 'dart:async';
 import 'dart:math';
 import 'package:audioplayers/audioplayers.dart';
@@ -28,16 +27,15 @@ class _SwitchCardGameScreenState extends State<SwitchCardGameScreen>
   int _currentTeam = 1;
   int _team1Score = 0;
   int _team2Score = 0;
-  late List<String> _availableWords; // חדש - מילים זמינות לסיבוב הנוכחי
-  late List<String> _allUsedWords; // חדש - כל המילים שכבר נוגנו במשחק
+  late List<String> _availableWords;
+  late List<String> _allUsedWords;
   int _currentRoundScore = 0;
   bool _isPlaying = false;
   bool _isPaused = false;
   int _remainingSeconds = 10;
-  int _totalSeconds = 10;
+  final int _totalSeconds = 60;
   Timer? _timer;
-  bool _wordsRepeating = false;
-  int _wordCurIndex = 0;
+
   late AnimationController _timerAnimationController;
   late Animation<double> _timerAnimation;
   List<String> _correctWords = [];
@@ -50,8 +48,8 @@ class _SwitchCardGameScreenState extends State<SwitchCardGameScreen>
     _controller = CardSwiperController();
     _words = List.from(widget.item.strElements);
     _usedWords = [];
-    _availableWords = List.from(widget.item.strElements); // חדש
-    _allUsedWords = []; // חדש
+    _availableWords = List.from(widget.item.strElements);
+    _allUsedWords = [];
     _shuffleWords();
 
     _timerAnimationController = AnimationController(
@@ -63,8 +61,6 @@ class _SwitchCardGameScreenState extends State<SwitchCardGameScreen>
       begin: 1.0,
       end: 0.0,
     ).animate(_timerAnimationController);
-
-    // _checkShowRules();
   }
 
   @override
@@ -75,17 +71,6 @@ class _SwitchCardGameScreenState extends State<SwitchCardGameScreen>
     _audioPlayer.dispose();
     super.dispose();
   }
-
-  // void _checkShowRules() async {
-  //   final prefs = await SharedPreferences.getInstance();
-  //   final dontShowAgain = prefs.getBool('card_game_rules_dont_show') ?? false;
-  //
-  //   if (!dontShowAgain && mounted) {
-  //     WidgetsBinding.instance.addPostFrameCallback((_) {
-  //       _showRulesDialog(isFirstTime: true);
-  //     });
-  //   }
-  // }
 
   void _showRulesDialog({bool isFirstTime = false}) {
     showDialog(
@@ -120,7 +105,6 @@ class _SwitchCardGameScreenState extends State<SwitchCardGameScreen>
                           await prefs.setBool(
                               'card_game_rules_dont_show', true);
                         }
-                        // Navigator.pop(context);
                       },
                     ),
                     const Text('אל תציג שוב'),
@@ -186,7 +170,6 @@ class _SwitchCardGameScreenState extends State<SwitchCardGameScreen>
   }
 
   void _startRound() {
-    // הכנת המילים לסיבוב החדש
     _prepareWordsForNewRound();
 
     setState(() {
@@ -196,7 +179,7 @@ class _SwitchCardGameScreenState extends State<SwitchCardGameScreen>
       _currentRoundScore = 0;
       _correctWords = [];
       _skippedWords = [];
-      _usedWords = []; // איפוס המילים ששוחקו בסיבוב הנוכחי
+      _usedWords = [];
     });
 
     _timerAnimationController.forward(from: 0.0);
@@ -214,17 +197,12 @@ class _SwitchCardGameScreenState extends State<SwitchCardGameScreen>
     });
   }
 
-  // פונקציה חדשה להכנת מילים לסיבוב חדש
   void _prepareWordsForNewRound() {
     setState(() {
-      // אם נגמרו כל המילים הזמינות
       if (_availableWords.isEmpty) {
-        // אתחול מחדש של כל המילים
         _availableWords = List.from(widget.item.strElements);
         _allUsedWords.clear();
-        _wordsRepeating = false;
 
-        // הודעה למשתמש
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('כל המילים נוגנו - מתחילים מחזור חדש'),
@@ -233,10 +211,8 @@ class _SwitchCardGameScreenState extends State<SwitchCardGameScreen>
         );
       }
 
-      // טעינת המילים הזמינות לסיבוב הנוכחי
       _words = List.from(_availableWords);
 
-      // וידוא שיש לפחות מילה אחת
       if (_words.isEmpty) {
         _words = List.from(widget.item.strElements);
         _availableWords = List.from(widget.item.strElements);
@@ -245,6 +221,29 @@ class _SwitchCardGameScreenState extends State<SwitchCardGameScreen>
 
       _shuffleWords();
     });
+  }
+
+  // פונקציה חדשה לטיפול בסיום הכרטיסים באמצע משחק
+  void _reloadCardsIfNeeded() {
+    // בודק אם נגמרו הכרטיסים הזמינים
+    if (_availableWords.isEmpty) {
+      setState(() {
+        // מאתחל את כל המילים מחדש
+        _availableWords = List.from(widget.item.strElements);
+        _allUsedWords.clear();
+        _words = List.from(_availableWords);
+        _shuffleWords();
+      });
+
+      // הודעה למשתמש
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('כל המילים נגמרו - מתחיל מחדש עם כל המילים!'),
+          duration: Duration(seconds: 2),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
   }
 
   void _pauseTimer() {
@@ -271,14 +270,12 @@ class _SwitchCardGameScreenState extends State<SwitchCardGameScreen>
       _remainingSeconds = _totalSeconds;
       _currentRoundScore = 0;
 
-      // החזרת המילים שלא נוגנו בסיבוב זה חזרה לרשימה הזמינה
       for (String word in _words) {
         if (!_usedWords.contains(word) && !_availableWords.contains(word)) {
           _availableWords.add(word);
         }
       }
 
-      // הסרת המילים שנוגנו מהרשימה הכללית
       for (String word in _usedWords) {
         _allUsedWords.remove(word);
       }
@@ -321,7 +318,6 @@ class _SwitchCardGameScreenState extends State<SwitchCardGameScreen>
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Points summary
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
@@ -334,7 +330,7 @@ class _SwitchCardGameScreenState extends State<SwitchCardGameScreen>
                         const Icon(Icons.star, color: Colors.green, size: 28),
                         const SizedBox(width: 8),
                         Text(
-                          'קיבלתם $_currentRoundScore נקודות!',
+                          'קיבלת $_currentRoundScore נקודות!',
                           style: const TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
@@ -347,7 +343,6 @@ class _SwitchCardGameScreenState extends State<SwitchCardGameScreen>
 
                   const SizedBox(height: 16),
 
-                  // Total score
                   Text(
                     'ניקוד כולל: $_team1Score - $_team2Score',
                     style: const TextStyle(
@@ -357,7 +352,6 @@ class _SwitchCardGameScreenState extends State<SwitchCardGameScreen>
                     textAlign: TextAlign.center,
                   ),
 
-                  // הוספת מידע על המילים הנותרות
                   const SizedBox(height: 8),
                   Text(
                     'מילים שנותרו במשחק: ${_availableWords.length}',
@@ -370,7 +364,6 @@ class _SwitchCardGameScreenState extends State<SwitchCardGameScreen>
 
                   const SizedBox(height: 16),
 
-                  // Correct words section
                   if (_correctWords.isNotEmpty) ...[
                     Row(
                       children: [
@@ -378,7 +371,7 @@ class _SwitchCardGameScreenState extends State<SwitchCardGameScreen>
                             Icons.check_circle, color: Colors.green, size: 20),
                         const SizedBox(width: 8),
                         Text(
-                          'מילים שניחשתם (${_correctWords.length}):',
+                          'מילים שניחשת (${_correctWords.length}):',
                           style: const TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
@@ -411,7 +404,6 @@ class _SwitchCardGameScreenState extends State<SwitchCardGameScreen>
                     ),
                   ],
 
-                  // Skipped words section
                   if (_skippedWords.isNotEmpty) ...[
                     const SizedBox(height: 12),
                     Row(
@@ -420,7 +412,7 @@ class _SwitchCardGameScreenState extends State<SwitchCardGameScreen>
                             Icons.skip_next, color: Colors.orange, size: 20),
                         const SizedBox(width: 8),
                         Text(
-                          'מילים שדילגתם (${_skippedWords.length}):',
+                          'מילים שדילגת (${_skippedWords.length}):',
                           style: const TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
@@ -453,12 +445,11 @@ class _SwitchCardGameScreenState extends State<SwitchCardGameScreen>
                     ),
                   ],
 
-                  // If no words were guessed
                   if (_correctWords.isEmpty && _skippedWords.isEmpty) ...[
                     const SizedBox(height: 12),
                     const Center(
                       child: Text(
-                        'לא שיחקתם בסיבוב זה',
+                        'לא שיחקת בסיבוב זה',
                         style: TextStyle(
                           fontSize: 14,
                           color: Colors.grey,
@@ -486,427 +477,440 @@ class _SwitchCardGameScreenState extends State<SwitchCardGameScreen>
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey[900],
+  // פונקציה לבדיקה אם יש משחק פעיל
+  bool get _hasActiveGame => _isPlaying || _team1Score > 0 || _team2Score > 0;
 
-      appBar: AppBar(
-        title: Text(widget.item.name, style: TextStyle(color: Colors.white)),
-        centerTitle: true,
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        foregroundColor: Colors.white,
-        systemOverlayStyle: const SystemUiOverlayStyle(
-          statusBarColor: Colors.deepPurple, // צבע החלק העליון (סטטוס בר)
-          statusBarIconBrightness: Brightness.light, // צבע האייקונים באנדרואיד
-          statusBarBrightness: Brightness.dark, // צבע האייקונים ב־iOS
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.info_outline),
-            onPressed: () => _showRulesDialog(),
+  // פונקציה לטיפול ביציאה מהמסך
+  Future<void> _handlePopInvoked(bool didPop, Object? result) async {
+    // אם כבר יצאנו, לא צריך לעשות כלום
+    if (didPop) {
+      return;
+    }
+
+    // בודק אם יש משחק פעיל או נקודות לקבוצות
+    if (_hasActiveGame) {
+      final shouldExit = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('יציאה מהמשחק'),
+          content: const Text(
+            'אם תצא עכשיו, המשחק יסתיים וכל הנקודות יאבדו.\n\nהאם אתה בטוח שברצונך לצאת?',
           ),
-        ],
-      ),
-
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Team scores
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  GestureDetector(
-                    onTap: () => _showEditScoreDialog(1),
-                    child: _buildTeamScore(1, _team1Score),
-                  ),
-                  GestureDetector(
-                    onTap: () => _showEditScoreDialog(2),
-                    child: _buildTeamScore(2, _team2Score),
-                  ),
-                ],
-              ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('ביטול'),
             ),
-
-            // Current round score
-            if (_isPlaying)
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  vertical: 8,
-                  horizontal: 16,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.green,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  'סיבוב נוכחי: $_currentRoundScore',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
               ),
-
-            // Cards area
-            Expanded(
-              child: Center(
-                child: SizedBox(
-                  width: 350,
-                  height: 500,
-                  child: _isPlaying
-                      ? (_words.isNotEmpty // בדיקה שיש מילים
-                      ? CardSwiper(
-                    controller: _controller,
-                    cardsCount: _words.length,
-                    numberOfCardsDisplayed: min(3, _words.length),
-                    // שימוש ב-min
-                    backCardOffset: const Offset(20, 20),
-                    padding: const EdgeInsets.all(24.0),
-                    cardBuilder: (context,
-                        index,
-                        horizontalOffsetPercentage,
-                        verticalOffsetPercentage,) {
-                      final word = _words[index % _words.length];
-                      final swipeProgress = horizontalOffsetPercentage.abs();
-                      final isSwipingRight = horizontalOffsetPercentage > 0;
-                      final isSwipingLeft = horizontalOffsetPercentage < 0;
-                      final showIndicator = swipeProgress > 0.1;
-                      final isFirstCard = index == 0;
-
-                      return Stack(
-                        children: [
-                          Card(
-                            elevation: 10,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Container(
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(20),
-                                gradient: LinearGradient(
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                  colors: [
-                                    Colors.purple[400]!,
-                                    Colors.blue[600]!,
-                                  ],
-                                ),
-                              ),
-                              child: Stack(
-                                children: [
-                                  Center(
-                                    child: Text(
-                                      word,
-                                      style: const TextStyle(
-                                        fontSize: 48,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.white,
-                                      ),
-                                      textAlign: TextAlign.center,
-                                    ),
-                                  ),
-
-                                  // הוספת אייקון החצים בכרטיס הראשון
-                                  if (isFirstCard && !showIndicator)
-                                    Positioned(
-                                      bottom: 30,
-                                      left: 0,
-                                      right: 0,
-                                      child: Center(
-                                        child: Container(
-                                          padding: const EdgeInsets.all(12),
-                                          decoration: BoxDecoration(
-                                            color: Colors.white.withOpacity(
-                                                0.2),
-                                            borderRadius: BorderRadius.circular(
-                                                30),
-                                          ),
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Icon(
-                                                Icons.arrow_back,
-                                                color: Colors.white.withOpacity(
-                                                    0.8),
-                                                size: 24,
-                                              ),
-                                              const SizedBox(width: 8),
-                                              Icon(
-                                                Icons.swipe,
-                                                color: Colors.white.withOpacity(
-                                                    0.9),
-                                                size: 28,
-                                              ),
-                                              const SizedBox(width: 8),
-                                              Icon(
-                                                Icons.arrow_forward,
-                                                color: Colors.white.withOpacity(
-                                                    0.8),
-                                                size: 24,
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            ),
-                          ),
-
-                          // Swipe indicators
-                          if (showIndicator && isSwipingRight)
-                            const Positioned(
-                              top: 20,
-                              left: 10,
-                              child: Icon(
-                                Icons.check_circle,
-                                size: 100,
-                                color: Colors.green,
-                              ),
-                            ),
-                          if (showIndicator && isSwipingLeft)
-                            const Positioned(
-                              top: 20,
-                              right: 10,
-                              child: Icon(
-                                Icons.cancel,
-                                size: 100,
-                                color: Colors.red,
-                              ),
-                            ),
-                        ],
-                      );
-                    },
-                    onSwipe: (previousIndex, currentIndex, direction) {
-                      final word = _words[previousIndex % _words.length];
-
-                      if (direction == CardSwiperDirection.right) {
-                        setState(() {
-                          _currentRoundScore++;
-                          _correctWords.add(word);
-                        });
-                        HapticFeedback.lightImpact();
-                      } else if (direction == CardSwiperDirection.left) {
-                        setState(() {
-                          if (_currentRoundScore > 0) {
-                            _currentRoundScore--;
-                          }
-                          _skippedWords.add(word);
-                        });
-                      }
-
-                      // סימון המילה כמשוחקת
-                      if (previousIndex < _words.length) {
-                        _usedWords.add(_words[previousIndex]);
-
-                        // הסרת המילה מהרשימה הזמינה
-                        _availableWords.remove(_words[previousIndex]);
-                        _allUsedWords.add(_words[previousIndex]);
-                      }
-
-                      return true;
-                    },
-                    onEnd: () {
-                      // בודקים אם נגמרו המילים בסיבוב הנוכחי
-                      if (_words.length == _usedWords.length &&
-                          !_wordsRepeating) {
-                        setState(() {
-                          _wordsRepeating = true;
-                        });
-
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              _availableWords.isEmpty
-                                  ? 'נגמרו כל המילים - בסיום הסיבוב יתחיל מחזור חדש'
-                                  : 'המילים בסיבוב זה נגמרו - מתחילים מחזור חוזר',
-                            ),
-                            duration: const Duration(seconds: 2),
-                          ),
-                        );
-                      }
-                      // ערבוב המילים הנוכחיות שוב
-                      _shuffleWords();
-                    },
-                  )
-                      : Center(
-                    // במקרה שאין מילים כלל
-                    child: Text(
-                      'אין מילים זמינות',
-                      style: TextStyle(
-                        fontSize: 18,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ))
-                      : Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(20),
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [Colors.purple[400]!, Colors.blue[600]!],
-                      ),
-                    ),
-                    child: Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(
-                            Icons.theater_comedy,
-                            size: 80,
-                            color: Colors.white,
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            'לחץ "התחל סיבוב" כדי להתחיל את המשחק',
-                            style: const TextStyle(
-                              fontSize: 18,
-                              color: Colors.white,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-
-            // Timer and controls
-            Container(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                children: [
-                  // Timer display
-                  if (_isPlaying)
-                    Column(
-                      children: [
-                        const SizedBox(height: 10),
-                        // Control buttons during game
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            IconButton(
-                              onPressed: _pauseTimer,
-                              icon: Icon(
-                                _isPaused ? Icons.play_arrow : Icons.pause,
-                                size: 32,
-                              ),
-                              style: IconButton.styleFrom(
-                                backgroundColor: Colors.orange,
-                                foregroundColor: Colors.white,
-                              ),
-                            ),
-                            const SizedBox(width: 24),
-                            AnimatedBuilder(
-                              animation: _timerAnimation,
-                              builder: (context, child) {
-                                return Stack(
-                                  alignment: Alignment.center,
-                                  children: [
-                                    SizedBox(
-                                      width: 80,
-                                      height: 80,
-                                      child: CircularProgressIndicator(
-                                        value:
-                                        _remainingSeconds / _totalSeconds,
-                                        strokeWidth: 8,
-                                        backgroundColor: Colors.grey[700],
-                                        valueColor:
-                                        AlwaysStoppedAnimation<Color>(
-                                          _remainingSeconds <= 10
-                                              ? Colors.red
-                                              : Colors.green,
-                                        ),
-                                      ),
-                                    ),
-                                    Text(
-                                      '$_remainingSeconds',
-                                      style: TextStyle(
-                                        fontSize: 32,
-                                        fontWeight: FontWeight.bold,
-                                        color: _remainingSeconds <= 10
-                                            ? Colors.red
-                                            : Colors.white,
-                                      ),
-                                    ),
-                                  ],
-                                );
-                              },
-                            ),
-                            const SizedBox(width: 24),
-
-                            IconButton(
-                              onPressed: _stopAndReset,
-                              icon: const Icon(Icons.stop, size: 32),
-                              style: IconButton.styleFrom(
-                                backgroundColor: Colors.red,
-                                foregroundColor: Colors.white,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-
-                  // Play button or team selector
-                  if (!_isPlaying)
-                    Column(
-                      children: [
-                        Text(
-                          'בחר קבוצה:',
-                          style: TextStyle(
-                            fontSize: 18,
-                            color: Colors.grey[300],
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            _buildTeamSelector(1),
-                            const SizedBox(width: 20),
-                            _buildTeamSelector(2),
-                          ],
-                        ),
-                        const SizedBox(height: 20),
-                        ElevatedButton.icon(
-                          onPressed: _startRound,
-                          icon: const Icon(Icons.play_arrow, size: 32),
-                          label: const Text(
-                            'התחל סיבוב',
-                            style: TextStyle(fontSize: 20),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 32,
-                              vertical: 16,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                ],
-              ),
+              child: const Text('צא מהמשחק'),
             ),
           ],
         ),
-      ),
-    );
+      );
+
+      if (shouldExit == true && context.mounted) {
+        Navigator.of(context).pop();
+      }
+    }
   }
+
+  @override
+  Widget build(BuildContext context) {
+    return PopScope(
+        canPop: !_hasActiveGame,
+        onPopInvokedWithResult: _handlePopInvoked,
+        child: Scaffold(
+          backgroundColor: Colors.grey[900],
+
+          appBar: AppBar(
+            title: Text(widget.item.name, style: TextStyle(color: Colors.white)),
+            centerTitle: true,
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            foregroundColor: Colors.white,
+            systemOverlayStyle: const SystemUiOverlayStyle(
+              statusBarColor: Colors.deepPurple,
+              statusBarIconBrightness: Brightness.light,
+              statusBarBrightness: Brightness.dark,
+            ),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.info_outline),
+                onPressed: () => _showRulesDialog(),
+              ),
+            ],
+          ),
+
+          body: SafeArea(
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      GestureDetector(
+                        onTap: () => _showEditScoreDialog(1),
+                        child: _buildTeamScore(1, _team1Score),
+                      ),
+                      GestureDetector(
+                        onTap: () => _showEditScoreDialog(2),
+                        child: _buildTeamScore(2, _team2Score),
+                      ),
+                    ],
+                  ),
+                ),
+
+                if (_isPlaying)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 8,
+                      horizontal: 16,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.green,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      'סיבוב נוכחי: $_currentRoundScore',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+
+                Expanded(
+                  child: Center(
+                    child: SizedBox(
+                      width: 350,
+                      height: 500,
+                      child: _isPlaying
+                          ? (_words.isNotEmpty
+                          ? CardSwiper(
+                        controller: _controller,
+                        cardsCount: _words.length,
+                        numberOfCardsDisplayed: min(3, _words.length),
+                        backCardOffset: const Offset(20, 20),
+                        padding: const EdgeInsets.all(24.0),
+                        cardBuilder: (context,
+                            index,
+                            horizontalOffsetPercentage,
+                            verticalOffsetPercentage,) {
+                          final word = _words[index % _words.length];
+                          final swipeProgress = horizontalOffsetPercentage.abs();
+                          final isSwipingRight = horizontalOffsetPercentage > 0;
+                          final isSwipingLeft = horizontalOffsetPercentage < 0;
+                          final showIndicator = swipeProgress > 0.1;
+                          final isFirstCard = index == 0;
+
+                          return Stack(
+                            children: [
+                              Card(
+                                elevation: 10,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(20),
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                      colors: [
+                                        Colors.purple[400]!,
+                                        Colors.blue[600]!,
+                                      ],
+                                    ),
+                                  ),
+                                  child: Stack(
+                                    children: [
+                                      Center(
+                                        child: Text(
+                                          word,
+                                          style: const TextStyle(
+                                            fontSize: 48,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.white,
+                                          ),
+                                          textAlign: TextAlign.center,
+                                        ),
+                                      ),
+
+                                      if (isFirstCard && !showIndicator)
+                                        Positioned(
+                                          bottom: 30,
+                                          left: 0,
+                                          right: 0,
+                                          child: Center(
+                                            child: Container(
+                                              padding: const EdgeInsets.all(12),
+                                              decoration: BoxDecoration(
+                                                color: Colors.white.withOpacity(
+                                                    0.2),
+                                                borderRadius: BorderRadius.circular(
+                                                    30),
+                                              ),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Icon(
+                                                    Icons.arrow_back,
+                                                    color: Colors.white.withOpacity(
+                                                        0.8),
+                                                    size: 24,
+                                                  ),
+                                                  const SizedBox(width: 8),
+                                                  Icon(
+                                                    Icons.swipe,
+                                                    color: Colors.white.withOpacity(
+                                                        0.9),
+                                                    size: 28,
+                                                  ),
+                                                  const SizedBox(width: 8),
+                                                  Icon(
+                                                    Icons.arrow_forward,
+                                                    color: Colors.white.withOpacity(
+                                                        0.8),
+                                                    size: 24,
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+
+                              if (showIndicator && isSwipingRight)
+                                const Positioned(
+                                  top: 20,
+                                  left: 10,
+                                  child: Icon(
+                                    Icons.check_circle,
+                                    size: 100,
+                                    color: Colors.green,
+                                  ),
+                                ),
+                              if (showIndicator && isSwipingLeft)
+                                const Positioned(
+                                  top: 20,
+                                  right: 10,
+                                  child: Icon(
+                                    Icons.cancel,
+                                    size: 100,
+                                    color: Colors.red,
+                                  ),
+                                ),
+                            ],
+                          );
+                        },
+                        onSwipe: (previousIndex, currentIndex, direction) {
+                          final word = _words[previousIndex % _words.length];
+
+                          if (direction == CardSwiperDirection.right) {
+                            setState(() {
+                              _currentRoundScore++;
+                              _correctWords.add(word);
+                            });
+                            HapticFeedback.lightImpact();
+                          } else if (direction == CardSwiperDirection.left) {
+                            setState(() {
+                              if (_currentRoundScore > 0) {
+                                _currentRoundScore--;
+                              }
+                              _skippedWords.add(word);
+                            });
+                          }
+
+                          if (previousIndex < _words.length) {
+                            _usedWords.add(_words[previousIndex]);
+                            _availableWords.remove(_words[previousIndex]);
+                            _allUsedWords.add(_words[previousIndex]);
+                          }
+
+                          return true;
+                        },
+                        onEnd: () {
+                          // כאן הוספתי את הקריאה לפונקציה החדשה
+                          _reloadCardsIfNeeded();
+                        },
+                      )
+                          : Center(
+                        child: Text(
+                          'אין מילים זמינות',
+                          style: TextStyle(
+                            fontSize: 18,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ))
+                          : Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(20),
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [Colors.purple[400]!, Colors.blue[600]!],
+                          ),
+                        ),
+                        child: Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(
+                                Icons.theater_comedy,
+                                size: 80,
+                                color: Colors.white,
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'לחץ "התחל סיבוב" כדי להתחיל את המשחק',
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  color: Colors.white,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    children: [
+                      if (_isPlaying)
+                        Column(
+                          children: [
+                            const SizedBox(height: 10),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                IconButton(
+                                  onPressed: _pauseTimer,
+                                  icon: Icon(
+                                    _isPaused ? Icons.play_arrow : Icons.pause,
+                                    size: 32,
+                                  ),
+                                  style: IconButton.styleFrom(
+                                    backgroundColor: Colors.orange,
+                                    foregroundColor: Colors.white,
+                                  ),
+                                ),
+                                const SizedBox(width: 24),
+                                AnimatedBuilder(
+                                  animation: _timerAnimation,
+                                  builder: (context, child) {
+                                    return Stack(
+                                      alignment: Alignment.center,
+                                      children: [
+                                        SizedBox(
+                                          width: 80,
+                                          height: 80,
+                                          child: CircularProgressIndicator(
+                                            value:
+                                            _remainingSeconds / _totalSeconds,
+                                            strokeWidth: 8,
+                                            backgroundColor: Colors.grey[700],
+                                            valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                              _remainingSeconds <= 10
+                                                  ? Colors.red
+                                                  : Colors.green,
+                                            ),
+                                          ),
+                                        ),
+                                        Text(
+                                          '$_remainingSeconds',
+                                          style: TextStyle(
+                                            fontSize: 32,
+                                            fontWeight: FontWeight.bold,
+                                            color: _remainingSeconds <= 10
+                                                ? Colors.red
+                                                : Colors.white,
+                                          ),
+                                        ),
+                                      ],
+                                    );
+                                  },
+                                ),
+                                const SizedBox(width: 24),
+
+                                IconButton(
+                                  onPressed: _stopAndReset,
+                                  icon: const Icon(Icons.stop, size: 32),
+                                  style: IconButton.styleFrom(
+                                    backgroundColor: Colors.red,
+                                    foregroundColor: Colors.white,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+
+                      if (!_isPlaying)
+                        Column(
+                          children: [
+                            Text(
+                              'בחר קבוצה:',
+                              style: TextStyle(
+                                fontSize: 18,
+                                color: Colors.grey[300],
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                _buildTeamSelector(1),
+                                const SizedBox(width: 20),
+                                _buildTeamSelector(2),
+                              ],
+                            ),
+                            const SizedBox(height: 20),
+                            ElevatedButton.icon(
+                              onPressed: _startRound,
+                              icon: const Icon(Icons.play_arrow, size: 32),
+                              label: const Text(
+                                'התחל סיבוב',
+                                style: TextStyle(fontSize: 20),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.green,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 32,
+                                  vertical: 16,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(30),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ));
+    }
 
   Widget _buildTeamScore(int team, int score) {
     final isActive = _currentTeam == team;
