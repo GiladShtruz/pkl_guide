@@ -3,7 +3,6 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:pkl_guide/app_theme.dart';
 import 'package:provider/provider.dart';
-import 'models/element_model.dart';
 import 'screens/home_screen.dart';
 import 'services/storage_service.dart';
 import 'services/json_service.dart';

@@ -665,7 +665,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
       final calculatedHeight = min(maxHeight, _currentElements.length * estimatedItemHeight);
 
       return Card(
-        child: Container(
+        child: SizedBox(
           height: calculatedHeight,
           child: ReorderableListView.builder(
             itemCount: _currentElements.length,

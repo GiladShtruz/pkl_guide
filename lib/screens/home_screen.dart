@@ -1,12 +1,6 @@
-import 'dart:convert';
-import 'dart:io';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
-import 'package:share_plus/share_plus.dart';
 import '../models/category.dart';
 import '../providers/app_provider.dart';
 import '../services/import_export_service.dart';
@@ -20,12 +14,10 @@ import '../screens/category_items_screen.dart';
 import '../screens/games_classification_screen.dart';
 import '../screens/search_screen.dart';
 import '../screens/lists_screen.dart';
-import '../dialogs/update_dialog.dart';
 import '../dialogs/about_dialog.dart';
 
 //
 
-import '../services/storage_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -36,7 +28,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
-  bool _hasUpdate = false;
+  final bool _hasUpdate = false;
   Map<String, dynamic>? _updateInfo;
   bool _isInitialLoad = true;
   final GlobalKey<SearchScreenState> _searchKey = GlobalKey<SearchScreenState>();

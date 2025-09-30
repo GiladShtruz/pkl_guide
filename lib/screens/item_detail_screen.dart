@@ -5,7 +5,6 @@ import 'package:pkl_guide/screens/card_swiper_game_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/item_model.dart';
-import '../models/element_model.dart';
 import '../services/storage_service.dart';
 import '../services/lists_service.dart';
 import '../screens/edit_item_screen.dart';

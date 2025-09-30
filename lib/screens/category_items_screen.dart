@@ -404,12 +404,12 @@ class _CategoryItemsScreenState extends State<CategoryItemsScreen> {
           onPressed: _isSelectionMode
               ? _addToLists
               : () => _addNewItem(),
+          backgroundColor: _isSelectionMode ? Colors.blue : widget.category.categoryColor,
           child: Icon(
             _isSelectionMode
                 ? Icons.bookmark_add
                 : Icons.add,
           ),
-          backgroundColor: _isSelectionMode ? Colors.blue : widget.category.categoryColor,
         ),
         floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       ),

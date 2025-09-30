@@ -34,7 +34,7 @@ class _GamesClassificationScreenState extends State<GamesClassificationScreen> {
     for (var game in allGames) {
       // final classification = game.classification ?? 'אחר';
 
-      final classification;
+      final String? classification;
       if (game.classification == null){
         classification = 'כללי';
       }
@@ -46,7 +46,7 @@ class _GamesClassificationScreenState extends State<GamesClassificationScreen> {
       }
 
 
-      _classifications.add(classification);
+      _classifications.add(classification!);
       _categorizedGames.putIfAbsent(classification, () => []).add(game);
     }
 

@@ -386,7 +386,7 @@ class _ListEditScreenState extends State<ListEditScreen> {
       final calculatedHeight = min(maxHeight, _currentItems.length * estimatedItemHeight);
 
       return Card(
-        child: Container(
+        child: SizedBox(
           height: calculatedHeight,
           child: ReorderableListView.builder(
             itemCount: _currentItems.length,
