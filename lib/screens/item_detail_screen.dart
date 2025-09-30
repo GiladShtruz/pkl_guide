@@ -5,6 +5,7 @@ import 'package:pkl_guide/screens/card_swiper_game_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/item_model.dart';
+import '../models/element_model.dart';
 import '../services/storage_service.dart';
 import '../services/lists_service.dart';
 import '../screens/edit_item_screen.dart';
@@ -64,13 +65,14 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // final isPantomime = widget.item.name.toLowerCase().contains('פנטומימה');
-    // final isAlias = widget.item.name.toLowerCase().contains('נחש את המילה');
     final isCardGame = widget.item.classification?.toLowerCase().contains("אינטראקטיבי") ?? false;
     final hasModifications = widget.item.hasUserModifications;
     final originalCount = widget.item.originalElements.length;
     final userAddedCount = widget.item.userElements.length;
-    final totalItems = widget.item.strElements.length;
+
+    // שימוש ב-elements במקום strElements כדי לקבל גישה למידע על isUserElement
+    final allElements = widget.item.elements;
+    final totalItems = allElements.length;
 
     return Scaffold(
       appBar: AppBar(
@@ -86,13 +88,6 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
         ),
         centerTitle: true,
         actions: [
-          // IconButton(
-          //   icon: const Icon(Icons.adb),
-          //   onPressed: (){
-          //     print("widget.item.isUserChanged");
-          //     print(widget.item.isUserChanged);
-          //   },
-          // ),
           IconButton(
             icon: const Icon(Icons.bookmark_border),
             onPressed: _openListsDialog,
@@ -245,12 +240,9 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
               sliver: SliverList.builder(
                 itemCount: totalItems,
                 itemBuilder: (context, index) {
-                  final item = widget.item.strElements[index];
-                  final isUserAdded = index >= originalCount;
-
-                  // Replace the riddle display section in ItemDetailScreen
-
-// In the build method, update the riddle display part:
+                  final element = allElements[index];
+                  final itemText = element.text;
+                  final isUserAdded = element.isUserElement;
 
                   if (widget.item.category == 'riddles') {
                     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
@@ -296,7 +288,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                               const SizedBox(width: 12),
                               Expanded(
                                 child: Text(
-                                  item,
+                                  itemText,
                                   style: TextStyle(
                                     fontSize: 16,
                                     height: 1.4,
@@ -354,7 +346,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                             const SizedBox(width: 12),
                             Expanded(
                               child: Text(
-                                item,
+                                itemText,
                                 style: const TextStyle(
                                   fontSize: 16,
                                   height: 1.3,

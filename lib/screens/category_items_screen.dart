@@ -219,7 +219,7 @@ class _CategoryItemsScreenState extends State<CategoryItemsScreen> {
       totalItems += _filteredRegularItems.length;
     }
 
-    return PopScope(  // במקום WillPopScope
+    return PopScope(
       canPop: !_isSearching && !_isSelectionMode,  // מאפשר swipe רק כשלא במצבים מיוחדים
       onPopInvokedWithResult: (didPop, result) {
         if (!didPop) {

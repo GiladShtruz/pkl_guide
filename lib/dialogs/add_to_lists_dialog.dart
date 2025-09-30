@@ -23,6 +23,7 @@ class _AddToListsDialogState extends State<AddToListsDialog> {
   late ListsService _listsService;
   late StorageService _storageService;
   final Set<int> _selectedLists = {};
+  final Set<int> _initiallySelectedLists = {}; // לשמירת המצב ההתחלתי
   List<ListModel> _lists = [];
 
   @override
@@ -36,13 +37,29 @@ class _AddToListsDialogState extends State<AddToListsDialog> {
   void _loadLists() {
     _lists = _listsService.getAllLists();
 
-    // Pre-select lists that already contain ALL items
-    // Only pre-select if we're dealing with a single item
+    // Pre-select lists based on items
     if (widget.itemIds.length == 1) {
+      // Single item: show all lists it's in
       final itemId = widget.itemIds.first;
       for (var list in _lists) {
         if (list.categoryItemIds.contains(itemId)) {
           _selectedLists.add(list.id);
+          _initiallySelectedLists.add(list.id);
+        }
+      }
+    } else {
+      // Multiple items: show only lists that contain ALL items
+      for (var list in _lists) {
+        bool containsAll = true;
+        for (var itemId in widget.itemIds) {
+          if (!list.categoryItemIds.contains(itemId)) {
+            containsAll = false;
+            break;
+          }
+        }
+        if (containsAll) {
+          _selectedLists.add(list.id);
+          _initiallySelectedLists.add(list.id);
         }
       }
     }
@@ -51,7 +68,7 @@ class _AddToListsDialogState extends State<AddToListsDialog> {
   }
 
   void _createNewList() async {
-    final result = await showDialog<Map<String, String?>>(  // Changed to String?
+    final result = await showDialog<Map<String, String?>>(
       context: context,
       builder: (context) => const CreateListDialog(),
     );
@@ -59,7 +76,7 @@ class _AddToListsDialogState extends State<AddToListsDialog> {
     if (result != null && result['name'] != null) {
       final newList = await _listsService.createList(
         result['name']!,
-        detail: result['detail'],  // Can be null
+        detail: result['detail'],
       );
       // Add items to new list
       for (var itemId in widget.itemIds) {
@@ -70,11 +87,23 @@ class _AddToListsDialogState extends State<AddToListsDialog> {
       }
     }
   }
+
   void _saveSelections() async {
-    // Add to selected lists
-    for (var listId in _selectedLists) {
+    // Determine which lists to add to and which to remove from
+    final listsToAdd = _selectedLists.difference(_initiallySelectedLists);
+    final listsToRemove = _initiallySelectedLists.difference(_selectedLists);
+
+    // Add to new lists
+    for (var listId in listsToAdd) {
       for (var itemId in widget.itemIds) {
         await _listsService.addItemToList(listId, itemId);
+      }
+    }
+
+    // Remove from deselected lists
+    for (var listId in listsToRemove) {
+      for (var itemId in widget.itemIds) {
+        await _listsService.removeItemFromList(listId, itemId);
       }
     }
 
@@ -97,7 +126,7 @@ class _AddToListsDialogState extends State<AddToListsDialog> {
       title: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('הוסף לרשימה'),
+          const Text('ניהול רשימות'),
           const SizedBox(height: 4),
           Text(
             _getTitle(),
@@ -109,8 +138,6 @@ class _AddToListsDialogState extends State<AddToListsDialog> {
           ),
         ],
       ),
-
-      // lib/dialogs/add_to_lists_dialog.dart - CONTINUATION
       content: SizedBox(
         width: double.maxFinite,
         child: Column(
@@ -140,9 +167,35 @@ class _AddToListsDialogState extends State<AddToListsDialog> {
                 itemBuilder: (context, index) {
                   final list = _lists[index];
                   final isSelected = _selectedLists.contains(list.id);
+                  final wasInitiallySelected = _initiallySelectedLists.contains(list.id);
 
                   return CheckboxListTile(
-                    title: Text(list.name),
+                    title: Row(
+                      children: [
+                        Expanded(child: Text(list.name)),
+                        // אינדיקטור למצב שונה מהמקורי
+                        if (isSelected != wasInitiallySelected)
+                          Container(
+                            margin: const EdgeInsets.only(right: 8),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isSelected ? Colors.green.shade100 : Colors.red.shade100,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              isSelected ? 'חדש' : 'יוסר',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: isSelected ? Colors.green.shade700 : Colors.red.shade700,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
                     subtitle: list.detail != null && list.detail!.isNotEmpty
                         ? Text(
                       list.detail!,
@@ -177,7 +230,7 @@ class _AddToListsDialogState extends State<AddToListsDialog> {
           child: const Text('ביטול'),
         ),
         ElevatedButton(
-          onPressed: _selectedLists.isNotEmpty ? _saveSelections : null,
+          onPressed: _saveSelections,
           child: const Text('שמור'),
         ),
       ],
