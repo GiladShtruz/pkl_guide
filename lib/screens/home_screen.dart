@@ -332,16 +332,16 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
               ),
-              const PopupMenuItem(
-                value: 'reload',
-                child: Row(
-                  children: [
-                    Icon(Icons.refresh),
-                    SizedBox(width: 8),
-                    Text('טען מחדש'),
-                  ],
-                ),
-              ),
+              // const PopupMenuItem(
+              //   value: 'reload',
+              //   child: Row(
+              //     children: [
+              //       Icon(Icons.refresh),
+              //       SizedBox(width: 8),
+              //       Text('טען מחדש'),
+              //     ],
+              //   ),
+              // ),
               // const PopupMenuItem(
               //   value: 'reset',
               //   child: Row(
