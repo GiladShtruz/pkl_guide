@@ -86,7 +86,7 @@ class _GamesClassificationScreenState extends State<GamesClassificationScreen> {
           return GameClassificationCard(
             title: isAllGames ? 'כל המשחקים' : classification,
             itemCount: games.length,
-            icon: isAllGames ? Icons.sports_esports : Icons.category,
+            icon: _getGameIcon(classification, isAllGames),
             isHighlighted: isAllGames,
             onTap: () {
               Navigator.push(
@@ -106,5 +106,32 @@ class _GamesClassificationScreenState extends State<GamesClassificationScreen> {
         },
       ),
     );
+  }
+  IconData _getGameIcon(String classification, bool isAllGames) {
+    if (isAllGames) return Icons.casino;
+    switch (classification) {
+      case 'כל המשחקים':
+        return Icons.casino;
+      case 'משחקי כיסאות':
+        return Icons.event_seat;
+      case 'משחקים בחוץ':
+        return Icons.park;
+      case 'משחקים כלליים':
+        return Icons.games;
+      case 'משחקי אנרגיה':
+        return Icons.bolt;
+      case 'משחקי דרך':
+        return Icons.directions_walk;
+      case 'משחקי פתיחה':
+        return Icons.celebration;
+      case 'ODT':
+        return Icons.hiking; // outdoor training
+      case 'משחקי חברה':
+        return Icons.groups;
+      case 'אינטראקטיבי':
+        return Icons.touch_app; // משחקים אינטראקטיביים
+      default:
+        return Icons.category;
+    }
   }
 }

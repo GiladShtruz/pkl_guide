@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/list_model.dart';
 import '../models/item_model.dart';
+import '../models/category.dart';
 import '../services/lists_service.dart';
 import '../screens/item_detail_screen.dart';
 import '../screens/list_edit_screen.dart';
@@ -65,12 +66,20 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
     // Refresh the screen regardless of result
     _loadItems();
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.list.name),
         centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.edit),
+            onPressed: _openListEditScreen,
+            tooltip: 'ערוך רשימה',
+          ),
+        ],
       ),
       body: _items.isEmpty
           ? Center(
@@ -156,7 +165,7 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'סה"כ ${_items.length} פריטים',
+                      'סה״כ ${_items.length} פריטים',
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
@@ -174,19 +183,19 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
                 itemCount: _items.length,
                 itemBuilder: (context, index) {
                   final item = _items[index];
+                  final categoryType = getCategoryType(item.category);
 
                   return Card(
-
                     margin: const EdgeInsets.only(bottom: 8),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: ListTile(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical:0),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
                       leading: CircleAvatar(
-                        backgroundColor: _getCategoryColor(item.category),
+                        backgroundColor: categoryType.categoryColor,
                         child: Icon(
-                          _getCategoryIcon(item.category),
+                          categoryType.icon,
                           color: Colors.white,
                           size: 20,
                         ),
@@ -235,79 +244,6 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _openListEditScreen,
-        backgroundColor: Theme.of(context).primaryColor,
-        icon: const Icon(Icons.edit),
-        label: const Text('ערוך רשימה'),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
-  }
-
-  Widget _getCategoryBadge(String category) {
-    String label;
-    switch (category) {
-      case 'games':
-        label = 'משחק';
-        break;
-      case 'activities':
-        label = 'פעילות';
-        break;
-      case 'riddles':
-        label = 'חידה';
-        break;
-      case 'texts':
-        label = 'טקסט';
-        break;
-      default:
-        label = category;
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        color: _getCategoryColor(category).withOpacity(0.15),
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w500,
-          color: _getCategoryColor(category),
-        ),
-      ),
-    );
-  }
-
-  Color _getCategoryColor(String categoryName) {
-    switch (categoryName) {
-      case 'games':
-        return Colors.purple;
-      case 'activities':
-        return Colors.blue;
-      case 'riddles':
-        return Colors.orange;
-      case 'texts':
-        return Colors.green;
-      default:
-        return Colors.grey;
-    }
-  }
-
-  IconData _getCategoryIcon(String categoryName) {
-    switch (categoryName) {
-      case 'games':
-        return Icons.sports_esports;
-      case 'activities':
-        return Icons.assignment;
-      case 'riddles':
-        return Icons.quiz;
-      case 'texts':
-        return Icons.description;
-      default:
-        return Icons.folder;
-    }
   }
 }

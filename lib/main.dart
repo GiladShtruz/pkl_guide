@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:pkl_guide/app_theme.dart';
 import 'package:provider/provider.dart';
+import 'package:upgrader/upgrader.dart';
 import 'screens/home_screen.dart';
 import 'services/storage_service.dart';
 import 'services/json_service.dart';
@@ -11,6 +13,7 @@ import 'providers/app_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
 
   // Initialize Hive
   await Hive.initFlutter();
@@ -25,7 +28,9 @@ void main() async {
   final jsonService = JsonService(storageService);
 
   // טעינת ערכת הנושא השמורה
-  final savedTheme = storageService.settingsBox.get('theme_mode', defaultValue: 'system') as String;
+  final savedTheme =
+      storageService.settingsBox.get('theme_mode', defaultValue: 'system')
+          as String;
   final initialThemeMode = _getThemeModeFromString(savedTheme);
 
   runApp(
@@ -71,13 +76,28 @@ class MyApp extends StatelessWidget {
             GlobalWidgetsLocalizations.delegate,
             GlobalCupertinoLocalizations.delegate,
           ],
-          supportedLocales: const [
-            Locale('he', 'IL'),
-          ],
+          supportedLocales: const [Locale('he', 'IL')],
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
           themeMode: appProvider.themeMode,
-          home: const HomeScreen(),
+          builder: (context, child) {
+            return GestureDetector(
+              onTap: () {
+                FocusManager.instance.primaryFocus?.unfocus();
+              },
+              behavior: HitTestBehavior.opaque,
+              child: child,
+            );
+          },
+          home: UpgradeAlert(
+            upgrader: Upgrader(
+              durationUntilAlertAgain: const Duration(
+                days: 1
+              ), // בודק רק פעם ב
+              messages: UpgraderMessages(code: 'he')
+            ),
+            child: const HomeScreen(),
+          ),
         );
       },
     );

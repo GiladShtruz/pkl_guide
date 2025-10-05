@@ -177,20 +177,21 @@ class _ListEditScreenState extends State<ListEditScreen> {
   @override
   Widget build(BuildContext context) {
     return PopScope(
-      canPop: false, // Prevent default popping to control it manually
+      canPop: !_isEditMode,
       onPopInvokedWithResult: (didPop, result) async {
-        if (didPop) return; // If already popped, do nothing
-        if (_isEditMode) {
+        if (_isEditMode && !didPop) {
+          // Exit edit mode instead of popping
           setState(() {
             _isEditMode = false;
             _selectedIndices.clear();
           });
-          return; // Prevent popping
+          return;
         }
-        if (_hasChanges) {
+
+        if (didPop && _hasChanges) {
+          // Save changes after pop
           await _saveChanges();
         }
-        Navigator.pop(context, true); // Force pop with true to trigger refresh
       },
       child: Scaffold(
         appBar: AppBar(

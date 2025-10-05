@@ -363,11 +363,6 @@ class StorageService {
               List<String> itemsToDelete = curOriginalTexts.difference(newOriginalTexts).toList();
               List<String> itemsToAdd = newOriginalTexts.difference(curOriginalTexts).toList();
               if (oldItem.name.contains("פנטומימה")) {
-                print("פנטומימה הגענו");
-                print(curOriginalTexts);
-                print(newOriginalTexts);
-                print(itemsToDelete);
-                print(itemsToAdd);
               }
               List<ElementModel> result = List<ElementModel>.from(oldItem.elements);
               for (var item in itemsToDelete) {

@@ -570,9 +570,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.grey[100],
+                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.grey[300]!),
+                    border: Border.all(
+                      color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
+                    ),
                   ),
                   constraints: const BoxConstraints(maxHeight: 200),
                   child: SingleChildScrollView(
@@ -583,9 +585,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                const Text(
-                  'הנתונים יישלחו דרך טופס Google',
-                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                Text(
+                  'פתח קישור להצעת הנתונים דרך טופס Google',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),
