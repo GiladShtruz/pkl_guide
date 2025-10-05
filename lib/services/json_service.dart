@@ -27,7 +27,7 @@ class JsonService {
       try {
         print('Starting JSON parsing...');
 
-        final version = jsonData['version'] ?? 1;
+        final dataVersion = jsonData['dataVersion'] ?? 1;
         final categories = jsonData['categories'] ?? {};
         List<ItemModel> appItems = [];
 
@@ -53,7 +53,7 @@ class JsonService {
 
         // Save to storage
         await storageService.saveAllData(appItems);
-        await storageService.saveVersion(version);
+        await storageService.saveVersion(dataVersion);
       } catch (e) {
         print('Error parsing JSON: $e');
         print('Stack trace: ${StackTrace.current}');
@@ -74,7 +74,7 @@ class JsonService {
       }).then((result) {
         if (result != null && result['shouldUpdate'] == true) {
           // Update found and downloaded - save to storage
-          _saveUpdatedData(result['data'], result['version']);
+          _saveUpdatedData(result['data'], result['dataVersion']);
         }
       }).catchError((error) {
         print('Background update check failed: $error');
@@ -107,7 +107,7 @@ class JsonService {
       }
 
       final versionData = json.decode(utf8.decode(versionResponse.bodyBytes));
-      final newVersion = versionData['version'] ?? 1;
+      final newVersion = versionData['dataVersion'] ?? 1;
       final dataUrl = versionData['dataUrl'];
 
       print('Current version: $currentVersion, Available version: $newVersion');
@@ -133,7 +133,7 @@ class JsonService {
 
         return {
           'shouldUpdate': true,
-          'version': newVersion,
+          'dataVersion': newVersion,
           'data': jsonData,
         };
       }
@@ -146,11 +146,11 @@ class JsonService {
   }
 
   /// Save update data to storage (runs on main thread)
-  Future<void> _saveUpdatedData(Map<String, dynamic> jsonData, int version) async {
+  Future<void> _saveUpdatedData(Map<String, dynamic> jsonData, int dataVersion) async {
     try {
-      print('Saving update data with version: $version');
+      print('Saving update data with version: $dataVersion');
       await storageService.updateFromOnline(jsonData);
-      await storageService.saveVersion(version);
+      await storageService.saveVersion(dataVersion);
 
       print('Update saved successfully');
     } catch (e) {

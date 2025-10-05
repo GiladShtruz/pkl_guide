@@ -202,8 +202,8 @@ class StorageService {
     return SortingMethod.original;
   }
 
-  Future<void> saveVersion(int version) async {
-    await settingsBox.put('json_version', version);
+  Future<void> saveVersion(int dataVersion) async {
+    await settingsBox.put('json_version', dataVersion);
   }
 
   int? getVersion() {
