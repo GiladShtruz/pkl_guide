@@ -28,6 +28,7 @@ class JsonService {
         print('Starting JSON parsing...');
 
         final dataVersion = jsonData['dataVersion'] ?? 1;
+        final aboutText = jsonData['aboutText'] ?? '';
         final categories = jsonData['categories'] ?? {};
         List<ItemModel> appItems = [];
 
@@ -54,6 +55,7 @@ class JsonService {
         // Save to storage
         await storageService.saveAllData(appItems);
         await storageService.saveVersion(dataVersion);
+        await storageService.saveAboutText(aboutText);
       } catch (e) {
         print('Error parsing JSON: $e');
         print('Stack trace: ${StackTrace.current}');
@@ -146,6 +148,10 @@ class JsonService {
       print('Saving update data with version: $dataVersion');
       await storageService.updateFromOnline(jsonData);
       await storageService.saveVersion(dataVersion);
+      final aboutText = jsonData['aboutText'];
+      if (aboutText != null) {
+        await storageService.saveAboutText(aboutText);
+      }
 
       print('Update saved successfully');
     } catch (e) {

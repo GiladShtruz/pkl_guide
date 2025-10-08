@@ -201,6 +201,13 @@ class StorageService {
     }
     return SortingMethod.lastAccessed;
   }
+  Future<void> saveAboutText(String aboutText) async {
+    await settingsBox.put('about_text', aboutText);
+  }
+
+  String? getAboutText() {
+    return settingsBox.get('about_text');
+  }
 
   Future<void> saveVersion(int dataVersion) async {
     await settingsBox.put('json_version', dataVersion);
