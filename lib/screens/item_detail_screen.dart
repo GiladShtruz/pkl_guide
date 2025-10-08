@@ -9,8 +9,8 @@ import '../services/storage_service.dart';
 import '../services/lists_service.dart';
 import '../screens/edit_item_screen.dart';
 import '../dialogs/manage_list_dialog.dart';
-import '../utils/category_helper.dart'; // ← הוסף
-import '../utils/content_helper.dart';  // ← הוסף
+import '../utils/category_helper.dart';
+import '../utils/content_helper.dart';
 
 class ItemDetailScreen extends StatefulWidget {
   final ItemModel item;
@@ -27,6 +27,9 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
 
   final Set<int> _selectedIndices = {};
 
+  final ScrollController _scrollController = ScrollController();
+  bool _showTitleInAppBar = false;
+
   @override
   void initState() {
     super.initState();
@@ -34,6 +37,26 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     _storageService = context.read<StorageService>();
 
     _storageService.updateItemAccess(widget.item.id);
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+  void _onScroll() {
+    // אם גללנו יותר מ-100 פיקסלים, הצג את השם ב-AppBar
+    if (_scrollController.offset > 100 && !_showTitleInAppBar) {
+      setState(() {
+        _showTitleInAppBar = true;
+      });
+    } else if (_scrollController.offset <= 100 && _showTitleInAppBar) {
+      setState(() {
+        _showTitleInAppBar = false;
+      });
+    }
   }
 
   void _toggleSelection(int index) {
@@ -76,7 +99,9 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isCardGame = widget.item.classification?.toLowerCase().contains("אינטראקטיבי") ?? false;
+    final isCardGame =
+        widget.item.classification?.toLowerCase().contains("אינטראקטיבי") ??
+        false;
     final hasModifications = widget.item.hasUserModifications;
     final originalCount = widget.item.originalElements.length;
     final userAddedCount = widget.item.userElements.length;
@@ -86,7 +111,8 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Column(
+        title: _showTitleInAppBar
+            ? Column(
           children: [
             Text(widget.item.name),
             if (hasModifications)
@@ -95,7 +121,8 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                 style: TextStyle(fontSize: 12, color: Colors.blue),
               ),
           ],
-        ),
+        )
+            : null,
         centerTitle: true,
         actions: [
           IconButton(
@@ -118,6 +145,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
       ),
 
       body: CustomScrollView(
+        controller: _scrollController,
         slivers: [
           SliverToBoxAdapter(
             child: Padding(
@@ -125,6 +153,27 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
+              Card(
+              margin: const EdgeInsets.only(bottom: 16),
+              elevation: 2,
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(  // הסר את ה-Expanded ותשאיר רק Text
+                  widget.item.name,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.start,
+                ),
+              ),
+            ),
+                  const SizedBox(height: 16),
+
                   if (widget.item.isUserCreated)
                     Container(
                       margin: const EdgeInsets.only(bottom: 16),
@@ -152,15 +201,18 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                       ),
                     ),
 
-                  if (widget.item.detail != null && widget.item.detail!.isNotEmpty)
+                  if (widget.item.detail != null &&
+                      widget.item.detail!.isNotEmpty)
                     _buildInfoCard(
-                      title: ContentHelper.getDetailLabel(widget.item.category), // ← שינוי כאן
+                      title: ContentHelper.getDetailLabel(widget.item.category),
                       content: widget.item.detail!,
                       icon: Icons.description,
                     ),
 
-                  if ((widget.item.equipment != null && widget.item.equipment!.isNotEmpty) ||
-                      (widget.item.classification != null && widget.item.classification!.isNotEmpty))
+                  if ((widget.item.equipment != null &&
+                          widget.item.equipment!.isNotEmpty) ||
+                      (widget.item.classification != null &&
+                          widget.item.classification!.isNotEmpty))
                     _buildLocationEquipmentCards(),
 
                   if (widget.item.link != null && widget.item.link!.isNotEmpty)
@@ -178,7 +230,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            ContentHelper.getContentTitle(widget.item.category), // ← שינוי כאן
+                            ContentHelper.getContentTitle(widget.item.category),
                             style: const TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -192,7 +244,9 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                                   vertical: 4,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: CategoryHelper.getCategoryColor(widget.item.category).withOpacity(0.2), // ← שינוי כאן
+                                  color: CategoryHelper.getCategoryColor(
+                                    widget.item.category,
+                                  ).withOpacity(0.2),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Text(
@@ -200,7 +254,9 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                                   style: TextStyle(
                                     fontSize: 14,
                                     fontWeight: FontWeight.bold,
-                                    color: CategoryHelper.getCategoryColor(widget.item.category), // ← שינוי כאן
+                                    color: CategoryHelper.getCategoryColor(
+                                      widget.item.category,
+                                    ),
                                   ),
                                 ),
                               ),
@@ -249,7 +305,8 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                   final isSelected = _selectedIndices.contains(index);
 
                   if (widget.item.category == 'riddles') {
-                    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+                    final isDarkMode =
+                        Theme.of(context).brightness == Brightness.dark;
 
                     return GestureDetector(
                       onTap: () => _toggleSelection(index),
@@ -265,8 +322,12 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                                 color: isSelected
                                     ? Colors.green
                                     : (isDarkMode
-                                    ? (isUserAdded ? Colors.blue[700]! : Colors.orange[700]!)
-                                    : (isUserAdded ? Colors.blue[200]! : Colors.orange[200]!)),
+                                          ? (isUserAdded
+                                                ? Colors.blue[700]!
+                                                : Colors.orange[700]!)
+                                          : (isUserAdded
+                                                ? Colors.blue[200]!
+                                                : Colors.orange[200]!)),
                                 width: isSelected ? 3 : 1,
                               ),
                             ),
@@ -278,15 +339,21 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                                   height: 32,
                                   decoration: BoxDecoration(
                                     color: isDarkMode
-                                        ? (isUserAdded ? Colors.blue[400] : Colors.orange[400])
-                                        : (isUserAdded ? Colors.blue : Colors.orange),
+                                        ? (isUserAdded
+                                              ? Colors.blue[400]
+                                              : Colors.orange[400])
+                                        : (isUserAdded
+                                              ? Colors.blue
+                                              : Colors.orange),
                                     shape: BoxShape.circle,
                                   ),
                                   child: Center(
                                     child: Text(
                                       '${index + 1}',
                                       style: TextStyle(
-                                        color: isDarkMode ? Colors.black87 : Colors.white,
+                                        color: isDarkMode
+                                            ? Colors.black87
+                                            : Colors.white,
                                         fontWeight: FontWeight.bold,
                                         fontSize: 14,
                                       ),
@@ -300,7 +367,9 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                                     style: TextStyle(
                                       fontSize: 16,
                                       height: 1.4,
-                                      color: Theme.of(context).textTheme.bodyLarge?.color,
+                                      color: Theme.of(
+                                        context,
+                                      ).textTheme.bodyLarge?.color,
                                     ),
                                   ),
                                 ),
@@ -310,7 +379,9 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                                     child: Icon(
                                       Icons.person,
                                       size: 16,
-                                      color: isDarkMode ? Colors.blue[400] : Colors.blue,
+                                      color: isDarkMode
+                                          ? Colors.blue[400]
+                                          : Colors.blue,
                                     ),
                                   ),
                               ],
@@ -344,7 +415,9 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                                 decoration: BoxDecoration(
                                   color: isUserAdded
                                       ? Colors.blue.withOpacity(0.15)
-                                      : CategoryHelper.getCategoryColor(widget.item.category).withOpacity(0.15), // ← שינוי כאן
+                                      : CategoryHelper.getCategoryColor(
+                                          widget.item.category,
+                                        ).withOpacity(0.15),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Center(
@@ -353,7 +426,9 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                                     style: TextStyle(
                                       color: isUserAdded
                                           ? Colors.blue
-                                          : CategoryHelper.getCategoryColor(widget.item.category), // ← שינוי כאן
+                                          : CategoryHelper.getCategoryColor(
+                                              widget.item.category,
+                                            ),
                                       fontWeight: FontWeight.bold,
                                       fontSize: 14,
                                     ),
@@ -392,24 +467,23 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
 
       floatingActionButton: isCardGame
           ? FloatingActionButton.extended(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => SwitchCardGameScreen(item: widget.item),
-            ),
-          );
-        },
-        label: const Text('התחל משחק'),
-        icon: const Icon(Icons.play_arrow),
-        backgroundColor: Colors.green,
-      )
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        SwitchCardGameScreen(item: widget.item),
+                  ),
+                );
+              },
+              label: const Text('התחל משחק'),
+              icon: const Icon(Icons.play_arrow),
+              backgroundColor: Colors.green,
+            )
           : null,
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
   }
-
-  // ← מחקנו את _getContentTitle(), _getContentDetail(), _getCategoryColor()
 
   Widget _buildInfoCard({
     required String title,
@@ -434,16 +508,16 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
           content,
           style: isLink
               ? const TextStyle(
-            color: Colors.blue,
-            decoration: TextDecoration.underline,
-          )
+                  color: Colors.blue,
+                  decoration: TextDecoration.underline,
+                )
               : const TextStyle(),
         ),
         trailing: isLink
             ? IconButton(
-          icon: const Icon(Icons.copy, size: 20),
-          onPressed: () => _copyToClipboard(widget.item.link!),
-        )
+                icon: const Icon(Icons.copy, size: 20),
+                onPressed: () => _copyToClipboard(widget.item.link!),
+              )
             : null,
         onTap: isLink ? () => _launchURL(widget.item.link!) : null,
       ),
@@ -451,15 +525,23 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
   }
 
   Widget _buildLocationEquipmentCards() {
-    final hasEquipment = widget.item.equipment != null && widget.item.equipment!.isNotEmpty;
-    final hasClassification = widget.item.classification != null && widget.item.classification!.isNotEmpty;
+    final hasEquipment =
+        widget.item.equipment != null && widget.item.equipment!.isNotEmpty;
+    final hasClassification =
+        widget.item.classification != null &&
+        widget.item.classification!.isNotEmpty;
 
-    final isEquipmentLong = hasEquipment &&
-        (widget.item.equipment!.length > 50 || widget.item.equipment!.contains('\n'));
-    final isClassificationLong = hasClassification &&
-        (widget.item.classification!.length > 50 || widget.item.classification!.contains('\n'));
+    final isEquipmentLong =
+        hasEquipment &&
+        (widget.item.equipment!.length > 50 ||
+            widget.item.equipment!.contains('\n'));
+    final isClassificationLong =
+        hasClassification &&
+        (widget.item.classification!.length > 50 ||
+            widget.item.classification!.contains('\n'));
 
-    final useVerticalLayout = (hasEquipment && hasClassification) &&
+    final useVerticalLayout =
+        (hasEquipment && hasClassification) &&
         (isEquipmentLong || isClassificationLong);
 
     if (!useVerticalLayout) {
@@ -478,8 +560,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                 ),
               ),
 
-            if (hasEquipment && hasClassification)
-              const SizedBox(width: 8),
+            if (hasEquipment && hasClassification) const SizedBox(width: 8),
 
             if (hasClassification)
               Expanded(
@@ -536,10 +617,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: color.withOpacity(0.3),
-            width: 1,
-          ),
+          border: Border.all(color: color.withOpacity(0.3), width: 1),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -559,13 +637,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
               ],
             ),
             const SizedBox(height: 8),
-            Text(
-              content,
-              style: const TextStyle(
-                fontSize: 15,
-                height: 1.4,
-              ),
-            ),
+            Text(content, style: const TextStyle(fontSize: 15, height: 1.4)),
           ],
         ),
       ),
@@ -585,10 +657,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: color.withOpacity(0.3),
-            width: 1,
-          ),
+          border: Border.all(color: color.withOpacity(0.3), width: 1),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -610,10 +679,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
             const SizedBox(height: 4),
             Text(
               content,
-              style: const TextStyle(
-                fontSize: 14,
-                height: 1.3,
-              ),
+              style: const TextStyle(fontSize: 14, height: 1.3),
               maxLines: maxLines,
               overflow: maxLines != null ? TextOverflow.ellipsis : null,
             ),

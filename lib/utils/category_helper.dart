@@ -51,7 +51,7 @@ class CategoryHelper {
       case 'activities':
         return 'פעילות';
       case 'riddles':
-        return 'חידה';
+        return 'חידות';
       case 'texts':
         return 'טקסט';
       default:
