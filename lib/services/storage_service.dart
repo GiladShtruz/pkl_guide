@@ -29,22 +29,6 @@ class StorageService {
     await appDataBox.putAll(entries);
   }
 
-  // Future<void> saveAppData(List<ItemModel> items) async {
-  //   appDataBox.putAll(entries);
-  //
-  //
-  //   for (var item in items) {
-  //     if (appDataBox.containsKey(item.id)) {
-  //       ItemModel existingItem = appDataBox.get(item.id)!;
-  //       existingItem.updateItemFromOnline(item);
-  //
-  //       await appDataBox.put(item.id, item);
-  //     } else {
-  //       await appDataBox.put(item.id, item);
-  //     }
-  //   }
-  // }
-
   List<ItemModel> getAppData() {
     return appDataBox.values.toList();
   }
@@ -272,11 +256,11 @@ class StorageService {
             }
             // update item:
             // set old item name:
-            oldItem.originalTitle = oldItem.name;
-            oldItem.originalDetail = oldItem.detail;
-            oldItem.originalLink = oldItem.link;
-            oldItem.originalClassification = oldItem.classification;
-            oldItem.originalEquipment = oldItem.equipment;
+            oldItem.originalTitle = newItem.name;
+            oldItem.originalDetail = newItem.detail;
+            oldItem.originalLink = newItem.link;
+            oldItem.originalClassification = newItem.classification;
+            oldItem.originalEquipment = newItem.equipment;
             // set elements:
             if (oldItem.isElementsChanged) {
               // in order to get smallest run time
