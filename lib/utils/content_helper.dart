@@ -6,7 +6,7 @@ class ContentHelper {
     switch (categoryName.toLowerCase()) {
       case 'games':
       case 'משחקים':
-        return 'מילים למשחק';
+        return 'תוכן המשחק';
       case 'activities':
       case 'פעילויות':
         return 'תוכן הפעילות';
