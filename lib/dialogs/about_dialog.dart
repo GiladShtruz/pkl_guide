@@ -6,8 +6,22 @@ import '../services/storage_service.dart';
 class AboutDialogWidget extends StatelessWidget {
   const AboutDialogWidget({super.key});
 
+  Future<void> _launchEmail() async {
+    final Uri emailUri = Uri(
+      scheme: 'mailto',
+      path: 'giladsh22@gmail.com',
+      query: 'subject=לגבי אפליקציית פק"ל למדריך&body=שלום,\n',
+    );
+
+    if (!await launchUrl(emailUri)) {
+      throw Exception('Could not launch $emailUri');
+    }
+  }
+
   void _launchPrivacyPolicy() async {
-    final uri = Uri.parse('https://drive.google.com/file/d/1_qDY-4Oit85Vz5225CNzrd7VbGc3N_qg/view?usp=sharing');
+    final uri = Uri.parse(
+      'https://drive.google.com/file/d/1_qDY-4Oit85Vz5225CNzrd7VbGc3N_qg/view?usp=sharing',
+    );
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
@@ -33,11 +47,9 @@ class AboutDialogWidget extends StatelessWidget {
 
     return AboutDialog(
       children: [
-        Text(
-          aboutText,
-          style: const TextStyle(fontSize: 14),
-        ),
+        Text(aboutText, style: const TextStyle(fontSize: 14)),
         const SizedBox(height: 16),
+        TextButton(onPressed: _launchEmail, child: const Text('שלחו לי מייל')),
         TextButton(
           onPressed: _launchPrivacyPolicy,
           child: const Text('Privacy Policy'),
