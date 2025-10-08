@@ -13,7 +13,7 @@ class JsonService {
 
   // Version check URL
   static const String versionCheckUrl =
-      'https://drive.google.com/uc?export=download&id=1gx4d_8yPdlaMhlcDzdyK-sCBcT66HD5r';
+      'https://drive.google.com/uc?export=download&id=1dzNX_KoG_kWOdirSh_0cJhYRgLKWBGor';
 
   JsonService(this.storageService);
 // first on open app:
