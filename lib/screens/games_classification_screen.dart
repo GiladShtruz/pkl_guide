@@ -35,9 +35,9 @@ class _GamesClassificationScreenState extends State<GamesClassificationScreen> {
     for (var game in allGames) {
       final String? classification;
       if (game.classification == null) {
-        classification = 'כללי';
+        classification = 'משחקים כלליים';
       } else if (game.classification == "") {
-        classification = 'כללי';
+        classification = 'משחקים כלליים';
       } else {
         classification = game.classification;
       }

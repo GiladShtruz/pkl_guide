@@ -83,7 +83,7 @@ class CategoryHelper {
         return Icons.event_seat;
       case 'משחקים בחוץ':
         return Icons.park;
-      case 'משחקים כללייים':
+      case 'משחקים כלליים':
         return Icons.games;
       case 'משחקי אנרגיה':
         return Icons.bolt;
@@ -92,13 +92,11 @@ class CategoryHelper {
       case 'משחקי פתיחה':
         return Icons.celebration;
       case 'odt':
-        return Icons.hiking;
+        return Icons.group_work;
       case 'משחקי חברה':
         return Icons.groups;
       case 'אינטראקטיבי':
         return Icons.touch_app;
-      case 'כללי':
-        return Icons.category;
       default:
         return Icons.category;
     }
