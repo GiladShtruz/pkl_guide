@@ -30,8 +30,6 @@ class AboutDialogWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final storageService = Provider.of<StorageService>(context, listen: false);
-
-    // טקסט ברירת מחדל במקרה שאין טקסט ב-storage
     const defaultAboutText =
         'שלום, אני גילעד שטרוזמן ואני מפתח האפליקציה שלפניכם.\n'
         'האפליקציה מיועדת לכל המדריכים באשר הם. כאן תוכלו למצוא מאגר עשיר של חידות, משחקים והפעלות עבור פעולות שאתם מעבירים לחניכים שלכם.\n\n'
