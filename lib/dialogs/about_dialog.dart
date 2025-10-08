@@ -14,11 +14,7 @@ class AboutDialogWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AboutDialog(
-
-      // applicationIcon: const Icon(Icons.info_outline), // Optional: Add your app icon here
-      // applicationLegalese: '© 2025 גילעד שטרוזמן. כל הזכויות שמורות.',
       children: [
-        // const SizedBox(height: 16),
         const Text(
           'שלום, אני גילעד שטרוזמן ואני מפתח האפליקציה שלפניכם.\n'
               'האפליקציה מיועדת לכל המדריכים באשר הם. כאן תוכלו למצוא מאגר עשיר של חידות, משחקים והפעלות עבור פעולות שאתם מעבירים לחניכים שלכם.',

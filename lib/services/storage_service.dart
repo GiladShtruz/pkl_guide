@@ -199,7 +199,7 @@ class StorageService {
         orElse: () => SortingMethod.original,
       );
     }
-    return SortingMethod.original;
+    return SortingMethod.lastAccessed;
   }
 
   Future<void> saveVersion(int dataVersion) async {
@@ -244,91 +244,7 @@ class StorageService {
         .toList();
   }
 
-  // Future<void> updateFromOnline(Map<String, dynamic> jsonData) async {
-  //   final categories = jsonData['categories'] ?? {};
-  //   final jsonService = JsonService(this);
-  //   final existingIds = appDataBox.keys.cast<int>().toSet();
-  //   final processedIds = <int>{};
-  //
-  //   for (final entry in categories.entries) {
-  //     final categoryHebName = getCategoryType(entry.key);
-  //     final categoryItems = entry.value;
-  //
-  //     if (categoryItems is! List) continue;
-  //
-  //     for (final itemData in categoryItems) {
-  //       final newItem = jsonService.parseItem(itemData, categoryHebName);
-  //       if (newItem == null) continue;
-  //
-  //       processedIds.add(newItem.id);
-  //
-  //       await _updateOrAddItem(newItem);
-  //     }
-  //   }
-  //
-  //   // מחיקת פריטים שלא קיימים יותר
-  //   final idsToRemove = existingIds.difference(processedIds);
-  //   for (final id in idsToRemove) {
-  //     await appDataBox.delete(id);
-  //   }
-  // }
 
-  // Future<void> _updateOrAddItem(ItemModel newItem) async {
-  //   final oldItem = appDataBox.get(newItem.id);
-  //
-  //   if (oldItem == null || !oldItem.isElementsChanged) {
-  //     // פריט חדש או ללא שינויים - פשוט שומרים
-  //     await appDataBox.put(newItem.id, newItem);
-  //     return;
-  //   }
-  //
-  //   // יש פריט קיים עם שינויים - צריך למזג
-  //   final updatedElements = _mergeElements(
-  //     oldElements: oldItem.elements,
-  //     oldOriginalElements: oldItem.originalElements,
-  //     newElements: newItem.elements, // original Element at all
-  //     itemName: oldItem.name
-  //   );
-  //
-  //   newItem.itemElements = updatedElements;
-  //   await appDataBox.put(newItem.id, newItem);
-  // }
-  //
-  // List<ElementModel> _mergeElements({
-  //   required List<ElementModel> oldElements,
-  //   required List<ElementModel> oldOriginalElements,
-  //   required List<ElementModel> newElements,
-  //
-  //   required String itemName, // delete only for debug
-  // }) {
-  //
-  //
-  //   Set<ElementModel> oldOriginalElementsSet = oldOriginalElements.toSet();
-  //   Set<ElementModel> newElementsSet = newElements.toSet();
-  //   List<ElementModel> itemsToDelete = oldOriginalElementsSet.difference(newElementsSet).toList();
-  //   List<ElementModel> itemsToAdd = newElementsSet.difference(oldOriginalElementsSet).toList();
-  //
-  //   // דיבאג אופציונלי
-  //   if (itemName.contains("פנטומימה")) {
-  //     print("=== מיזוג אלמנטים: $itemName ===");
-  //     print("נוכחיים: ${oldOriginalElementsSet.map((e) => e.text).toList()}");
-  //     print("חדשים: ${newElementsSet.map((e) => e.text).toList()}");
-  //     print("למחוק: ${itemsToDelete.map((e) => e.text).toList()}");
-  //     print("להוסיף: ${itemsToAdd.map((e) => e.text).toList()}");
-  //   }
-  //
-  //   // יצירת רשימה חדשה עם השינויים
-  //   final result = List<ElementModel>.from(oldElements);
-  //
-  //   for (final element in itemsToDelete) {
-  //     result.removeWhere((e) => e.text == element.text);
-  //   }
-  //
-  //   result.addAll(itemsToAdd);
-  //
-  //   return result;
-  // }
-  //
   Future<void> updateFromOnline(Map<String, dynamic> jsonData) async {
     final categories = jsonData['categories'] ?? {};
     JsonService jsonService = JsonService(this);
@@ -381,7 +297,7 @@ class StorageService {
         }
       }
     });
-
+    print("idsRemovedFromData: $idsRemovedFromData");
     for (var id in idsRemovedFromData) {
       appDataBox.delete(id);
     }

@@ -64,32 +64,26 @@ class JsonService {
   }
 
   /// Check for updates from online version file (runs in background)
-  void checkForOnlineUpdates() {
-    // Run in background using compute
-    // bool isComputeDoTrouble = false;
+  Future<bool> checkForOnlineUpdates() async {
     try {
-      compute(_checkAndUpdateInBackground, {
+      final result = await compute(_checkAndUpdateInBackground, {
         'versionCheckUrl': versionCheckUrl,
         'currentVersion': storageService.getVersion() ?? 1,
-      }).then((result) {
-        if (result != null && result['shouldUpdate'] == true) {
-          // Update found and downloaded - save to storage
-          _saveUpdatedData(result['data'], result['dataVersion']);
-        }
-      }).catchError((error) {
-        print('Background update check failed: $error');
-
       });
-    }
-    catch (e){
 
+      if (result != null && result['shouldUpdate'] == true) {
+        // Update found and downloaded - save to storage
+        _saveUpdatedData(result['data'], result['dataVersion']);
+        return true; // עדכון נמצא ובוצע
+      }
+
+      return false; // אין עדכון או לא היה צורך בעדכון
+
+    } catch (e) {
+      print('Background update check failed: $e');
+      return false; // במקרה של שגיאה
     }
-    // if (isComputeDoTrouble){
-    //   print("start");
-    //   checkForOnlineUpdatesSimple();
-    // }
   }
-
   /// Background function for checking and downloading updates
   /// Must be static or top-level for compute
   static Future<Map<String, dynamic>?> _checkAndUpdateInBackground(Map<String, dynamic> params) async {
@@ -118,11 +112,12 @@ class JsonService {
         return null;
       }
 
-      print('Update available! Downloading from: $dataUrl');
+      print('Update available! Downloading from: dataUrl');
 
       // Step 3: Download new data
       if (newVersion > currentVersion) {
-        print("download data!!!");
+        print("download data!");
+
         final dataResponse = await http.get(Uri.parse(dataUrl));
         if (dataResponse.statusCode != 200) {
           print('Failed to download data');

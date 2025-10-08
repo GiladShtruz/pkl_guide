@@ -29,7 +29,7 @@ class ImportExportService {
     for (var item in storageService.appDataBox.values) {
       if (item.isUserCreated) {
         // User created items
-        String addition = '${_getCategoryDisplayName(item.category)} חדש בשם ${item.userTitle ?? item.originalTitle}';
+        String addition = '${_getCategoryDisplayName(item.category)} בשם ${item.userTitle ?? item.originalTitle}';
 
         // Add detail if exists
         String? detail = item.userDetail ?? item.originalDetail;
@@ -144,7 +144,7 @@ class ImportExportService {
       case 'riddles':
         return 'חידה';
       case 'texts':
-        return 'קטע';
+        return 'טקסט';
       default:
         return category;
     }
@@ -229,16 +229,17 @@ class ImportExportService {
   }
 
   // Main export function
-  Future<String> exportToJson() async {
+  // Update exportToJson to accept includeLists parameter
+  Future<String> exportToJson({bool includeLists = true}) async {
     try {
       // Get data from storage service
       final userData = storageService.exportUserData();
 
-      // Get lists from lists service
-      final listsData = listsService.exportLists();
-
-      // Add lists to export data
-      userData['userLists'] = listsData;
+      // Add lists to export data only if requested
+      if (includeLists) {
+        final listsData = listsService.exportLists();
+        userData['userLists'] = listsData;
+      }
 
       // Convert to JSON string
       final jsonString = const JsonEncoder.withIndent('  ').convert(userData);
@@ -250,10 +251,10 @@ class ImportExportService {
     }
   }
 
-  // Export to file
-  Future<File?> exportToFile() async {
+// Update exportToFile to accept includeLists parameter
+  Future<File?> exportToFile({bool includeLists = true}) async {
     try {
-      final jsonString = await exportToJson();
+      final jsonString = await exportToJson(includeLists: includeLists);
 
       // Get app documents directory
       final directory = await getApplicationDocumentsDirectory();
@@ -273,10 +274,10 @@ class ImportExportService {
     }
   }
 
-  // Share export file
-  Future<void> shareExport() async {
+// Update shareExport to accept includeLists parameter
+  Future<void> shareExport({bool includeLists = true}) async {
     try {
-      final file = await exportToFile();
+      final file = await exportToFile(includeLists: includeLists);
       if (file != null) {
         await Share.shareXFiles(
           [XFile(file.path)],
@@ -289,7 +290,6 @@ class ImportExportService {
       throw Exception('Failed to share export: $e');
     }
   }
-
   // Main import function
   Future<void> importFromJson(String jsonString) async {
     try {

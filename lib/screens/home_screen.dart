@@ -65,19 +65,30 @@ class _HomeScreenState extends State<HomeScreen> {
     _checkForUpdatesInBackground();
   }
 
-  void _checkForUpdatesInBackground() {
+  void _checkForUpdatesInBackground() async {
     // Run update check in background without blocking UI
-    Future.delayed(Duration(seconds: 1), () {
       if (mounted) {
         final jsonService = context.read<JsonService>();
 
         // Use the compute version for true background processing
+        bool wasUpdated = await jsonService.checkForOnlineUpdates();
+        if (wasUpdated) {
+          print('העדכון בוצע בהצלחה!');
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('נתונים עודכנו'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else {
+          print('אין עדכון');
+        }
         jsonService.checkForOnlineUpdates();
 
         // Alternative: Use the simple version if compute causes issues
         // jsonService.checkForOnlineUpdatesSimple();
       }
-    });
+
   }
 
 
@@ -487,37 +498,73 @@ class _HomeScreenState extends State<HomeScreen> {
       // Show preview dialog
       final preview = importExportService.getExportPreview();
 
+      // Variable to track if lists should be exported
+      bool exportLists = true;
+
       final confirmed = await showDialog<bool>(
         context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('ייצוא נתונים'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('פריטים שנוספו: ${preview['userCreatedItems']}'),
-              Text('פריטים ששונו: ${preview['modifiedItems']}'),
-              Text('פריטים עם נתוני שימוש: ${preview['itemsWithUsageData']}'),
-              const Divider(),
-              Text('סה"כ פריטים: ${preview['totalItems']}'),
-              Text('רשימות: ${preview['lists']}'),
+        builder: (context) => StatefulBuilder(
+          builder: (context, setState) => AlertDialog(
+            title: const Text('ייצוא נתונים'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('פריטים שנוספו: ${preview['userCreatedItems']}'),
+                Text('פריטים ששונו: ${preview['modifiedItems']}'),
+                Text('פריטים עם נתוני שימוש: ${preview['itemsWithUsageData']}'),
+                const Divider(),
+                Text('סה"כ פריטים: ${preview['totalItems']}'),
+                const SizedBox(height: 16),
+                // Content checkbox - always checked and disabled
+                Row(
+                  children: [
+                    Checkbox(
+                      value: true,
+                      onChanged: null, // Disabled
+                    ),
+                    const Expanded(
+                      child: Text('תוכן'),
+                    ),
+                  ],
+                ),
+                // Lists checkbox - can be toggled
+                Row(
+                  children: [
+                    Checkbox(
+                      value: exportLists,
+                      onChanged: (value) {
+                        setState(() {
+                          exportLists = value ?? true;
+                        });
+                      },
+                    ),
+                    Expanded(
+                      child: Text('רשימות (${preview['lists']})'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('ביטול'),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context, true);
+                },
+                child: const Text('ייצא'),
+              ),
             ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('ביטול'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('ייצוא נתונים'),
-            ),
-          ],
         ),
       );
 
       if (confirmed == true) {
-        await importExportService.shareExport();
+        // Pass the exportLists flag to the export function
+        await importExportService.shareExport(includeLists: exportLists);
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -528,7 +575,6 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
   }
-
   void _handleShare() async {
     try {
       final importExportService = ImportExportService(
