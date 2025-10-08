@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../models/item_model.dart';
 import '../services/storage_service.dart';
 import '../screens/item_detail_screen.dart';
+import '../utils/category_helper.dart'; // ← הוספנו import
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
@@ -36,7 +37,6 @@ class SearchScreenState extends State<SearchScreen> {
   @override
   void initState() {
     super.initState();
-    // Auto-focus on search field when screen opens
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _searchFocusNode.requestFocus();
@@ -61,91 +61,81 @@ class SearchScreenState extends State<SearchScreen> {
       return;
     }
 
+    final storageService = context.read<StorageService>();
+    final allCategoryItems = storageService.getAllCategoryItems();
 
-      final storageService = context.read<StorageService>();
-      final allCategoryItems = storageService.getAllCategoryItems();
+    final List<SearchResult> titleResults = [];
+    final List<SearchResult> detailResults = [];
+    final List<SearchResult> itemsResults = [];
 
-      // נתוני חיפוש מסודרים לפי עדיפות
-      final List<SearchResult> titleResults = [];
-      final List<SearchResult> detailResults = [];
-      final List<SearchResult> itemsResults = [];
+    final queryLower = query.toLowerCase();
 
-      final queryLower = query.toLowerCase();
+    for (var categoryItem in allCategoryItems) {
+      bool foundInTitle = false;
+      bool foundInDetail = false;
 
-      for (var categoryItem in allCategoryItems) {
-        bool foundInTitle = false;
-        bool foundInDetail = false;
+      // Search in title
+      String titleToSearch = categoryItem.userTitle ?? categoryItem.originalTitle;
+      if (titleToSearch.toLowerCase().contains(queryLower)) {
+        titleResults.add(SearchResult(
+          item: categoryItem,
+          matchType: MatchType.title,
+          matchedText: _getDisplayDetail(categoryItem),
+          searchQuery: query,
+          priority: 1,
+        ));
+        foundInTitle = true;
+      }
 
-        // 1. חיפוש בכותרת (עדיפות ראשונה)
-        String titleToSearch = categoryItem.userTitle ??
-            categoryItem.originalTitle;
-        if (titleToSearch.toLowerCase().contains(queryLower)) {
-          titleResults.add(SearchResult(
+      // Search in detail
+      if (!foundInTitle) {
+        String? detailToSearch = categoryItem.userDetail ?? categoryItem.originalDetail;
+        if (detailToSearch != null && detailToSearch.toLowerCase().contains(queryLower)) {
+          detailResults.add(SearchResult(
             item: categoryItem,
-            matchType: MatchType.title,
-            matchedText: _getDisplayDetail(categoryItem),
+            matchType: MatchType.detail,
+            matchedText: detailToSearch,
             searchQuery: query,
-            priority: 1,
+            priority: 2,
           ));
-          foundInTitle = true;
-        }
-
-        // 2. חיפוש בתיאור (עדיפות שנייה) - רק אם לא נמצא בכותרת
-        if (!foundInTitle) {
-          String? detailToSearch = categoryItem.userDetail ??
-              categoryItem.originalDetail;
-          if (detailToSearch != null &&
-              detailToSearch.toLowerCase().contains(queryLower)) {
-            detailResults.add(SearchResult(
-              item: categoryItem,
-              matchType: MatchType.detail,
-              matchedText: detailToSearch,
-              searchQuery: query,
-              priority: 2,
-            ));
-            foundInDetail = true;
-          }
-        }
-
-        // 3. חיפוש ברשימת פריטים (עדיפות שלישית) - רק אם לא נמצא בכותרת או תיאור
-        if (!foundInTitle && !foundInDetail) {
-          // חפש קודם ב-userElements ואז ב-originalElements
-          String? matchedItem = _searchInItems(categoryItem, queryLower);
-          if (matchedItem != null) {
-            itemsResults.add(SearchResult(
-              item: categoryItem,
-              matchType: MatchType.items,
-              matchedText: matchedItem,
-              searchQuery: query,
-              priority: 3,
-            ));
-          }
+          foundInDetail = true;
         }
       }
 
-      // איחוד התוצאות לפי סדר עדיפויות
-      final List<SearchResult> combinedResults = [
-        ...titleResults,
-        ...detailResults,
-        ...itemsResults,
-      ];
+      // Search in items
+      if (!foundInTitle && !foundInDetail) {
+        String? matchedItem = _searchInItems(categoryItem, queryLower);
+        if (matchedItem != null) {
+          itemsResults.add(SearchResult(
+            item: categoryItem,
+            matchType: MatchType.items,
+            matchedText: matchedItem,
+            searchQuery: query,
+            priority: 3,
+          ));
+        }
+      }
+    }
 
-      setState(() {
-        _searchResults = combinedResults;
-        _isSearching = false;
-      });
+    final List<SearchResult> combinedResults = [
+      ...titleResults,
+      ...detailResults,
+      ...itemsResults,
+    ];
 
+    setState(() {
+      _searchResults = combinedResults;
+      _isSearching = false;
+    });
   }
 
   String? _searchInItems(ItemModel categoryItem, String queryLower) {
-    // חפש קודם ב-userElements
     for (var element in categoryItem.strElements) {
       if (element.toLowerCase().contains(queryLower)) {
         return element;
       }
     }
 
-    // אם לא נמצא, חפש ב-originalElements
     for (var element in categoryItem.originalElements) {
       if (element.text.toLowerCase().contains(queryLower)) {
         return element.text;
@@ -156,13 +146,11 @@ class SearchScreenState extends State<SearchScreen> {
   }
 
   String _getDisplayDetail(ItemModel categoryItem) {
-    // מחזיר תיאור או פריט ראשון להצגה
     String? detail = categoryItem.userDetail ?? categoryItem.originalDetail;
     if (detail != null && detail.isNotEmpty) {
       return detail;
     }
 
-    // אם אין תיאור, הראה פריט ראשון
     List<String> allItems = categoryItem.strElements;
     if (allItems.isNotEmpty) {
       return allItems.first;
@@ -171,7 +159,6 @@ class SearchScreenState extends State<SearchScreen> {
     return '';
   }
 
-  // Widget להדגשת טקסט עם חיפוש
   Widget _buildHighlightedText(
       String text,
       String query, {
@@ -180,13 +167,11 @@ class SearchScreenState extends State<SearchScreen> {
         double? fontSize,
       }) {
     final defaultStyle = TextStyle(
-      color: Theme.of(context).colorScheme.onSurface, // <-- צבע מותאם ל-theme
+      color: Theme.of(context).colorScheme.onSurface,
       fontWeight: isTitle ? FontWeight.bold : FontWeight.normal,
       fontSize: fontSize ?? (isTitle ? 18 : 14),
     );
 
-
-    // תמיד נחזיר RichText, גם כשאין התאמה
     if (query.isEmpty || !text.toLowerCase().contains(query.toLowerCase())) {
       return RichText(
         maxLines: maxLines,
@@ -206,7 +191,6 @@ class SearchScreenState extends State<SearchScreen> {
     int indexOf = lowerText.indexOf(lowerQuery, start);
 
     while (indexOf != -1) {
-      // טקסט לפני ההתאמה
       if (indexOf > start) {
         matches.add(TextSpan(
           text: text.substring(start, indexOf),
@@ -214,7 +198,6 @@ class SearchScreenState extends State<SearchScreen> {
         ));
       }
 
-      // הטקסט המודגש
       matches.add(TextSpan(
         text: text.substring(indexOf, indexOf + query.length),
         style: defaultStyle.copyWith(
@@ -228,7 +211,6 @@ class SearchScreenState extends State<SearchScreen> {
       indexOf = lowerText.indexOf(lowerQuery, start);
     }
 
-    // השארית
     if (start < text.length) {
       matches.add(TextSpan(
         text: text.substring(start),
@@ -245,6 +227,7 @@ class SearchScreenState extends State<SearchScreen> {
       ),
     );
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -344,12 +327,9 @@ class SearchScreenState extends State<SearchScreen> {
                     result.searchQuery,
                     maxLines: 1,
                     isTitle: true,
-
-
                   ),
                 ),
                 const SizedBox(width: 8),
-                // Show modification indicators
                 if (result.item.isUserChanged && !result.item.isUserCreated)
                   const Icon(Icons.edit, size: 14, color: Colors.orange),
                 if (result.item.isUserCreated)
@@ -373,15 +353,14 @@ class SearchScreenState extends State<SearchScreen> {
                   result.matchedText,
                   result.searchQuery,
                   maxLines: 2,
-                    // isTitle: true
-                  fontSize: 15
+                  fontSize: 15,
                 ),
               ],
             ),
             leading: CircleAvatar(
-              backgroundColor: _getCategoryColor(result.item.category),
+              backgroundColor: CategoryHelper.getCategoryColor(result.item.category), // ← שינוי כאן
               child: Icon(
-                _getCategoryIcon(result.item.category),
+                CategoryHelper.getCategoryIcon(result.item.category), // ← שינוי כאן
                 color: Colors.white,
               ),
             ),
@@ -399,35 +378,7 @@ class SearchScreenState extends State<SearchScreen> {
     );
   }
 
-  Color _getCategoryColor(String categoryName) {
-    switch (categoryName) {
-      case 'games':
-        return Colors.purple;
-      case 'activities':
-        return Colors.blue;
-      case 'riddles':
-        return Colors.orange;
-      case 'texts':
-        return Colors.green;
-      default:
-        return Colors.grey;
-    }
-  }
-
-  IconData _getCategoryIcon(String categoryName) {
-    switch (categoryName) {
-      case 'games':
-        return Icons.sports_esports;
-      case 'activities':
-        return Icons.assignment;
-      case 'riddles':
-        return Icons.quiz;
-      case 'texts':
-        return Icons.description;
-      default:
-        return Icons.folder;
-    }
-  }
+// ← מחקנו את הפונקציות _getCategoryColor ו-_getCategoryIcon
 }
 
 enum MatchType { title, detail, items }

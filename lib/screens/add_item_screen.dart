@@ -1,11 +1,11 @@
 // lib/screens/add_item_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:pkl_guide/models/element_model.dart';
 import 'package:provider/provider.dart';
 import '../models/category.dart';
 import '../models/item_model.dart';
 import '../services/storage_service.dart';
+import '../utils/content_helper.dart'; // ← הוסף
 
 class AddItemScreen extends StatefulWidget {
   final CategoryType category;
@@ -14,7 +14,7 @@ class AddItemScreen extends StatefulWidget {
   const AddItemScreen({
     super.key,
     required this.category,
-    this.classification
+    this.classification,
   });
 
   @override
@@ -61,7 +61,6 @@ class _AddItemScreenState extends State<AddItemScreen> {
     if (_formKey.currentState!.validate()) {
       final storageService = context.read<StorageService>();
 
-      // Generate unique ID for user-created item
       final id = DateTime.now().millisecondsSinceEpoch % 100000000;
 
       final newItem = ItemModel(
@@ -80,7 +79,6 @@ class _AddItemScreenState extends State<AddItemScreen> {
             ? _equipmentController.text
             : null,
         elements: _contentList,
-
         category: widget.category.name,
         isUserCreated: true,
         lastAccessed: DateTime.now(),
@@ -98,7 +96,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_getCategoryAddName()),
+        title: Text(ContentHelper.getAddItemTitle(widget.category.name)), // ← שינוי כאן
         centerTitle: true,
       ),
       body: Form(
@@ -126,7 +124,6 @@ class _AddItemScreenState extends State<AddItemScreen> {
 
               TextFormField(
                 controller: _detailController,
-
                 decoration: const InputDecoration(
                   labelText: 'תיאור (אופציונלי)',
                   border: OutlineInputBorder(),
@@ -145,7 +142,6 @@ class _AddItemScreenState extends State<AddItemScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Add equipment field
               TextFormField(
                 controller: _equipmentController,
                 decoration: const InputDecoration(
@@ -158,14 +154,12 @@ class _AddItemScreenState extends State<AddItemScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Add classification field for games and activities
               if (widget.category == CategoryType.games ||
                   widget.category == CategoryType.activities) ...[
                 TextFormField(
                   controller: _classificationController,
                   decoration: const InputDecoration(
                     labelText: 'סיווג (אופציונלי)',
-
                     border: OutlineInputBorder(),
                     hintText: 'לדוגמה: כיתה, בחוץ, שטח',
                   ),
@@ -174,7 +168,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
               ],
 
               Text(
-                "${_getContentLabel()} (אופציונלי)",
+                "${ContentHelper.getContentSectionLabel(widget.category.name)} (אופציונלי)", // ← שינוי כאן
                 style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -188,7 +182,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
                     child: TextField(
                       controller: _contentController,
                       decoration: InputDecoration(
-                        hintText: _getContentHint(),
+                        hintText: ContentHelper.getAddContentHint(widget.category.name), // ← שינוי כאן
                         border: const OutlineInputBorder(),
                       ),
                       onEditingComplete: _addContent,
@@ -240,44 +234,4 @@ class _AddItemScreenState extends State<AddItemScreen> {
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
   }
-
-  String _getContentLabel() {
-    switch (widget.category) {
-      case CategoryType.games:
-        return 'מילים למשחק';
-      case CategoryType.activities:
-        return 'תוכן הפעילות';
-      case CategoryType.riddles:
-        return 'חידות';
-      case CategoryType.texts:
-        return 'קטעים';
-    }
-  }
-
-  String _getContentHint() {
-    switch (widget.category) {
-      case CategoryType.games:
-        return 'הוסף מילה...';
-      case CategoryType.activities:
-        return 'הוסף תוכן...';
-      case CategoryType.riddles:
-        return 'הוסף חידה...';
-      case CategoryType.texts:
-        return 'הוסף קטע...';
-    }
-  }
-
-  String _getCategoryAddName() {
-    switch (widget.category) {
-      case CategoryType.games:
-        return 'משחק חדש';
-      case CategoryType.activities:
-        return 'פעילות חדשה';
-      case CategoryType.riddles:
-        return 'חידה חדשה';
-      case CategoryType.texts:
-        return 'קטע חדש';
-    }
-  }
-
 }

@@ -8,8 +8,9 @@ import '../models/item_model.dart';
 import '../services/storage_service.dart';
 import '../services/lists_service.dart';
 import '../screens/edit_item_screen.dart';
-
 import '../dialogs/manage_list_dialog.dart';
+import '../utils/category_helper.dart'; // ← הוסף
+import '../utils/content_helper.dart';  // ← הוסף
 
 class ItemDetailScreen extends StatefulWidget {
   final ItemModel item;
@@ -24,7 +25,6 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
   late ListsService _listsService;
   late StorageService _storageService;
 
-  // Set to track selected element indices
   final Set<int> _selectedIndices = {};
 
   @override
@@ -33,7 +33,6 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     _listsService = context.read<ListsService>();
     _storageService = context.read<StorageService>();
 
-    // Update access count
     _storageService.updateItemAccess(widget.item.id);
   }
 
@@ -82,7 +81,6 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     final originalCount = widget.item.originalElements.length;
     final userAddedCount = widget.item.userElements.length;
 
-    // שימוש ב-elements במקום strElements כדי לקבל גישה למידע על isUserElement
     final allElements = widget.item.elements;
     final totalItems = allElements.length;
 
@@ -105,7 +103,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
             onPressed: _openListsDialog,
           ),
           IconButton(
-            icon: Icon(Icons.edit),
+            icon: const Icon(Icons.edit),
             onPressed: () =>
                 Navigator.push(
                   context,
@@ -121,14 +119,12 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
 
       body: CustomScrollView(
         slivers: [
-          // Fixed header content
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  // User-created badge
                   if (widget.item.isUserCreated)
                     Container(
                       margin: const EdgeInsets.only(bottom: 16),
@@ -156,21 +152,17 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                       ),
                     ),
 
-                  // Detail card - כרטיס הסבר גדול
-                  if (widget.item.detail != null &&
-                      widget.item.detail!.isNotEmpty)
+                  if (widget.item.detail != null && widget.item.detail!.isNotEmpty)
                     _buildInfoCard(
-                      title: _getContentDetail(),
+                      title: ContentHelper.getDetailLabel(widget.item.category), // ← שינוי כאן
                       content: widget.item.detail!,
                       icon: Icons.description,
                     ),
 
-                  // כרטיסיות קומפקטיות למיקום וציוד
                   if ((widget.item.equipment != null && widget.item.equipment!.isNotEmpty) ||
                       (widget.item.classification != null && widget.item.classification!.isNotEmpty))
                     _buildLocationEquipmentCards(),
 
-                  // קישור
                   if (widget.item.link != null && widget.item.link!.isNotEmpty)
                     _buildInfoCard(
                       title: 'קישור',
@@ -179,7 +171,6 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                       isLink: true,
                     ),
 
-                  // Items count header
                   if (totalItems > 0) ...[
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 8),
@@ -187,7 +178,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            _getContentTitle(),
+                            ContentHelper.getContentTitle(widget.item.category), // ← שינוי כאן
                             style: const TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -201,7 +192,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                                   vertical: 4,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: _getCategoryColor().withOpacity(0.2),
+                                  color: CategoryHelper.getCategoryColor(widget.item.category).withOpacity(0.2), // ← שינוי כאן
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Text(
@@ -209,7 +200,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                                   style: TextStyle(
                                     fontSize: 14,
                                     fontWeight: FontWeight.bold,
-                                    color: _getCategoryColor(),
+                                    color: CategoryHelper.getCategoryColor(widget.item.category), // ← שינוי כאן
                                   ),
                                 ),
                               ),
@@ -245,7 +236,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
               ),
             ),
           ),
-          // Items list - using SliverList.builder for performance
+
           if (totalItems > 0)
             SliverPadding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -329,11 +320,10 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                       ),
                     );
                   } else {
-                    // Games and activities display
                     return Card(
                       margin: const EdgeInsets.only(bottom: 8),
                       child: InkWell(
-                        borderRadius: BorderRadius.circular(12), // חשוב כדי שיתאים לעיגוליות
+                        borderRadius: BorderRadius.circular(12),
                         onTap: () => _toggleSelection(index),
                         child: Container(
                           padding: const EdgeInsets.symmetric(
@@ -354,7 +344,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                                 decoration: BoxDecoration(
                                   color: isUserAdded
                                       ? Colors.blue.withOpacity(0.15)
-                                      : _getCategoryColor().withOpacity(0.15),
+                                      : CategoryHelper.getCategoryColor(widget.item.category).withOpacity(0.15), // ← שינוי כאן
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Center(
@@ -363,7 +353,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                                     style: TextStyle(
                                       color: isUserAdded
                                           ? Colors.blue
-                                          : _getCategoryColor(),
+                                          : CategoryHelper.getCategoryColor(widget.item.category), // ← שינוי כאן
                                       fontWeight: FontWeight.bold,
                                       fontSize: 14,
                                     ),
@@ -391,24 +381,22 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                         ),
                       ),
                     );
-
                   }
                 },
               ),
             ),
 
-          // Bottom padding
           const SliverToBoxAdapter(child: SizedBox(height: 80)),
         ],
       ),
+
       floatingActionButton: isCardGame
           ? FloatingActionButton.extended(
         onPressed: () {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) =>
-                  SwitchCardGameScreen(item: widget.item),
+              builder: (context) => SwitchCardGameScreen(item: widget.item),
             ),
           );
         },
@@ -421,48 +409,8 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     );
   }
 
-  String _getContentTitle() {
-    switch (widget.item.category) {
-      case 'games':
-        return 'מילים למשחק';
-      case 'activities':
-        return 'תוכן הפעילות';
-      case 'riddles':
-        return 'חידות';
-      case 'texts':
-        return 'תוכן';
-      default:
-        return 'תוכן';
-    }
-  }
+  // ← מחקנו את _getContentTitle(), _getContentDetail(), _getCategoryColor()
 
-  String _getContentDetail() {
-    switch (widget.item.category) {
-      case 'games':
-        return 'הסבר משחק';
-      case 'activities':
-        return 'הסבר פעילות';
-      default:
-        return 'תוכן';
-    }
-  }
-
-  Color _getCategoryColor() {
-    switch (widget.item.category) {
-      case 'games':
-        return Colors.purple;
-      case 'activities':
-        return Colors.blue;
-      case 'riddles':
-        return Colors.orange;
-      case 'texts':
-        return Colors.green;
-      default:
-        return Colors.grey;
-    }
-  }
-
-  // כרטיס מידע רגיל - לתוכן ארוך
   Widget _buildInfoCard({
     required String title,
     required String content,
@@ -475,10 +423,10 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
         title: Row(
           children: [
             Icon(icon),
-            SizedBox(width: 10),
+            const SizedBox(width: 10),
             Text(
               title,
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
             ),
           ],
         ),
@@ -489,7 +437,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
             color: Colors.blue,
             decoration: TextDecoration.underline,
           )
-              : TextStyle(),
+              : const TextStyle(),
         ),
         trailing: isLink
             ? IconButton(
@@ -502,24 +450,19 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     );
   }
 
-  // פונקציה שבודקת את אורך הטקסט ומחליטה על התצוגה
   Widget _buildLocationEquipmentCards() {
     final hasEquipment = widget.item.equipment != null && widget.item.equipment!.isNotEmpty;
     final hasClassification = widget.item.classification != null && widget.item.classification!.isNotEmpty;
 
-    // בודק אם הטקסט ארוך (יותר מ-50 תווים או שיש לו שברי שורה)
     final isEquipmentLong = hasEquipment &&
         (widget.item.equipment!.length > 50 || widget.item.equipment!.contains('\n'));
     final isClassificationLong = hasClassification &&
         (widget.item.classification!.length > 50 || widget.item.classification!.contains('\n'));
 
-    // אם שניהם קיימים ולפחות אחד מהם ארוך - תצוגה אנכית
     final useVerticalLayout = (hasEquipment && hasClassification) &&
         (isEquipmentLong || isClassificationLong);
 
-    // אם רק אחד קיים או שניהם קצרים
     if (!useVerticalLayout) {
-      // תצוגה אופקית (זה לצד זה)
       return Container(
         margin: const EdgeInsets.only(bottom: 16),
         child: Row(
@@ -552,7 +495,6 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
         ),
       );
     } else {
-      // תצוגה אנכית (אחד מתחת לשני)
       return Column(
         children: [
           if (hasEquipment)
@@ -581,7 +523,6 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     }
   }
 
-  // כרטיס מידע מורחב - לתצוגה אנכית
   Widget _buildExpandedInfoCard({
     required String title,
     required String content,
@@ -631,7 +572,6 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     );
   }
 
-  // כרטיס מידע קומפקטי - למיקום וציוד
   Widget _buildCompactInfoCard({
     required String title,
     required String content,
@@ -698,17 +638,16 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('האם לפתוח את הקישור?'),
-
+          title: const Text('האם לפתוח את הקישור?'),
           actions: <Widget>[
             TextButton(
-              child: Text('ביטול'),
+              child: const Text('ביטול'),
               onPressed: () {
                 Navigator.of(context).pop();
               },
             ),
             TextButton(
-              child: Text('פתח'),
+              child: const Text('פתח'),
               onPressed: () async {
                 if (!url.startsWith('http://') && !url.startsWith('https://')) {
                   url = 'https://$url';

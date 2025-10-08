@@ -35,7 +35,5 @@ class CustomBottomNav extends StatelessWidget {
         ),
       ],
     );
-
-
   }
 }

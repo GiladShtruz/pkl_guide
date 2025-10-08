@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../models/item_model.dart';
 import '../providers/app_provider.dart';
 import '../services/lists_service.dart';
+import '../utils/category_helper.dart'; // ← הוסף
 
 class ItemCard extends StatelessWidget {
   final ItemModel item;
@@ -45,20 +46,12 @@ class ItemCard extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           child: Row(
             children: [
-
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
-                        // if (isFavorite)
-                        //   const Icon(
-                        //     Icons.favorite,
-                        //     size: 16,
-                        //     color: Colors.red,
-                        //   ),
-                        // if (isFavorite) const SizedBox(width: 4),
                         Expanded(
                           child: Text(
                             item.name,
@@ -176,34 +169,27 @@ class ItemCard extends StatelessWidget {
                           ],
                         ),
                       ),
-
                   ],
                 ),
               ),
               if (item.classification != null && item.classification != "")
-
                 Padding(
                   padding: const EdgeInsets.only(top: 4),
                   child: Chip(
-                    label: Text(
-                      item.classification!,
-                      // style: const TextStyle(fontSize: 12),
-                    ),
-                    // backgroundColor: Colors.grey[200],
+                    label: Text(item.classification!),
                     padding: EdgeInsets.zero,
                     materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
                 ),
               const SizedBox(width: 5),
-              showCheckbox ?
-                Checkbox(
-                  value: isSelected,
-                  onChanged: (_) => appProvider.toggleItemSelection(item.id),
-                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    visualDensity: VisualDensity.compact
-                ) : const Icon(Icons.arrow_forward_ios, size: 16),
-
-
+              showCheckbox
+                  ? Checkbox(
+                value: isSelected,
+                onChanged: (_) => appProvider.toggleItemSelection(item.id),
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                visualDensity: VisualDensity.compact,
+              )
+                  : const Icon(Icons.arrow_forward_ios, size: 16),
             ],
           ),
         ),

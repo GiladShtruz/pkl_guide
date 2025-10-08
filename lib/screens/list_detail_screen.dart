@@ -1,11 +1,12 @@
+// lib/screens/list_detail_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/list_model.dart';
 import '../models/item_model.dart';
-import '../models/category.dart';
 import '../services/lists_service.dart';
 import '../screens/item_detail_screen.dart';
 import '../screens/list_edit_screen.dart';
+import '../utils/category_helper.dart'; // ← הוסף
 
 class ListDetailScreen extends StatefulWidget {
   final ListModel list;
@@ -44,7 +45,6 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
       ),
     );
 
-    // If list was deleted, pop back to lists screen immediately
     if (result == 'deleted') {
       if (mounted) {
         Navigator.pop(context);
@@ -52,9 +52,7 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
       return;
     }
 
-    // Always refresh when returning from edit screen
     if (result == true) {
-      // Double-check if list still exists
       if (!_listsService.listExists(widget.list.id)) {
         if (mounted) {
           Navigator.pop(context);
@@ -63,7 +61,6 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
       }
     }
 
-    // Refresh the screen regardless of result
     _loadItems();
   }
 
@@ -77,7 +74,7 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
           IconButton(
             icon: const Icon(Icons.edit),
             onPressed: _openListEditScreen,
-            tooltip: 'ערוך רשימה',
+            tooltip: 'עריכת רשימה',
           ),
         ],
       ),
@@ -183,7 +180,6 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
                 itemCount: _items.length,
                 itemBuilder: (context, index) {
                   final item = _items[index];
-                  final categoryType = getCategoryType(item.category);
 
                   return Card(
                     margin: const EdgeInsets.only(bottom: 8),
@@ -193,9 +189,9 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
                     child: ListTile(
                       contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
                       leading: CircleAvatar(
-                        backgroundColor: categoryType.categoryColor,
+                        backgroundColor: CategoryHelper.getCategoryColor(item.category), // ← שינוי כאן
                         child: Icon(
-                          categoryType.icon,
+                          CategoryHelper.getCategoryIcon(item.category), // ← שינוי כאן
                           color: Colors.white,
                           size: 20,
                         ),

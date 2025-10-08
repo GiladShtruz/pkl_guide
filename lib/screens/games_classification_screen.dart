@@ -1,10 +1,12 @@
+// lib/screens/games_classification_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/category.dart';
 import '../models/item_model.dart';
 import '../services/storage_service.dart';
 import '../screens/category_items_screen.dart';
-import '../widgets/game_classification_card.dart';  // Import the new widget
+import '../widgets/game_classification_card.dart';
+import '../utils/category_helper.dart'; // ← הוסף
 
 class GamesClassificationScreen extends StatefulWidget {
   const GamesClassificationScreen({super.key});
@@ -30,21 +32,15 @@ class _GamesClassificationScreenState extends State<GamesClassificationScreen> {
     _categorizedGames = {'all': allGames};
     _classifications = {'all'};
 
-    // Group games by classification
     for (var game in allGames) {
-      // final classification = game.classification ?? 'אחר';
-
       final String? classification;
-      if (game.classification == null){
+      if (game.classification == null) {
         classification = 'כללי';
-      }
-      else if(game.classification == ""){
+      } else if (game.classification == "") {
         classification = 'כללי';
-      }
-      else{
+      } else {
         classification = game.classification;
       }
-
 
       _classifications.add(classification!);
       _categorizedGames.putIfAbsent(classification, () => []).add(game);
@@ -86,7 +82,9 @@ class _GamesClassificationScreenState extends State<GamesClassificationScreen> {
           return GameClassificationCard(
             title: isAllGames ? 'כל המשחקים' : classification,
             itemCount: games.length,
-            icon: _getGameIcon(classification, isAllGames),
+            icon: CategoryHelper.getGameClassificationIcon( // ← שינוי כאן
+              isAllGames ? 'all' : classification,
+            ),
             isHighlighted: isAllGames,
             onTap: () {
               Navigator.push(
@@ -98,7 +96,6 @@ class _GamesClassificationScreenState extends State<GamesClassificationScreen> {
                   ),
                 ),
               ).then((_) {
-                // Reload games after returning
                 _loadGames();
               });
             },
@@ -106,32 +103,5 @@ class _GamesClassificationScreenState extends State<GamesClassificationScreen> {
         },
       ),
     );
-  }
-  IconData _getGameIcon(String classification, bool isAllGames) {
-    if (isAllGames) return Icons.casino;
-    switch (classification) {
-      case 'כל המשחקים':
-        return Icons.casino;
-      case 'משחקי כיסאות':
-        return Icons.event_seat;
-      case 'משחקים בחוץ':
-        return Icons.park;
-      case 'משחקים כלליים':
-        return Icons.games;
-      case 'משחקי אנרגיה':
-        return Icons.bolt;
-      case 'משחקי דרך':
-        return Icons.directions_walk;
-      case 'משחקי פתיחה':
-        return Icons.celebration;
-      case 'ODT':
-        return Icons.hiking; // outdoor training
-      case 'משחקי חברה':
-        return Icons.groups;
-      case 'אינטראקטיבי':
-        return Icons.touch_app; // משחקים אינטראקטיביים
-      default:
-        return Icons.category;
-    }
   }
 }

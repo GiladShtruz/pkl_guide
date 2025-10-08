@@ -3,10 +3,10 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:pkl_guide/models/category.dart';
 import 'package:pkl_guide/models/element_model.dart';
-
 import 'package:provider/provider.dart';
 import '../models/item_model.dart';
 import '../services/storage_service.dart';
+import '../utils/content_helper.dart'; // ← הוסף
 
 class EditItemScreen extends StatefulWidget {
   final ItemModel item;
@@ -36,7 +36,6 @@ class _EditItemScreenState extends State<EditItemScreen> {
   bool _isChangeElements = false;
   late StorageService _storageService;
 
-  // Keep a local copy of elements for reordering
   late List<ElementModel> _currentElements;
 
   @override
@@ -48,11 +47,10 @@ class _EditItemScreenState extends State<EditItemScreen> {
       _initializeData();
     });
   }
+
   Future<void> _initializeData() async {
-    // Initialize elements list
     _currentElements = List.from(widget.item.elements);
 
-    // Initialize controllers
     _nameController = TextEditingController(text: widget.item.name);
     _detailController = TextEditingController(text: widget.item.detail ?? '');
     _linkController = TextEditingController(text: widget.item.link ?? '');
@@ -64,7 +62,6 @@ class _EditItemScreenState extends State<EditItemScreen> {
     );
     _newItemController = TextEditingController();
 
-    // Add listeners
     _nameController.addListener(_markChanged);
     _detailController.addListener(_markChanged);
     _linkController.addListener(_markChanged);
@@ -75,8 +72,6 @@ class _EditItemScreenState extends State<EditItemScreen> {
       _isInitializing = false;
     });
   }
-
-
 
   void _markChanged() {
     if (!_hasChanges) {
@@ -98,10 +93,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
     super.dispose();
   }
 
-
-
   Future<void> _saveChanges() async {
-    // Save title changes
     if (_nameController.text != widget.item.originalTitle) {
       await _storageService.updateItemTitle(
         widget.item.id,
@@ -109,7 +101,6 @@ class _EditItemScreenState extends State<EditItemScreen> {
       );
     }
 
-    // Save detail changes
     if (_detailController.text != (widget.item.originalDetail ?? '')) {
       await _storageService.updateItemDetail(
         widget.item.id,
@@ -117,7 +108,6 @@ class _EditItemScreenState extends State<EditItemScreen> {
       );
     }
 
-    // Save link changes
     if (_linkController.text != (widget.item.originalLink ?? '')) {
       await _storageService.updateItemLink(
         widget.item.id,
@@ -125,7 +115,6 @@ class _EditItemScreenState extends State<EditItemScreen> {
       );
     }
 
-    // Save equipment changes
     if (_equipmentController.text != (widget.item.originalEquipment ?? '')) {
       await _storageService.updateItemEquipment(
         widget.item.id,
@@ -133,7 +122,6 @@ class _EditItemScreenState extends State<EditItemScreen> {
       );
     }
 
-    // Save classification changes
     if (_classificationController.text != (widget.item.originalClassification ?? '')) {
       await _storageService.updateItemClassification(
         widget.item.id,
@@ -141,8 +129,6 @@ class _EditItemScreenState extends State<EditItemScreen> {
       );
     }
 
-    // Save elements order if changed
-    // if (_currentElements != widget.item.elements)
     if (_isChangeElements) {
       widget.item.itemElements = _currentElements;
       widget.item.isElementsChanged = true;
@@ -211,22 +197,18 @@ class _EditItemScreenState extends State<EditItemScreen> {
           });
           break;
         case CategoryEntry.elements:
-        // await _storageService.resetElements(widget.item.id);
-        // _isChangeElements = false;
           setState(() {
             _currentElements = List.from(widget.item.elements);
             _isChangeElements = false;
           });
           break;
         default:
-        // Handle other cases if needed
       }
     }
   }
 
   void _addContent() async {
     if (_newItemController.text.isNotEmpty) {
-      // Add to the beginning of the list
       setState(() {
         _currentElements.insert(0, ElementModel(_newItemController.text, true));
         _hasChanges = true;
@@ -234,13 +216,11 @@ class _EditItemScreenState extends State<EditItemScreen> {
       });
 
       _newItemController.clear();
-      // Keep focus on the text field
       FocusScope.of(context).requestFocus(_addElementsFocusNode);
     }
   }
 
   void _deleteItem() async {
-    // Can only delete if this is a user-created item
     if (widget.item.isUserCreated) {
       final confirmed = await showDialog<bool>(
         context: context,
@@ -263,13 +243,13 @@ class _EditItemScreenState extends State<EditItemScreen> {
       if (confirmed == true) {
         await _storageService.deleteItem(widget.item.id);
         if (mounted) {
-          // Pop twice: once from edit screen, once from detail screen
-          Navigator.pop(context, true); // Return to detail screen with result
-          Navigator.pop(context, true); // Return to category items screen with result
+          Navigator.pop(context, true);
+          Navigator.pop(context, true);
         }
       }
     }
   }
+
   void _deleteSelectedElements() async {
     if (_selectedIndices.isEmpty) return;
 
@@ -292,7 +272,6 @@ class _EditItemScreenState extends State<EditItemScreen> {
     );
 
     if (confirmed == true) {
-      // Sort indices in reverse to remove from end to beginning
       final sortedIndices = _selectedIndices.toList()
         ..sort((a, b) => b.compareTo(a));
 
@@ -322,15 +301,15 @@ class _EditItemScreenState extends State<EditItemScreen> {
   @override
   Widget build(BuildContext context) {
     return PopScope(
-      canPop: true, // Allows popping by default
+      canPop: true,
       onPopInvokedWithResult: (didPop, result) async {
-        if (didPop) return; // If already popped, do nothing
+        if (didPop) return;
         if (_isEditMode) {
           setState(() {
             _isEditMode = false;
             _selectedIndices.clear();
           });
-          return; // Prevent popping
+          return;
         }
         if (_hasChanges) {
           await _saveChanges();
@@ -369,12 +348,12 @@ class _EditItemScreenState extends State<EditItemScreen> {
         ),
         body: _isInitializing
             ? const Center(child: CircularProgressIndicator())
-        : SingleChildScrollView(
+            : SingleChildScrollView(
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Title field with reset button
+              // Title field
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -402,7 +381,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Detail field with reset button
+              // Detail field
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -431,7 +410,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Link field with reset button
+              // Link field
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -460,7 +439,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Equipment field with reset button
+              // Equipment field
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -472,7 +451,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
                       prefixIcon: Icon(Icons.sports_soccer),
                     ),
                     keyboardType: TextInputType.multiline,
-                    maxLines: null, // מאפשר שורות רבות
+                    maxLines: null,
                   ),
                   if (widget.item.userEquipment != null)
                     TextButton.icon(
@@ -491,7 +470,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Classification (מיקום) field with reset button
+              // Classification field
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -520,7 +499,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
               ),
               const SizedBox(height: 24),
 
-              // Add new content section
+              // Content section
               if (widget.item.category != 'texts') ..._buildContentSection(),
 
               const SizedBox(height: 80),
@@ -540,14 +519,11 @@ class _EditItemScreenState extends State<EditItemScreen> {
             : FloatingActionButton.extended(
           onPressed: () async {
             await _saveChanges();
-            Navigator.pop(context, true); // Force refresh
+            Navigator.pop(context, true);
           },
           label: const Text('שמור'),
           icon: const Icon(Icons.save),
         ),
-
-
-
         floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       ),
     );
@@ -570,7 +546,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
               controller: _newItemController,
               focusNode: _addElementsFocusNode,
               decoration: InputDecoration(
-                hintText: _getAddContentHint(),
+                hintText: ContentHelper.getAddContentHint(widget.item.category), // ← שינוי כאן
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 12,
                   vertical: 8,
@@ -590,7 +566,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
-            _getContentSectionTitle(),
+            ContentHelper.getContentSectionLabel(widget.item.category), // ← שינוי כאן
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           Row(
@@ -608,24 +584,27 @@ class _EditItemScreenState extends State<EditItemScreen> {
                 ),
               TextButton.icon(
                 onPressed: _isChangingMode
-                    ? null :   () async {
+                    ? null
+                    : () async {
                   setState(() {
                     _isChangingMode = true;
                   });
-                  // TODO: maybe delete it
                   await Future.delayed(const Duration(milliseconds: 50));
 
                   setState(() {
                     _isEditMode = !_isEditMode;
                     if (!_isEditMode) {
                       _selectedIndices.clear();
-
                     }
                     _isChangingMode = false;
                   });
                 },
-                icon: Icon(_isChangingMode ? Icons.hourglass_bottom_sharp : _isEditMode ? Icons.check : Icons.edit),
-                label:  Text(_isChangingMode
+                icon: Icon(_isChangingMode
+                    ? Icons.hourglass_bottom_sharp
+                    : _isEditMode
+                    ? Icons.check
+                    : Icons.edit),
+                label: Text(_isChangingMode
                     ? 'טוען...'
                     : (_isEditMode ? 'אישור' : 'עריכה')),
               ),
@@ -634,9 +613,6 @@ class _EditItemScreenState extends State<EditItemScreen> {
         ],
       ),
       const SizedBox(height: 8),
-
-      // Content list
-
 
       _buildElementsList(),
     ];
@@ -658,10 +634,9 @@ class _EditItemScreenState extends State<EditItemScreen> {
     }
 
     if (_isEditMode) {
-      // חישוב גובה דינמי - מקסימום חצי מהמסך
       final screenHeight = MediaQuery.of(context).size.height;
       final maxHeight = screenHeight * 0.5;
-      final estimatedItemHeight = 72.0; // גובה משוער של ListTile
+      final estimatedItemHeight = 72.0;
       final calculatedHeight = min(maxHeight, _currentElements.length * estimatedItemHeight);
 
       return Card(
@@ -686,7 +661,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
               final canDelete = element.isUserElement;
 
               return ListTile(
-                contentPadding: EdgeInsets.only(left: 0, right: 5),
+                contentPadding: const EdgeInsets.only(left: 0, right: 5),
                 key: ValueKey('$index-${element.text}'),
                 leading: Icon(Icons.drag_handle, color: Colors.grey[600]),
                 title: Text(element.text),
@@ -731,10 +706,9 @@ class _EditItemScreenState extends State<EditItemScreen> {
       );
     }
 
-    // Normal view (not edit mode) - נשאר כמו שהיה
+    // Normal view
     return Card(
       child: Container(
-        // הגבל את הגובה גם במצב רגיל לרשימות גדולות
         constraints: BoxConstraints(
           maxHeight: _currentElements.length > 50
               ? MediaQuery.of(context).size.height * 0.5
@@ -753,7 +727,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
             return Column(
               children: [
                 ListTile(
-                  contentPadding: EdgeInsets.symmetric(horizontal: 5),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 5),
                   leading: CircleAvatar(
                     backgroundColor: isUserElement
                         ? Colors.blue[100]
@@ -782,35 +756,5 @@ class _EditItemScreenState extends State<EditItemScreen> {
         ),
       ),
     );
-  }
-
-  String _getContentSectionTitle() {
-    switch (widget.item.category) {
-      case 'games':
-        return 'מילים';
-      case 'activities':
-        return 'תוכן';
-      case 'riddles':
-        return 'חידות';
-      case 'texts':
-        return 'קטעים';
-      default:
-        return 'תוכן';
-    }
-  }
-
-  String _getAddContentHint() {
-    switch (widget.item.category) {
-      case 'games':
-        return 'הכנס מילה חדשה...';
-      case 'activities':
-        return 'הכנס פעילות חדשה...';
-      case 'riddles':
-        return 'הכנס חידה חדשה...';
-      case 'texts':
-        return 'הכנס קטע חדש...';
-      default:
-        return 'הכנס תוכן חדש...';
-    }
   }
 }

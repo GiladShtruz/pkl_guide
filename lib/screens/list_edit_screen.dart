@@ -1,3 +1,4 @@
+// lib/screens/list_edit_screen.dart
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -5,6 +6,7 @@ import '../models/list_model.dart';
 import '../models/item_model.dart';
 import '../services/lists_service.dart';
 import '../services/storage_service.dart';
+import '../utils/category_helper.dart'; // ← הוסף
 
 class ListEditScreen extends StatefulWidget {
   final ListModel list;
@@ -40,7 +42,6 @@ class _ListEditScreenState extends State<ListEditScreen> {
     _descriptionController = TextEditingController(text: widget.list.detail ?? '');
     _loadItems();
 
-    // Add listeners to auto-save on text changes
     _nameController.addListener(_onNameChanged);
     _descriptionController.addListener(_onDescriptionChanged);
   }
@@ -85,7 +86,6 @@ class _ListEditScreenState extends State<ListEditScreen> {
   }
 
   Future<void> _saveChanges() async {
-    // Save items order
     final itemIds = _currentItems.map((item) => item.id).toList();
     await _listsService.updateListItemsOrder(widget.list.id, itemIds);
 
@@ -118,11 +118,11 @@ class _ListEditScreenState extends State<ListEditScreen> {
     if (confirmed == true) {
       await _listsService.deleteList(widget.list.id);
       if (mounted) {
-        // Pop with special result 'deleted' to signal list was deleted
         Navigator.pop(context, 'deleted');
       }
     }
   }
+
   void _deleteSelectedItems() async {
     if (_selectedIndices.isEmpty) return;
 
@@ -145,7 +145,6 @@ class _ListEditScreenState extends State<ListEditScreen> {
     );
 
     if (confirmed == true) {
-      // Sort indices in reverse to remove from end to beginning
       final sortedIndices = _selectedIndices.toList()..sort((a, b) => b.compareTo(a));
 
       for (int index in sortedIndices) {
@@ -172,15 +171,12 @@ class _ListEditScreenState extends State<ListEditScreen> {
     }
   }
 
-
-
   @override
   Widget build(BuildContext context) {
     return PopScope(
       canPop: !_isEditMode,
       onPopInvokedWithResult: (didPop, result) async {
         if (_isEditMode && !didPop) {
-          // Exit edit mode instead of popping
           setState(() {
             _isEditMode = false;
             _selectedIndices.clear();
@@ -189,7 +185,6 @@ class _ListEditScreenState extends State<ListEditScreen> {
         }
 
         if (didPop && _hasChanges) {
-          // Save changes after pop
           await _saveChanges();
         }
       },
@@ -213,7 +208,7 @@ class _ListEditScreenState extends State<ListEditScreen> {
               if (_hasChanges) {
                 await _saveChanges();
               }
-              Navigator.pop(context, true); // Force refresh
+              Navigator.pop(context, true);
             },
           ),
           actions: [
@@ -368,7 +363,7 @@ class _ListEditScreenState extends State<ListEditScreen> {
             : FloatingActionButton.extended(
           onPressed: () async {
             await _saveChanges();
-            Navigator.pop(context, true); // Force refresh
+            Navigator.pop(context, true);
           },
           label: const Text('שמור'),
           icon: const Icon(Icons.save),
@@ -380,10 +375,9 @@ class _ListEditScreenState extends State<ListEditScreen> {
 
   Widget _buildItemsList() {
     if (_isEditMode) {
-      // חישוב גובה דינמי - מקסימום חצי מהמסך
       final screenHeight = MediaQuery.of(context).size.height;
       final maxHeight = screenHeight * 0.5;
-      final estimatedItemHeight = 88.0; // גובה משוער של ListTile עם subtitle
+      final estimatedItemHeight = 88.0;
       final calculatedHeight = min(maxHeight, _currentItems.length * estimatedItemHeight);
 
       return Card(
@@ -420,7 +414,7 @@ class _ListEditScreenState extends State<ListEditScreen> {
                 trailing: Wrap(
                   spacing: 0,
                   children: [
-                    _getCategoryChip(item.category),
+                    CategoryHelper.getCategoryChip(item.category, compact: true), // ← שינוי כאן
                     IconButton(
                       icon: const Icon(Icons.arrow_upward),
                       onPressed: index > 0 ? () => _moveToTop(index) : null,
@@ -456,7 +450,7 @@ class _ListEditScreenState extends State<ListEditScreen> {
       );
     }
 
-    // Normal view (not edit mode) - נשאר עם הגבלת גובה לרשימות גדולות
+    // Normal view
     return Card(
       child: Container(
         constraints: BoxConstraints(
@@ -477,7 +471,7 @@ class _ListEditScreenState extends State<ListEditScreen> {
             return ListTile(
               contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
               leading: CircleAvatar(
-                backgroundColor: _getCategoryColor(item.category),
+                backgroundColor: CategoryHelper.getCategoryColor(item.category), // ← שינוי כאן
                 child: Text(
                   '${index + 1}',
                   style: const TextStyle(color: Colors.white),
@@ -491,55 +485,11 @@ class _ListEditScreenState extends State<ListEditScreen> {
                 overflow: TextOverflow.ellipsis,
               )
                   : null,
-              trailing: _getCategoryChip(item.category),
+              trailing: CategoryHelper.getCategoryChip(item.category, compact: true), // ← שינוי כאן
             );
           },
         ),
       ),
     );
-  }
-
-  Widget _getCategoryChip(String category) {
-    String label;
-    switch (category) {
-      case 'games':
-        label = 'משחק';
-        break;
-      case 'activities':
-        label = 'פעילות';
-        break;
-      case 'riddles':
-        label = 'חידה';
-        break;
-      case 'texts':
-        label = 'טקסט';
-        break;
-      default:
-        label = category;
-    }
-
-    return Chip(
-      label: Text(label, style: const TextStyle(fontSize: 12)),
-      backgroundColor: _getCategoryColor(category).withOpacity(0.2),
-      labelStyle: TextStyle(color: _getCategoryColor(category)),
-      visualDensity: VisualDensity.compact,
-      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
-    );
-  }
-
-  Color _getCategoryColor(String categoryName) {
-    switch (categoryName) {
-      case 'games':
-        return Colors.purple;
-      case 'activities':
-        return Colors.blue;
-      case 'riddles':
-        return Colors.orange;
-      case 'texts':
-        return Colors.green;
-      default:
-        return Colors.grey;
-    }
   }
 }

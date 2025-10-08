@@ -4,10 +4,10 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'storage_service.dart';
 import 'lists_service.dart';
-import 'package:url_launcher/url_launcher.dart';
-
+import '../utils/category_helper.dart'; // ← הוסף
 
 class ImportExportService {
   final StorageService storageService;
@@ -18,8 +18,6 @@ class ImportExportService {
     required this.listsService,
   });
 
-
-
   String generateShareText() {
     final StringBuffer buffer = StringBuffer();
     final List<String> additions = [];
@@ -29,7 +27,7 @@ class ImportExportService {
     for (var item in storageService.appDataBox.values) {
       if (item.isUserCreated) {
         // User created items
-        String addition = '${_getCategoryDisplayName(item.category)} בשם ${item.userTitle ?? item.originalTitle}';
+        String addition = '${CategoryHelper.getCategoryDisplayName(item.category)} בשם ${item.userTitle ?? item.originalTitle}'; // ← שינוי כאן
 
         // Add detail if exists
         String? detail = item.userDetail ?? item.originalDetail;
@@ -65,7 +63,7 @@ class ImportExportService {
 
       } else if (item.isUserChanged) {
         // Modified items
-        String modification = 'ב${_getCategoryDisplayName(item.category)} ${item.originalTitle} שיניתי:';
+        String modification = 'ב${CategoryHelper.getCategoryDisplayName(item.category)} ${item.originalTitle} שיניתי:'; // ← שינוי כאן
         bool hasChanges = false;
 
         // Check each field for modifications
@@ -96,7 +94,6 @@ class ImportExportService {
 
         if (item.userElements.isNotEmpty) {
           List<String> strUserElements = item.userElements.map((element) => element.text).toList();
-
           modification += '\nהוספתי פריטים: ${strUserElements.join(', ')}';
           hasChanges = true;
         }
@@ -134,42 +131,23 @@ class ImportExportService {
     return buffer.toString().trim();
   }
 
-// Helper function to get display name for category
-  String _getCategoryDisplayName(String category) {
-    switch (category.toLowerCase()) {
-      case 'games':
-        return 'משחק';
-      case 'activities':
-        return 'פעילות';
-      case 'riddles':
-        return 'חידה';
-      case 'texts':
-        return 'טקסט';
-      default:
-        return category;
-    }
-  }
+  // ← מחקנו את _getCategoryDisplayName()
 
-// Share additions via Google Forms
+  // Share additions via Google Forms
   Future<bool> shareViaGoogleForms() async {
     try {
-      // Generate the share text
       final shareText = generateShareText();
 
       if (shareText.isEmpty) {
         throw Exception('אין תוספות או שינויים לשיתוף');
       }
 
-      // Encode the text for URL
       final encodedText = Uri.encodeComponent(shareText);
 
-      // Build the pre-filled Google Forms URL
       final formUrl = 'https://docs.google.com/forms/d/e/1FAIpQLSekLHYUHcYodOSpctkVPhGM_pq5ypXi0rk_NIL9W5H34OijJw/viewform?usp=pp_url&entry.498602657=$encodedText';
 
-      // Parse the URL
       final uri = Uri.parse(formUrl);
 
-      // Try to launch with external application mode first
       try {
         final launched = await launchUrl(
           uri,
@@ -177,7 +155,6 @@ class ImportExportService {
         );
 
         if (!launched) {
-          // Try with platform default if external fails
           return await launchUrl(
             uri,
             mode: LaunchMode.platformDefault,
@@ -189,7 +166,6 @@ class ImportExportService {
       } catch (e) {
         print('Error launching URL with external mode: $e');
 
-        // Try alternative launch mode
         try {
           return await launchUrl(
             uri,
@@ -206,7 +182,8 @@ class ImportExportService {
       return false;
     }
   }
-// Get preview of share content
+
+  // Get preview of share content
   Map<String, dynamic> getSharePreview() {
     final shareText = generateShareText();
     int additionsCount = 0;
@@ -229,19 +206,15 @@ class ImportExportService {
   }
 
   // Main export function
-  // Update exportToJson to accept includeLists parameter
   Future<String> exportToJson({bool includeLists = true}) async {
     try {
-      // Get data from storage service
       final userData = storageService.exportUserData();
 
-      // Add lists to export data only if requested
       if (includeLists) {
         final listsData = listsService.exportLists();
         userData['userLists'] = listsData;
       }
 
-      // Convert to JSON string
       final jsonString = const JsonEncoder.withIndent('  ').convert(userData);
 
       return jsonString;
@@ -251,20 +224,16 @@ class ImportExportService {
     }
   }
 
-// Update exportToFile to accept includeLists parameter
   Future<File?> exportToFile({bool includeLists = true}) async {
     try {
       final jsonString = await exportToJson(includeLists: includeLists);
 
-      // Get app documents directory
       final directory = await getApplicationDocumentsDirectory();
 
-      // Create filename with timestamp
       final timestamp = DateTime.now().toIso8601String().replaceAll(':', '-');
       final fileName = 'backup_$timestamp.json';
       final file = File('${directory.path}/$fileName');
 
-      // Write to file
       await file.writeAsString(jsonString);
 
       return file;
@@ -274,7 +243,6 @@ class ImportExportService {
     }
   }
 
-// Update shareExport to accept includeLists parameter
   Future<void> shareExport({bool includeLists = true}) async {
     try {
       final file = await exportToFile(includeLists: includeLists);
@@ -290,20 +258,18 @@ class ImportExportService {
       throw Exception('Failed to share export: $e');
     }
   }
+
   // Main import function
   Future<void> importFromJson(String jsonString) async {
     try {
       final Map<String, dynamic> importData = json.decode(jsonString);
 
-      // Validate JSON structure
       if (!importData.containsKey('data')) {
         throw Exception('Invalid JSON format: missing data field');
       }
 
-      // Import items
       await storageService.importUserData(importData);
 
-      // Import lists if present
       if (importData.containsKey('userLists') && importData['userLists'] != null) {
         await listsService.importLists(importData['userLists']);
       }
@@ -318,7 +284,6 @@ class ImportExportService {
   // Import from file picker
   Future<bool> importFromFile() async {
     try {
-      // Pick file
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['json'],
@@ -328,7 +293,6 @@ class ImportExportService {
         final file = File(result.files.single.path!);
         final jsonString = await file.readAsString();
 
-        // Import the data
         await importFromJson(jsonString);
         return true;
       }
@@ -352,19 +316,16 @@ class ImportExportService {
         'errors': <String>[],
       };
 
-      // Check for data field
       if (!data.containsKey('data')) {
         validation['isValid'] = false;
         validation['errors'] = ['Missing data field'];
         return validation;
       }
 
-      // Count items
       if (data['data'] is List) {
         validation['itemsCount'] = (data['data'] as List).length;
       }
 
-      // Count lists
       if (data.containsKey('userLists') && data['userLists'] is List) {
         validation['listsCount'] = (data['userLists'] as List).length;
       }
@@ -404,6 +365,4 @@ class ImportExportService {
       'lists': listsService.getAllLists().length,
     };
   }
-
-
 }

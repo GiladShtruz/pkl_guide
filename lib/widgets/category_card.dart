@@ -1,5 +1,7 @@
+// lib/widgets/category_card.dart
 import 'package:flutter/material.dart';
 import '../models/category.dart';
+import '../utils/category_helper.dart'; // ← הוסף
 
 class CategoryCard extends StatelessWidget {
   final CategoryType category;
@@ -20,19 +22,19 @@ class CategoryCard extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
       ),
-      child: Material(  // עטוף ב-Material
-        color: Colors.transparent,  // שקוף כדי לראות את הגרדיאנט
+      child: Material(
+        color: Colors.transparent,
         borderRadius: BorderRadius.circular(16),
-        child: Ink(  // השתמש ב-Ink במקום Container
+        child: Ink(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: _getGradientColors(),
+              colors: CategoryHelper.getCategoryGradient(category), // ← שינוי כאן
             ),
           ),
-          child: InkWell(  // רק InkWell אחד!
+          child: InkWell(
             onTap: onTap,
             borderRadius: BorderRadius.circular(16),
             splashColor: Colors.white.withOpacity(0.3),
@@ -60,7 +62,6 @@ class CategoryCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                // Item count badge
                 if (itemCount > 0)
                   Positioned(
                     top: 12,
@@ -79,7 +80,7 @@ class CategoryCard extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
-                          color: _getGradientColors().first,
+                          color: CategoryHelper.getCategoryColor(category.name), // ← שינוי כאן
                         ),
                       ),
                     ),
@@ -90,18 +91,5 @@ class CategoryCard extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  List<Color> _getGradientColors() {
-    switch (category) {
-      case CategoryType.games:
-        return [Colors.purple[400]!, Colors.purple[600]!];
-      case CategoryType.activities:
-        return [Colors.blue[400]!, Colors.blue[600]!];
-      case CategoryType.riddles:
-        return [Colors.orange[400]!, Colors.orange[600]!];
-      case CategoryType.texts:
-        return [Colors.green[400]!, Colors.green[600]!];
-    }
   }
 }

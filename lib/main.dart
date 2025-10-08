@@ -1,3 +1,4 @@
+// lib/main.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -10,6 +11,7 @@ import 'services/storage_service.dart';
 import 'services/json_service.dart';
 import 'services/lists_service.dart';
 import 'providers/app_provider.dart';
+import 'utils/theme_helper.dart'; // ← הוסף
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,9 +31,9 @@ void main() async {
 
   // טעינת ערכת הנושא השמורה
   final savedTheme =
-      storageService.settingsBox.get('theme_mode', defaultValue: 'system')
-          as String;
-  final initialThemeMode = _getThemeModeFromString(savedTheme);
+  storageService.settingsBox.get('theme_mode', defaultValue: 'system')
+  as String;
+  final initialThemeMode = ThemeHelper.getThemeModeFromString(savedTheme); // ← שינוי כאן
 
   runApp(
     MultiProvider(
@@ -48,17 +50,7 @@ void main() async {
   );
 }
 
-ThemeMode _getThemeModeFromString(String theme) {
-  switch (theme) {
-    case 'light':
-      return ThemeMode.light;
-    case 'dark':
-      return ThemeMode.dark;
-    case 'system':
-    default:
-      return ThemeMode.system;
-  }
-}
+// ← מחקנו את _getThemeModeFromString()
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -68,7 +60,7 @@ class MyApp extends StatelessWidget {
     return Consumer<AppProvider>(
       builder: (context, appProvider, child) {
         return MaterialApp(
-          title: 'פקד״ל למדריך',
+          title: 'פק"ל למדריך',
           debugShowCheckedModeBanner: false,
           locale: const Locale('he', 'IL'),
           localizationsDelegates: const [
@@ -91,10 +83,8 @@ class MyApp extends StatelessWidget {
           },
           home: UpgradeAlert(
             upgrader: Upgrader(
-              durationUntilAlertAgain: const Duration(
-                days: 1
-              ), // בודק רק פעם ב
-              messages: UpgraderMessages(code: 'he')
+              durationUntilAlertAgain: const Duration(days: 1),
+              messages: UpgraderMessages(code: 'he'),
             ),
             child: const HomeScreen(),
           ),

@@ -1,4 +1,4 @@
-
+// lib/screens/home_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/category.dart';
@@ -7,7 +7,6 @@ import '../services/import_export_service.dart';
 import '../services/storage_service.dart';
 import '../services/json_service.dart';
 import '../services/lists_service.dart';
-
 import '../widgets/category_card.dart';
 import '../widgets/bottom_nav.dart';
 import '../screens/category_items_screen.dart';
@@ -15,9 +14,7 @@ import '../screens/games_classification_screen.dart';
 import '../screens/search_screen.dart';
 import '../screens/lists_screen.dart';
 import '../dialogs/about_dialog.dart';
-
-//
-
+import '../utils/theme_helper.dart'; // ← הוסף
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -40,12 +37,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _quickInit() async {
-    // Quick check if data exists
     final storageService = context.read<StorageService>();
     final hasData = storageService.getAppData().isNotEmpty;
 
     if (!hasData) {
-      // First time - need to load JSON
       setState(() {
         _isInitialLoad = true;
       });
@@ -54,43 +49,32 @@ class _HomeScreenState extends State<HomeScreen> {
       await jsonService.loadFromLocalJson();
     }
 
-    // Data is ready - show UI immediately
     if (mounted) {
       setState(() {
         _isInitialLoad = false;
       });
     }
 
-    // Check for updates in background (non-blocking)
     _checkForUpdatesInBackground();
   }
 
   void _checkForUpdatesInBackground() async {
-    // Run update check in background without blocking UI
-      if (mounted) {
-        final jsonService = context.read<JsonService>();
-
-        // Use the compute version for true background processing
-        bool wasUpdated = await jsonService.checkForOnlineUpdates();
-        if (wasUpdated) {
-          print('העדכון בוצע בהצלחה!');
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('נתונים עודכנו'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        } else {
-          print('אין עדכון');
-        }
-        jsonService.checkForOnlineUpdates();
-
-        // Alternative: Use the simple version if compute causes issues
-        // jsonService.checkForOnlineUpdatesSimple();
+    if (mounted) {
+      final jsonService = context.read<JsonService>();
+      bool wasUpdated = await jsonService.checkForOnlineUpdates();
+      if (wasUpdated) {
+        print('העדכון בוצע בהצלחה!');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('נתונים עודכנו'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        print('אין עדכון');
       }
-
+    }
   }
-
 
   Future<void> _showThemeDialog() async {
     final storageService = context.read<StorageService>();
@@ -106,11 +90,11 @@ class _HomeScreenState extends State<HomeScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             RadioListTile<String>(
-              title: const Row(
+              title: Row(
                 children: [
-                  Icon(Icons.light_mode, size: 20),
-                  SizedBox(width: 8),
-                  Text('בהיר'),
+                  Icon(ThemeHelper.getThemeIcon('light'), size: 20), // ← שינוי כאן
+                  const SizedBox(width: 8),
+                  const Text('בהיר'),
                 ],
               ),
               value: 'light',
@@ -118,11 +102,11 @@ class _HomeScreenState extends State<HomeScreen> {
               onChanged: (value) => Navigator.pop(context, value),
             ),
             RadioListTile<String>(
-              title: const Row(
+              title: Row(
                 children: [
-                  Icon(Icons.dark_mode, size: 20),
-                  SizedBox(width: 8),
-                  Text('כהה'),
+                  Icon(ThemeHelper.getThemeIcon('dark'), size: 20), // ← שינוי כאן
+                  const SizedBox(width: 8),
+                  const Text('כהה'),
                 ],
               ),
               value: 'dark',
@@ -130,11 +114,11 @@ class _HomeScreenState extends State<HomeScreen> {
               onChanged: (value) => Navigator.pop(context, value),
             ),
             RadioListTile<String>(
-              title: const Row(
+              title: Row(
                 children: [
-                  Icon(Icons.settings_suggest, size: 20),
-                  SizedBox(width: 8),
-                  Text('תואם למכשיר'),
+                  Icon(ThemeHelper.getThemeIcon('system'), size: 20), // ← שינוי כאן
+                  const SizedBox(width: 8),
+                  const Text('תואם למכשיר'),
                 ],
               ),
               value: 'system',
@@ -155,52 +139,27 @@ class _HomeScreenState extends State<HomeScreen> {
     if (selectedTheme != null && selectedTheme != currentTheme) {
       await storageService.settingsBox.put('theme_mode', selectedTheme);
 
-      final themeMode = _getThemeModeFromString(selectedTheme);
+      final themeMode = ThemeHelper.getThemeModeFromString(selectedTheme); // ← שינוי כאן
       appProvider.setThemeMode(themeMode);
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('ערכת הנושא שונתה ל${_getThemeNameInHebrew(selectedTheme)}'),
+          content: Text('ערכת הנושא שונתה ל${ThemeHelper.getThemeNameInHebrew(selectedTheme)}'), // ← שינוי כאן
           backgroundColor: Colors.green,
         ),
       );
     }
   }
 
-  String _getThemeNameInHebrew(String theme) {
-    switch (theme) {
-      case 'light':
-        return 'בהיר';
-      case 'dark':
-        return 'כהה';
-      case 'system':
-        return 'תואם למכשיר';
-      default:
-        return '';
-    }
-  }
+  // ← מחקנו את _getThemeNameInHebrew() ו-_getThemeModeFromString()
 
-  ThemeMode _getThemeModeFromString(String theme) {
-    switch (theme) {
-      case 'light':
-        return ThemeMode.light;
-      case 'dark':
-        return ThemeMode.dark;
-      case 'system':
-      default:
-        return ThemeMode.system;
-    }
-  }
   Future<void> _forceReloadData() async {
-    // Clear all data
     final storageService = context.read<StorageService>();
     await storageService.appDataBox.clear();
 
-    // Reload from JSON
     final jsonService = context.read<JsonService>();
     await jsonService.loadFromLocalJson();
 
-    // Refresh UI
     setState(() {});
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -251,7 +210,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isInitialLoad) {
-      return Scaffold(
+      return const Scaffold(
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -267,14 +226,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       appBar: _currentIndex == 0 ? AppBar(
-        title: const Text('פק״ל למדריך'),
+        title: const Text('פק"ל למדריך'),
         centerTitle: true,
         actions: [
-          // IconButton(
-          //     icon: Icon(Icons.adb_sharp),
-          //   onPressed: (){
-          //     _checkForUpdatesInBackground();
-          // }, ),
           PopupMenuButton<String>(
             onSelected: (value) async {
               switch (value) {
@@ -332,7 +286,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
               ),
-
               const PopupMenuItem(
                 value: 'theme',
                 child: Row(
@@ -343,26 +296,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
               ),
-              // const PopupMenuItem(
-              //   value: 'reload',
-              //   child: Row(
-              //     children: [
-              //       Icon(Icons.refresh),
-              //       SizedBox(width: 8),
-              //       Text('טען מחדש'),
-              //     ],
-              //   ),
-              // ),
-              // const PopupMenuItem(
-              //   value: 'reset',
-              //   child: Row(
-              //     children: [
-              //       Icon(Icons.restore, color: Colors.orange),
-              //       SizedBox(width: 8),
-              //       Text('אפס לנתונים מקוריים'),
-              //     ],
-              //   ),
-              // ),
               const PopupMenuItem(
                 value: 'about',
                 child: Row(
@@ -388,13 +321,11 @@ class _HomeScreenState extends State<HomeScreen> {
           setState(() {
             _currentIndex = index;
           });
-          if (index == 1) { // Search tab index
-            print("object");
+          if (index == 1) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               _searchKey.currentState?.focusSearch();
             });
-          }
-          else{
+          } else {
             _searchKey.currentState?.unfocusSearch();
           }
         },
@@ -449,9 +380,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-
-// החלף את הפונקציות הקיימות ב-home_screen.dart
-
   void _handleImport() async {
     try {
       final importExportService = ImportExportService(
@@ -462,7 +390,7 @@ class _HomeScreenState extends State<HomeScreen> {
       final success = await importExportService.importFromFile();
 
       if (success) {
-        setState(() {}); // Refresh UI
+        setState(() {});
 
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -495,10 +423,8 @@ class _HomeScreenState extends State<HomeScreen> {
         listsService: context.read<ListsService>(),
       );
 
-      // Show preview dialog
       final preview = importExportService.getExportPreview();
 
-      // Variable to track if lists should be exported
       bool exportLists = true;
 
       final confirmed = await showDialog<bool>(
@@ -516,19 +442,17 @@ class _HomeScreenState extends State<HomeScreen> {
                 const Divider(),
                 Text('סה"כ פריטים: ${preview['totalItems']}'),
                 const SizedBox(height: 16),
-                // Content checkbox - always checked and disabled
                 Row(
                   children: [
                     Checkbox(
                       value: true,
-                      onChanged: null, // Disabled
+                      onChanged: null,
                     ),
                     const Expanded(
                       child: Text('תוכן'),
                     ),
                   ],
                 ),
-                // Lists checkbox - can be toggled
                 Row(
                   children: [
                     Checkbox(
@@ -563,7 +487,6 @@ class _HomeScreenState extends State<HomeScreen> {
       );
 
       if (confirmed == true) {
-        // Pass the exportLists flag to the export function
         await importExportService.shareExport(includeLists: exportLists);
       }
     } catch (e) {
@@ -575,6 +498,7 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
   }
+
   void _handleShare() async {
     try {
       final importExportService = ImportExportService(
@@ -582,7 +506,6 @@ class _HomeScreenState extends State<HomeScreen> {
         listsService: context.read<ListsService>(),
       );
 
-      // Get preview of what will be shared
       final preview = importExportService.getSharePreview();
 
       if (preview['isEmpty']) {
@@ -595,7 +518,6 @@ class _HomeScreenState extends State<HomeScreen> {
         return;
       }
 
-      // Show preview dialog
       final confirmed = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
@@ -682,6 +604,7 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
   }
+
   void _showAbout() {
     showDialog(
       context: context,
