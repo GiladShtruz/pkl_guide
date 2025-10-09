@@ -1,4 +1,4 @@
-package com.example.pkl_guide
+package com.gilad.pklGuide
 
 import io.flutter.embedding.android.FlutterActivity
 
