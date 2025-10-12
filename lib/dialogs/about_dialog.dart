@@ -20,7 +20,7 @@ class AboutDialogWidget extends StatelessWidget {
 
   void _launchPrivacyPolicy() async {
     final uri = Uri.parse(
-      'https://drive.google.com/file/d/1_qDY-4Oit85Vz5225CNzrd7VbGc3N_qg/view?usp=sharing',
+      'https://sites.google.com/view/pkl-guide-privacy-policy/%D7%91%D7%99%D7%AA',
     );
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
