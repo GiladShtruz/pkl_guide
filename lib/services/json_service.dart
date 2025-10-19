@@ -13,7 +13,8 @@ class JsonService {
 
   // Version check URL
   static const String versionCheckUrl =
-      'https://drive.google.com/uc?export=download&id=1dzNX_KoG_kWOdirSh_0cJhYRgLKWBGor';
+      'https://drive.google.com/uc?export=download&id=1dzNX_KoG_kWOdirSh_0cJhYRgLKWBGor'; // user data
+      // 'https://drive.google.com/uc?export=download&id=1zO-f04ITiFltKdrByhjZnv57cfVDz_xR'; // gilad training data
 
   JsonService(this.storageService);
 // first on open app:

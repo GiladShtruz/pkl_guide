@@ -223,6 +223,15 @@ class StorageService {
     return appDataBox.values.where((item) => item.isUserCreated).toList();
   }
 
+  // Get keys of items that were NOT created by user
+  List<int> getAppDataKeys() {
+    return appDataBox.keys
+        .cast<int>()
+        .where((key) => !appDataBox.get(key)!.isUserCreated)
+        .toList();
+  }
+
+
   // Get user modified items only
   List<ItemModel> getUserModifiedItems() {
     return appDataBox.values.where((item) => item.isUserChanged).toList();
@@ -239,7 +248,7 @@ class StorageService {
   Future<void> updateFromOnline(Map<String, dynamic> jsonData) async {
     final categories = jsonData['categories'] ?? {};
     JsonService jsonService = JsonService(this);
-    Set<int> idsRemovedFromData = appDataBox.keys.cast<int>().toSet();
+    Set<int> idsRemovedFromData = getAppDataKeys().toSet();
     categories.forEach((categoryName, categoryItems) async {
       final categoryHebName = getCategoryType(categoryName);
 
