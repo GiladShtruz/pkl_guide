@@ -283,6 +283,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
         _selectedIndices.clear();
         _isEditMode = false;
         _hasChanges = true;
+        _isChangeElements = true;
       });
     }
   }

@@ -1,4 +1,5 @@
 // lib/screens/home_screen.dart
+import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/category.dart';
@@ -499,6 +500,18 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+
+  String generateShareText() {
+    final importExportService = ImportExportService(
+      storageService: context.read<StorageService>(),
+      listsService: context.read<ListsService>(),
+    );
+
+    final preview = importExportService.getSharePreview();
+    return preview['text'] ?? '';
+  }
+
+
   void _handleShare() async {
     try {
       final importExportService = ImportExportService(
@@ -508,85 +521,137 @@ class _HomeScreenState extends State<HomeScreen> {
 
       final preview = importExportService.getSharePreview();
 
-      if (preview['isEmpty']) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('אין תוספות או שינויים לשיתוף'),
-            backgroundColor: Colors.orange,
-          ),
-        );
-        return;
-      }
-
       final confirmed = await showDialog<bool>(
         context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('שיתוף תוספות'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('פריטים חדשים: ${preview['additionsCount']}'),
-                Text('פריטים ששונו: ${preview['modificationsCount']}'),
-                const Divider(),
-                const Text(
-                  'תצוגה מקדימה:',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
+        builder: (context) {
+          final shareText = generateShareText(); // קבל את הטקסט המלא
+          final isTextTooLong = shareText.length > 1500;
+
+          return AlertDialog(
+            title: const Text('שיתוף תוספות'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('פריטים חדשים: ${preview['additionsCount']}'),
+                  Text('פריטים ששונו: ${preview['modificationsCount']}'),
+                  const Divider(),
+
+                  // אזהרה אם הטקסט ארוך מדי
+                  if (isTextTooLong) ...[
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.orange.shade300),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.warning_amber_rounded,
+                              color: Colors.orange.shade700, size: 20),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'הטקסט ארוך מדי (${shareText.length} תווים)\nחובה להעתיק את התוכן המלא!',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.orange.shade900,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+
+                  const Text(
+                    'תצוגה מקדימה:',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
+                      ),
+                    ),
+                    constraints: const BoxConstraints(maxHeight: 200),
+                    child: SingleChildScrollView(
+                      child: Text(
+                        preview['text'],
+                        style: const TextStyle(fontSize: 12),
+                      ),
                     ),
                   ),
-                  constraints: const BoxConstraints(maxHeight: 200),
-                  child: SingleChildScrollView(
-                    child: Text(
-                      preview['text'],
-                      style: const TextStyle(fontSize: 12),
+                  const SizedBox(height: 12),
+
+                  // כפתור העתקה
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () async {
+                        await Clipboard.setData(ClipboardData(text: shareText));
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                isTextTooLong
+                                    ? 'הועתק! עכשיו הדבק בטופס Google'
+                                    : 'הטקסט הועתק ללוח',
+                              ),
+                              duration: const Duration(seconds: 2),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                        }
+                      },
+                      icon: const Icon(Icons.copy, size: 18),
+                      label: const Text('העתק את התוכן המלא'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: isTextTooLong
+                            ? Colors.orange.shade700
+                            : Theme.of(context).colorScheme.primary,
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'פתח קישור להצעת הנתונים דרך טופס Google',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  const SizedBox(height: 8),
+                  Text(
+                    isTextTooLong
+                        ? 'לחץ על "פתח קישור" ואז הדבק את התוכן שהעתקת'
+                        : 'פתח קישור להצעת הנתונים דרך טופס Google',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('ביטול'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('פתח קישור'),
-            ),
-          ],
-        ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('ביטול'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('פתח קישור'),
+              ),
+            ],
+          );
+        },
       );
 
       if (confirmed == true) {
         final success = await importExportService.shareViaGoogleForms();
 
-        if (success) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('הטופס נפתח בדפדפן'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        } else {
+        if (!success) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('לא ניתן לפתוח את הטופס'),

@@ -5,6 +5,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:http/http.dart' as http;
 import 'storage_service.dart';
 import 'lists_service.dart';
 import '../utils/category_helper.dart'; // ← הוסף
@@ -134,47 +135,31 @@ class ImportExportService {
   // ← מחקנו את _getCategoryDisplayName()
 
   // Share additions via Google Forms
+
   Future<bool> shareViaGoogleForms() async {
     try {
       final shareText = generateShareText();
 
-      if (shareText.isEmpty) {
-        throw Exception('אין תוספות או שינויים לשיתוף');
-      }
+      // בדיקה אם הטקסט ארוך מדי ל-URL
+      const maxUrlLength = 1500;
 
-      final encodedText = Uri.encodeComponent(shareText);
+      if (shareText.length > maxUrlLength) {
+        print('טקסט ארוך (${shareText.length} תווים) - מנסה POST');
+        // ניסיון ראשון: POST
+        final postSuccess = await _sendViaPost(shareText);
 
-      final formUrl = 'https://docs.google.com/forms/d/e/1FAIpQLSekLHYUHcYodOSpctkVPhGM_pq5ypXi0rk_NIL9W5H34OijJw/viewform?usp=pp_url&entry.498602657=$encodedText';
-
-      final uri = Uri.parse(formUrl);
-
-      try {
-        final launched = await launchUrl(
-          uri,
-          mode: LaunchMode.externalApplication,
-        );
-
-        if (!launched) {
-          return await launchUrl(
-            uri,
-            mode: LaunchMode.platformDefault,
-          );
+        if (postSuccess) {
+          return true;
         }
 
-        return launched;
+        // אם POST נכשל - פתיחה בדפדפן עם טקסט מקוצר
+        print('POST נכשל, פותח בדפדפן עם טקסט מקוצר');
+        return await _openInBrowserWithTruncation(shareText, maxUrlLength);
 
-      } catch (e) {
-        print('Error launching URL with external mode: $e');
-
-        try {
-          return await launchUrl(
-            uri,
-            mode: LaunchMode.inAppWebView,
-          );
-        } catch (e2) {
-          print('Error launching URL with in-app mode: $e2');
-          return false;
-        }
+      } else {
+        // טקסט קצר - פתיחה רגילה בדפדפן
+        print('טקסט קצר (${shareText.length} תווים) - פותח בדפדפן');
+        return await _openInBrowser(shareText);
       }
 
     } catch (e) {
@@ -183,6 +168,97 @@ class ImportExportService {
     }
   }
 
+// שליחה ישירה עם POST (לטקסטים ארוכים)
+  Future<bool> _sendViaPost(String text) async {
+    const formUrl = 'https://docs.google.com/forms/d/e/1FAIpQLSekLHYUHcYodOSpctkVPhGM_pq5ypXi0rk_NIL9W5H34OijJw/formResponse';
+
+    try {
+      final response = await http.post(
+        Uri.parse(formUrl),
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'Accept-Language': 'he-IL,he;q=0.9,en-US;q=0.8,en;q=0.7',
+          'Origin': 'https://docs.google.com',
+          'Referer': 'https://docs.google.com/forms/d/e/1FAIpQLSekLHYUHcYodOSpctkVPhGM_pq5ypXi0rk_NIL9W5H34OijJw/viewform',
+        },
+        body: {
+          'entry.498602657': text,
+        },
+      );
+
+      print('POST Status: ${response.statusCode}');
+
+      // Google Forms מחזיר 200, 302, או 303 בהצלחה
+      if (response.statusCode == 200 ||
+          response.statusCode == 302 ||
+          response.statusCode == 303) {
+        print('✓ נשלח בהצלחה עם POST');
+        return true;
+      } else {
+        print('⚠ POST נכשל עם סטטוס: ${response.statusCode}');
+        return false;
+      }
+    } catch (e) {
+      print('✗ שגיאה בשליחת POST: $e');
+      return false;
+    }
+  }
+
+// פתיחה בדפדפן עם טקסט מקוצר (fallback לטקסט ארוך)
+  Future<bool> _openInBrowserWithTruncation(String fullText, int maxLength) async {
+    // יצירת טקסט מקוצר עם הודעה
+    final truncatedText = '${fullText.substring(0, maxLength - 150)}\n\n'
+        '━━━━━━━━━━━━━━━━\n'
+        '⚠️ הטקסט המלא ארוך מדי עבור URL\n'
+        'הועתקו רק ${maxLength - 150} תווים ראשונים\n'
+        'אורך מלא: ${fullText.length} תווים\n'
+        '━━━━━━━━━━━━━━━━';
+
+    return await _openInBrowser(truncatedText);
+  }
+
+// פתיחה בדפדפן (לטקסטים רגילים)
+  Future<bool> _openInBrowser(String text) async {
+    final encodedText = Uri.encodeComponent(text);
+    final formUrl = 'https://docs.google.com/forms/d/e/1FAIpQLSekLHYUHcYodOSpctkVPhGM_pq5ypXi0rk_NIL9W5H34OijJw/viewform?usp=pp_url&entry.498602657=$encodedText';
+
+    print('URL length: ${formUrl.length} characters');
+    final uri = Uri.parse(formUrl);
+
+    try {
+      // ניסיון ראשון: פתיחה באפליקציה חיצונית
+      final launched = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+
+      if (!launched) {
+        // ניסיון שני: מצב ברירת מחדל
+        return await launchUrl(
+          uri,
+          mode: LaunchMode.platformDefault,
+        );
+      }
+
+      return launched;
+
+    } catch (e) {
+      print('Error launching with external mode: $e');
+
+      try {
+        // ניסיון שלישי: WebView פנימי
+        return await launchUrl(
+          uri,
+          mode: LaunchMode.inAppWebView,
+        );
+      } catch (e2) {
+        print('Error launching with in-app mode: $e2');
+        return false;
+      }
+    }
+  }
   // Get preview of share content
   Map<String, dynamic> getSharePreview() {
     final shareText = generateShareText();

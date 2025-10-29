@@ -193,7 +193,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
                     onPressed: _addContent,
                     icon: const Icon(Icons.add_circle),
                     iconSize: 32,
-                    color: Theme.of(context).primaryColor,
+                    color: Theme.of(context).colorScheme.primary,
                   ),
                 ],
               ),
