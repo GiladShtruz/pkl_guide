@@ -264,6 +264,7 @@ class StorageService {
               continue;
             }
             // update item:
+            oldItem.category = newItem.category;
             oldItem.originalTitle = newItem.name;
             oldItem.originalDetail = newItem.detail;
             oldItem.originalLink = newItem.link;
