@@ -35,7 +35,7 @@ class _CreateListDialogState extends State<CreateListDialog> {
                 border: OutlineInputBorder(),
               ),
               validator: (value) {
-                if (value == null || value.isEmpty) {
+                if (value == null || value.trim().isEmpty) {
                   return 'נא להזין שם לרשימה';
                 }
                 return null;
@@ -63,11 +63,12 @@ class _CreateListDialogState extends State<CreateListDialog> {
           onPressed: () {
             if (_formKey.currentState!.validate()) {
               // Return Map<String, String?> instead of Map<String, String>
+              final name = _nameController.text.trim();
+              final detail = _detailController.text.trim();
+
               final result = <String, String?>{
-                'name': _nameController.text,
-                'detail': _detailController.text.isNotEmpty
-                    ? _detailController.text
-                    : null,
+                'name': name,
+                'detail': detail.isNotEmpty ? detail : null,
               };
               Navigator.pop(context, result);
             }

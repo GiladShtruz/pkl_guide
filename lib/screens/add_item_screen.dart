@@ -43,9 +43,10 @@ class _AddItemScreenState extends State<AddItemScreen> {
   }
 
   void _addContent() {
-    if (_contentController.text.isNotEmpty) {
+    final trimmedText = _contentController.text.trim();
+    if (trimmedText.isNotEmpty) {
       setState(() {
-        _contentList.add(ElementModel(_contentController.text, true));
+        _contentList.add(ElementModel(trimmedText, true));
         _contentController.clear();
       });
     }
@@ -63,21 +64,19 @@ class _AddItemScreenState extends State<AddItemScreen> {
 
       final id = DateTime.now().millisecondsSinceEpoch % 100000000;
 
+      final trimmedName = _nameController.text.trim();
+      final trimmedDetail = _detailController.text.trim();
+      final trimmedLink = _linkController.text.trim();
+      final trimmedClassification = _classificationController.text.trim();
+      final trimmedEquipment = _equipmentController.text.trim();
+
       final newItem = ItemModel(
         id: id,
-        originalTitle: _nameController.text,
-        originalDetail: _detailController.text.isNotEmpty
-            ? _detailController.text
-            : null,
-        originalLink: _linkController.text.isNotEmpty
-            ? _linkController.text
-            : null,
-        originalClassification: _classificationController.text.isNotEmpty
-            ? _classificationController.text
-            : null,
-        originalEquipment: _equipmentController.text.isNotEmpty
-            ? _equipmentController.text
-            : null,
+        originalTitle: trimmedName,
+        originalDetail: trimmedDetail.isNotEmpty ? trimmedDetail : null,
+        originalLink: trimmedLink.isNotEmpty ? trimmedLink : null,
+        originalClassification: trimmedClassification.isNotEmpty ? trimmedClassification : null,
+        originalEquipment: trimmedEquipment.isNotEmpty ? trimmedEquipment : null,
         elements: _contentList,
         category: widget.category.name,
         isUserCreated: true,
@@ -114,7 +113,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
                   border: OutlineInputBorder(),
                 ),
                 validator: (value) {
-                  if (value == null || value.isEmpty) {
+                  if (value == null || value.trim().isEmpty) {
                     return 'נא להזין שם';
                   }
                   return null;

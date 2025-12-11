@@ -94,38 +94,43 @@ class _EditItemScreenState extends State<EditItemScreen> {
   }
 
   Future<void> _saveChanges() async {
-    if (_nameController.text != widget.item.originalTitle) {
+    final trimmedName = _nameController.text.trim();
+    if (trimmedName != widget.item.originalTitle) {
       await _storageService.updateItemTitle(
         widget.item.id,
-        _nameController.text,
+        trimmedName,
       );
     }
 
-    if (_detailController.text != (widget.item.originalDetail ?? '')) {
+    final trimmedDetail = _detailController.text.trim();
+    if (trimmedDetail != (widget.item.originalDetail ?? '')) {
       await _storageService.updateItemDetail(
         widget.item.id,
-        _detailController.text.isNotEmpty ? _detailController.text : null,
+        trimmedDetail.isNotEmpty ? trimmedDetail : null,
       );
     }
 
-    if (_linkController.text != (widget.item.originalLink ?? '')) {
+    final trimmedLink = _linkController.text.trim();
+    if (trimmedLink != (widget.item.originalLink ?? '')) {
       await _storageService.updateItemLink(
         widget.item.id,
-        _linkController.text.isNotEmpty ? _linkController.text : null,
+        trimmedLink.isNotEmpty ? trimmedLink : null,
       );
     }
 
-    if (_equipmentController.text != (widget.item.originalEquipment ?? '')) {
+    final trimmedEquipment = _equipmentController.text.trim();
+    if (trimmedEquipment != (widget.item.originalEquipment ?? '')) {
       await _storageService.updateItemEquipment(
         widget.item.id,
-        _equipmentController.text.isNotEmpty ? _equipmentController.text : null,
+        trimmedEquipment.isNotEmpty ? trimmedEquipment : null,
       );
     }
 
-    if (_classificationController.text != (widget.item.originalClassification ?? '')) {
+    final trimmedClassification = _classificationController.text.trim();
+    if (trimmedClassification != (widget.item.originalClassification ?? '')) {
       await _storageService.updateItemClassification(
         widget.item.id,
-        _classificationController.text.isNotEmpty ? _classificationController.text : null,
+        trimmedClassification.isNotEmpty ? trimmedClassification : null,
       );
     }
 
@@ -208,9 +213,10 @@ class _EditItemScreenState extends State<EditItemScreen> {
   }
 
   void _addContent() async {
-    if (_newItemController.text.isNotEmpty) {
+    final trimmedText = _newItemController.text.trim();
+    if (trimmedText.isNotEmpty) {
       setState(() {
-        _currentElements.insert(0, ElementModel(_newItemController.text, true));
+        _currentElements.insert(0, ElementModel(trimmedText, true));
         _hasChanges = true;
         _isChangeElements = true;
       });

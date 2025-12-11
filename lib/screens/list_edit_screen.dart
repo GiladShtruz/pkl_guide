@@ -51,11 +51,12 @@ class _ListEditScreenState extends State<ListEditScreen> {
   }
 
   void _onNameChanged() async {
-    if (_nameController.text.isNotEmpty &&
+    final trimmedName = _nameController.text.trim();
+    if (trimmedName.isNotEmpty &&
         !widget.list.isDefault &&
-        _nameController.text != widget.list.name) {
-      await _listsService.updateListName(widget.list.id, _nameController.text);
-      widget.list.name = _nameController.text;
+        trimmedName != widget.list.name) {
+      await _listsService.updateListName(widget.list.id, trimmedName);
+      widget.list.name = trimmedName;
       setState(() {
         _hasChanges = true;
       });
@@ -63,8 +64,9 @@ class _ListEditScreenState extends State<ListEditScreen> {
   }
 
   void _onDescriptionChanged() async {
-    final newDescription = _descriptionController.text.isNotEmpty
-        ? _descriptionController.text
+    final trimmedDescription = _descriptionController.text.trim();
+    final newDescription = trimmedDescription.isNotEmpty
+        ? trimmedDescription
         : null;
 
     if (newDescription != widget.list.detail) {
