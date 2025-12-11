@@ -385,6 +385,15 @@ class ItemModel extends HiveObject {
 
 
   Map<String, dynamic> toJson() {
+    // Convert elements to the correct format
+    final elementsList = <Map<String, dynamic>>[];
+    for (int i = 0; i < elementTexts.length; i++) {
+      elementsList.add({
+        'element': elementTexts[i],
+        'isUserElement': i < isUserElementList.length ? isUserElementList[i] : false,
+      });
+    }
+
     return {
       'id': id,
       'category': category,
@@ -398,8 +407,7 @@ class ItemModel extends HiveObject {
       'userClassification': userClassification,
       'originalEquipment': originalEquipment,
       'userEquipment': userEquipment,
-      'elementTexts': elementTexts,
-      'isUserElementList': isUserElementList,
+      'elements': elementsList,
       'isElementsChanged': isElementsChanged,
       'lastAccessed': lastAccessed?.toIso8601String(),
       'clickCount': clickCount,
