@@ -1,0 +1,46 @@
+# ===========================
+# Security & Secrets (CRITICAL)
+# ===========================
+# מפתחות חתימה וסיסמאות לאנדרואיד
+**/key.properties
+**/local.properties
+**/*.jks
+**/*.keystore
+**/*.p12
+
+# מפתחות ושירותים (למקרה שיתווספו בעתיד)
+**/google-services.json
+**/GoogleService-Info.plist
+**/gradle.properties
+
+# ===========================
+# Build & Generated Files (NOISE)
+# ===========================
+# תיקיות בנייה שסתם מבזבזות טוקנים ומבלבלות את ה-AI
+build/
+.dart_tool/
+.gradle/
+android/.gradle/
+android/build/
+android/app/build/
+ios/Flutter/ephemeral/
+ios/Pods/
+
+# קבצי Lock (ארוכים מאוד ולא תורמים לקוד)
+pubspec.lock
+ios/Podfile.lock
+
+# ===========================
+# Assets & Binaries
+# ===========================
+# ה-AI לא יכול לקרוא תמונות ופונטים כטקסט
+assets/fonts/
+assets/sounds/
+assets/images/
+**/*.png
+**/*.jpg
+**/*.jpeg
+**/*.ttf
+**/*.mp3
+**/*.ico
+**/*.svg

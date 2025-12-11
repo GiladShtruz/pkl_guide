@@ -1,0 +1,43 @@
+# ===========================
+# Security (חסימת סיסמאות ומפתחות)
+# ===========================
+# אלו הקבצים הכי קריטיים בפרויקט שלך שאסור ל-AI לראות
+**/key.properties
+**/local.properties
+**/*.jks
+**/*.keystore
+**/*.p12
+**/google-services.json
+**/GoogleService-Info.plist
+
+# ===========================
+# Performance & Noise (חסכון בטוקנים)
+# ===========================
+# תיקיות שנוצרות אוטומטית ומכילות אלפי קבצים לא רלוונטיים
+build/
+.dart_tool/
+.gradle/
+.idea/
+android/.gradle/
+android/build/
+android/app/build/
+ios/Flutter/ephemeral/
+ios/Pods/
+
+# קבצים גדולים שאין טעם שה-AI יקרא
+pubspec.lock
+ios/Podfile.lock
+
+# ===========================
+# Media & Assets
+# ===========================
+# Cursor לא יכול "לראות" תמונות או פונטים דרך האינדקס הטקסטואלי
+assets/
+**/*.png
+**/*.jpg
+**/*.jpeg
+**/*.ttf
+**/*.mp3
+**/*.wav
+**/*.ico
+**/*.svg
