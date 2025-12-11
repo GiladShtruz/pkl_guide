@@ -4,6 +4,7 @@ import '../models/list_model.dart';
 import '../services/lists_service.dart';
 import '../screens/list_detail_screen.dart';
 import '../dialogs/create_list_dialog.dart';
+import '../services/import_export_service.dart';
 
 enum ListSortMethod {
   original('סדר מקורי'),
@@ -24,12 +25,14 @@ class _ListsScreenState extends State<ListsScreen> {
   bool _isEditMode = false;
   final Set<int> _selectedLists = {};
   late ListsService _listsService;
+  late ImportExportService _importExportService;
   ListSortMethod _sortMethod = ListSortMethod.original;
 
   @override
   void initState() {
     super.initState();
     _listsService = context.read<ListsService>();
+    _importExportService = context.read<ImportExportService>();
   }
 
   void _toggleEditMode() {
@@ -83,6 +86,55 @@ class _ListsScreenState extends State<ListsScreen> {
         _selectedLists.clear();
         _isEditMode = false;
       });
+    }
+  }
+
+  void _exportSelectedLists() async {
+    if (_selectedLists.isEmpty) return;
+
+    try {
+      // Show loading dialog
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+
+      // Export selected lists
+      await _importExportService.shareExportSelectedLists(_selectedLists.toList());
+
+      // Close loading dialog
+      if (mounted) Navigator.pop(context);
+
+      // Show success message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('יוצאו ${_selectedLists.length} רשימות בהצלחה'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+
+      setState(() {
+        _selectedLists.clear();
+        _isEditMode = false;
+      });
+    } catch (e) {
+      // Close loading dialog
+      if (mounted) Navigator.pop(context);
+
+      // Show error message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('שגיאה בייצוא רשימות: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -324,11 +376,26 @@ class _ListsScreenState extends State<ListsScreen> {
             );
           },
         ),
-        floatingActionButton: _isEditMode
-            ? FloatingActionButton(
-          onPressed: _selectedLists.isNotEmpty ? _deleteSelectedLists : null,
-          backgroundColor: _selectedLists.isNotEmpty ? Colors.red : Colors.grey,
-          child: const Icon(Icons.delete),
+        floatingActionButton: _isEditMode && _selectedLists.isNotEmpty
+            ? Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            FloatingActionButton.extended(
+              onPressed: _exportSelectedLists,
+              backgroundColor: Colors.blue,
+              icon: const Icon(Icons.share),
+              label: const Text('שתף'),
+              heroTag: 'share',
+            ),
+            const SizedBox(width: 16),
+            FloatingActionButton.extended(
+              onPressed: _deleteSelectedLists,
+              backgroundColor: Colors.red,
+              icon: const Icon(Icons.delete),
+              label: const Text('מחק'),
+              heroTag: 'delete',
+            ),
+          ],
         )
             : FloatingActionButton(
           onPressed: _createNewList,

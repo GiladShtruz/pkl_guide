@@ -441,4 +441,127 @@ class ImportExportService {
       'lists': listsService.getAllLists().length,
     };
   }
+
+  // Export selected lists to JSON with their custom games
+  Future<String> exportSelectedListsToJson(List<int> listIds) async {
+    try {
+      final exportData = <String, dynamic>{};
+      final listsData = <Map<String, dynamic>>[];
+      final customGamesData = <Map<String, dynamic>>[];
+      final Set<int> processedGameIds = {};
+
+      // Get selected lists
+      for (var listId in listIds) {
+        final list = listsService.listsBox.get(listId);
+        if (list != null) {
+          listsData.add({
+            'id': list.id,
+            'name': list.name,
+            'detail': list.detail,
+            'categoryItemIds': list.categoryItemIds,
+            'createdAt': list.createdAt.toIso8601String(),
+            'lastModified': list.lastModified?.toIso8601String(),
+            'isDefault': list.isDefault,
+          });
+
+          // Check for custom games in this list
+          for (var itemId in list.categoryItemIds) {
+            if (!processedGameIds.contains(itemId)) {
+              final item = storageService.appDataBox.get(itemId);
+              if (item != null && item.isUserCreated) {
+                // This is a custom game, add it to the export
+                customGamesData.add(item.toJson());
+                processedGameIds.add(itemId);
+              }
+            }
+          }
+        }
+      }
+
+      exportData['lists'] = listsData;
+      exportData['customGames'] = customGamesData;
+      exportData['exportDate'] = DateTime.now().toIso8601String();
+      exportData['type'] = 'pkl_guide_lists_export';
+      exportData['version'] = '1.0';
+
+      final jsonString = const JsonEncoder.withIndent('  ').convert(exportData);
+      return jsonString;
+    } catch (e) {
+      print('Error exporting selected lists: $e');
+      throw Exception('Failed to export selected lists: $e');
+    }
+  }
+
+  // Export selected lists to file and share
+  Future<void> shareExportSelectedLists(List<int> listIds) async {
+    try {
+      final jsonString = await exportSelectedListsToJson(listIds);
+
+      final directory = await getApplicationDocumentsDirectory();
+      final timestamp = DateTime.now().toIso8601String().replaceAll(':', '-');
+      final fileName = 'lists_export_$timestamp.json';
+      final file = File('${directory.path}/$fileName');
+
+      await file.writeAsString(jsonString);
+
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        subject: 'ייצוא רשימות',
+        text: 'ייצוא רשימות מאפליקציית פק"ל למדריך',
+      );
+    } catch (e) {
+      print('Error sharing selected lists export: $e');
+      throw Exception('Failed to share selected lists: $e');
+    }
+  }
+
+  // Import selected lists from JSON
+  Future<Map<String, dynamic>> importSelectedListsFromJson(String jsonString) async {
+    try {
+      final Map<String, dynamic> importData = json.decode(jsonString);
+
+      // Validate import data
+      if (importData['type'] != 'pkl_guide_lists_export') {
+        throw Exception('Invalid file type');
+      }
+
+      final result = {
+        'listsImported': 0,
+        'customGamesImported': 0,
+        'listNames': <String>[],
+      };
+
+      // Import custom games first
+      if (importData.containsKey('customGames') && importData['customGames'] != null) {
+        final customGames = importData['customGames'] as List;
+        for (var gameJson in customGames) {
+          final gameId = gameJson['id'] as int;
+          final existingGame = storageService.appDataBox.get(gameId);
+
+          if (existingGame == null) {
+            // Only import if game doesn't exist
+            await storageService.importUserData({'data': [gameJson]});
+            result['customGamesImported'] = (result['customGamesImported'] as int) + 1;
+          }
+        }
+      }
+
+      // Import lists
+      if (importData.containsKey('lists') && importData['lists'] != null) {
+        await listsService.importLists(importData['lists']);
+        result['listsImported'] = (importData['lists'] as List).length;
+
+        // Collect list names for display
+        final listNames = result['listNames'] as List<String>;
+        for (var listJson in importData['lists']) {
+          listNames.add(listJson['name'] as String);
+        }
+      }
+
+      return result;
+    } catch (e) {
+      print('Error importing selected lists: $e');
+      throw Exception('Failed to import lists: $e');
+    }
+  }
 }

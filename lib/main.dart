@@ -1,4 +1,5 @@
 // lib/main.dart
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -10,8 +11,10 @@ import 'screens/home_screen.dart';
 import 'services/storage_service.dart';
 import 'services/json_service.dart';
 import 'services/lists_service.dart';
+import 'services/import_export_service.dart';
 import 'providers/app_provider.dart';
-import 'utils/theme_helper.dart'; // ← הוסף
+import 'utils/theme_helper.dart';
+import 'dialogs/import_dialog.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,6 +32,11 @@ void main() async {
 
   final jsonService = JsonService(storageService);
 
+  final importExportService = ImportExportService(
+    storageService: storageService,
+    listsService: listsService,
+  );
+
   // טעינת ערכת הנושא השמורה
   final savedTheme =
   storageService.settingsBox.get('theme_mode', defaultValue: 'system')
@@ -41,6 +49,7 @@ void main() async {
         Provider<StorageService>.value(value: storageService),
         Provider<JsonService>.value(value: jsonService),
         Provider<ListsService>.value(value: listsService),
+        Provider<ImportExportService>.value(value: importExportService),
         ChangeNotifierProvider(
           create: (_) => AppProvider()..setThemeMode(initialThemeMode),
         ),
@@ -52,14 +61,59 @@ void main() async {
 
 // ← מחקנו את _getThemeModeFromString()
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
+  @override
+  void initState() {
+    super.initState();
+    _handleIncomingIntent();
+  }
+
+  Future<void> _handleIncomingIntent() async {
+    // Support both Android and iOS
+    if (!Platform.isAndroid && !Platform.isIOS) return;
+
+    // Wait a bit for the app to fully initialize
+    await Future.delayed(const Duration(milliseconds: 500));
+
+    try {
+      const platform = MethodChannel('com.gilad.pklGuide/intent');
+      final String? sharedData = await platform.invokeMethod('getSharedData');
+
+      if (sharedData != null && sharedData.isNotEmpty) {
+        // We have incoming data, show the import dialog
+        _showImportDialog(sharedData);
+      }
+    } catch (e) {
+      print('Error handling incoming intent: $e');
+    }
+  }
+
+  void _showImportDialog(String jsonData) {
+    final context = navigatorKey.currentContext;
+    if (context != null) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => ImportDialog(jsonData: jsonData),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Consumer<AppProvider>(
       builder: (context, appProvider, child) {
         return MaterialApp(
+          navigatorKey: navigatorKey,
           title: 'פק"ל למדריך',
           debugShowCheckedModeBanner: false,
           locale: const Locale('he', 'IL'),

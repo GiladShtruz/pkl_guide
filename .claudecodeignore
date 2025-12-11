@@ -1,46 +1,38 @@
-# ===========================
-# Security & Secrets (CRITICAL)
-# ===========================
-# מפתחות חתימה וסיסמאות לאנדרואיד
+# ============================================
+# CLAUDE CODE IGNORE FILE
+# Blocks AI from reading content of these files
+# ============================================
+
+# 1. CRITICAL SECRETS (Must Block)
 **/key.properties
 **/local.properties
 **/*.jks
 **/*.keystore
 **/*.p12
-
-# מפתחות ושירותים (למקרה שיתווספו בעתיד)
 **/google-services.json
 **/GoogleService-Info.plist
-**/gradle.properties
+**/.env
+**/.env.*
 
-# ===========================
-# Build & Generated Files (NOISE)
-# ===========================
-# תיקיות בנייה שסתם מבזבזות טוקנים ומבלבלות את ה-AI
+# 2. NOISE & BUILD ARTIFACTS (Performance)
 build/
-.dart_tool/
 .gradle/
+.dart_tool/
 android/.gradle/
 android/build/
 android/app/build/
 ios/Flutter/ephemeral/
 ios/Pods/
+coverage/
 
-# קבצי Lock (ארוכים מאוד ולא תורמים לקוד)
+# 3. LARGE BINARIES (Save Tokens)
 pubspec.lock
 ios/Podfile.lock
-
-# ===========================
-# Assets & Binaries
-# ===========================
-# ה-AI לא יכול לקרוא תמונות ופונטים כטקסט
-assets/fonts/
-assets/sounds/
-assets/images/
+assets/
 **/*.png
 **/*.jpg
-**/*.jpeg
 **/*.ttf
 **/*.mp3
-**/*.ico
-**/*.svg
+**/*.wav
+**/*.pdf
+**/*.zip
