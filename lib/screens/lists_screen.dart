@@ -4,6 +4,7 @@ import '../models/list_model.dart';
 import '../services/lists_service.dart';
 import '../screens/list_detail_screen.dart';
 import '../dialogs/create_list_dialog.dart';
+import '../dialogs/export_filename_dialog.dart';
 import '../services/import_export_service.dart';
 
 enum ListSortMethod {
@@ -92,31 +93,53 @@ class _ListsScreenState extends State<ListsScreen> {
   void _exportSelectedLists() async {
     if (_selectedLists.isEmpty) return;
 
-    try {
-      // Show loading dialog
-      showDialog(
+    String? filename;
+
+    // If only one list is selected, use its name automatically
+    if (_selectedLists.length == 1) {
+      final listId = _selectedLists.first;
+      final list = _listsService.listsBox.get(listId);
+      if (list != null) {
+        filename = list.name;
+      }
+    } else {
+      // Multiple lists selected - ask for filename
+      final result = await showDialog<String>(
         context: context,
-        barrierDismissible: false,
-        builder: (context) => const Center(
-          child: CircularProgressIndicator(),
+        builder: (context) => const ExportFilenameDialog(
+          suggestedName: 'רשימות מיוצאות',
         ),
       );
 
-      // Export selected lists
-      await _importExportService.shareExportSelectedLists(_selectedLists.toList());
+      if (result == null) {
+        // User cancelled
+        return;
+      }
+
+      filename = result;
+    }
+
+    try {
+      // Show loading dialog
+      if (mounted) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => const Center(
+            child: CircularProgressIndicator(),
+          ),
+        );
+      }
+
+      // Export selected lists with custom filename
+      await _importExportService.shareExportSelectedLists(
+        _selectedLists.toList(),
+        customFilename: filename,
+      );
 
       // Close loading dialog
       if (mounted) Navigator.pop(context);
 
-      // Show success message
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('יוצאו ${_selectedLists.length} רשימות בהצלחה'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
 
       setState(() {
         _selectedLists.clear();

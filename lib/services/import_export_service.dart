@@ -19,6 +19,30 @@ class ImportExportService {
     required this.listsService,
   });
 
+  // Sanitize filename by removing invalid characters
+  static String sanitizeFilename(String filename) {
+    const invalidChars = r'<>:"/\|?*';
+    String cleaned = filename;
+
+    // Remove invalid characters
+    for (int i = 0; i < invalidChars.length; i++) {
+      cleaned = cleaned.replaceAll(invalidChars[i], '');
+    }
+
+    // Remove leading/trailing spaces and dots
+    cleaned = cleaned.trim().replaceAll(RegExp(r'^\.+|\.+$'), '');
+
+    // Replace multiple spaces with single space
+    cleaned = cleaned.replaceAll(RegExp(r'\s+'), ' ');
+
+    // If empty after cleaning, use default name
+    if (cleaned.isEmpty) {
+      cleaned = 'export';
+    }
+
+    return cleaned;
+  }
+
   String generateShareText() {
     final StringBuffer buffer = StringBuffer();
     final List<String> additions = [];
@@ -493,13 +517,22 @@ class ImportExportService {
   }
 
   // Export selected lists to file and share
-  Future<void> shareExportSelectedLists(List<int> listIds) async {
+  Future<void> shareExportSelectedLists(List<int> listIds, {String? customFilename}) async {
     try {
       final jsonString = await exportSelectedListsToJson(listIds);
 
       final directory = await getApplicationDocumentsDirectory();
-      final timestamp = DateTime.now().toIso8601String().replaceAll(':', '-');
-      final fileName = 'lists_export_$timestamp.json';
+
+      // Use custom filename or generate timestamp-based name
+      String fileName;
+      if (customFilename != null && customFilename.isNotEmpty) {
+        final sanitized = sanitizeFilename(customFilename);
+        fileName = '$sanitized.json';
+      } else {
+        final timestamp = DateTime.now().toIso8601String().replaceAll(':', '-');
+        fileName = 'lists_export_$timestamp.json';
+      }
+
       final file = File('${directory.path}/$fileName');
 
       await file.writeAsString(jsonString);
