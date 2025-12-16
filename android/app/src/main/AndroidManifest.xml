@@ -30,11 +30,16 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
-            <!-- Deep link for JSON files -->
+            <!-- Deep link for JSON files only -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
                 <data android:scheme="file"/>
+                <data android:mimeType="application/json"/>
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
                 <data android:scheme="content"/>
                 <data android:mimeType="application/json"/>
             </intent-filter>
@@ -42,8 +47,14 @@
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
                 <data android:scheme="file"/>
+                <data android:host="*"/>
+                <data android:pathPattern=".*\\.json"/>
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
                 <data android:scheme="content"/>
-                <data android:mimeType="*/*"/>
+                <data android:host="*"/>
                 <data android:pathPattern=".*\\.json"/>
             </intent-filter>
         </activity>

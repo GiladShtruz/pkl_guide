@@ -62,7 +62,7 @@
         <array>
             <dict>
                 <key>CFBundleTypeName</key>
-                <string>JSON File</string>
+                <string>JSON Document</string>
                 <key>CFBundleTypeRole</key>
                 <string>Viewer</string>
                 <key>LSHandlerRank</key>
@@ -70,6 +70,10 @@
                 <key>LSItemContentTypes</key>
                 <array>
                     <string>public.json</string>
+                </array>
+                <key>CFBundleTypeExtensions</key>
+                <array>
+                    <string>json</string>
                 </array>
             </dict>
         </array>
