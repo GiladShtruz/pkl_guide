@@ -3,7 +3,7 @@ description: "אפליקציית ערכת הדרכה למדריך"
 
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 
-version: 1.0.4+11
+version: 1.0.5+12
 
 environment:
   sdk: ^3.9.0
@@ -33,6 +33,7 @@ dependencies:
   intl: ^0.20.2
   shared_preferences: ^2.5.3
   upgrader: ^12.1.0
+  screenshot: ^3.0.0
 
 
 dev_dependencies:
@@ -48,6 +49,7 @@ flutter:
   assets:
     - assets/sounds/timer_end.mp3
     - assets/data.json
+    - assets/logoShare.png
 
 
 fonts:

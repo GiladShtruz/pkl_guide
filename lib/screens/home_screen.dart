@@ -10,7 +10,10 @@ import '../services/json_service.dart';
 import '../services/lists_service.dart';
 import '../widgets/category_card.dart';
 import '../widgets/bottom_nav.dart';
+import '../widgets/wrapped_banner.dart';
 import '../screens/category_items_screen.dart';
+import '../screens/wrapped_story_screen.dart';
+import '../services/wrapped_service.dart';
 import '../screens/games_classification_screen.dart';
 import '../screens/search_screen.dart';
 import '../screens/lists_screen.dart';
@@ -30,11 +33,22 @@ class _HomeScreenState extends State<HomeScreen> {
   Map<String, dynamic>? _updateInfo;
   bool _isInitialLoad = true;
   final GlobalKey<SearchScreenState> _searchKey = GlobalKey<SearchScreenState>();
+  bool _showWrappedBanner = false;
+  late WrappedService _wrappedService;
 
   @override
   void initState() {
     super.initState();
     _quickInit();
+    _initWrapped();
+  }
+
+  Future<void> _initWrapped() async {
+    _wrappedService = WrappedService(context.read<StorageService>());
+    await _wrappedService.init();
+    setState(() {
+      _showWrappedBanner = _wrappedService.shouldShowWrapped();
+    });
   }
 
   Future<void> _quickInit() async {
@@ -316,20 +330,38 @@ class _HomeScreenState extends State<HomeScreen> {
         SearchScreen(key: _searchKey),
         const ListsScreen(),
       ][_currentIndex],
-      bottomNavigationBar: CustomBottomNav(
-        currentIndex: _currentIndex,
-        onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-          if (index == 1) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              _searchKey.currentState?.focusSearch();
-            });
-          } else {
-            _searchKey.currentState?.unfocusSearch();
-          }
-        },
+      bottomNavigationBar: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Wrapped banner above bottom nav
+          if (_showWrappedBanner && _currentIndex == 0)
+            WrappedBanner(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const WrappedStoryScreen(),
+                  ),
+                );
+              },
+            ),
+          // Bottom navigation
+          CustomBottomNav(
+            currentIndex: _currentIndex,
+            onTap: (index) {
+              setState(() {
+                _currentIndex = index;
+              });
+              if (index == 1) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  _searchKey.currentState?.focusSearch();
+                });
+              } else {
+                _searchKey.currentState?.unfocusSearch();
+              }
+            },
+          ),
+        ],
       ),
     );
   }
