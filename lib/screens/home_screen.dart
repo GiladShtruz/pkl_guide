@@ -270,8 +270,18 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
-    return Scaffold(
-      appBar: _currentIndex == 0 ? AppBar(
+    return PopScope(
+      canPop: _currentIndex == 0,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        // If not on home tab, go to home tab instead of exiting
+        setState(() {
+          _currentIndex = 0;
+        });
+        _searchKey.currentState?.unfocusSearch();
+      },
+      child: Scaffold(
+        appBar: _currentIndex == 0 ? AppBar(
         title: const Text('פק"ל למדריך'),
         centerTitle: true,
         actions: [
@@ -393,6 +403,7 @@ class _HomeScreenState extends State<HomeScreen> {
             },
           ),
         ],
+      ),
       ),
     );
   }
