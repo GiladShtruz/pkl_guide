@@ -15,6 +15,7 @@ import 'services/import_export_service.dart';
 import 'providers/app_provider.dart';
 import 'utils/theme_helper.dart';
 import 'dialogs/import_dialog.dart';
+import 'providers/home_navigation_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -52,6 +53,9 @@ void main() async {
         Provider<ImportExportService>.value(value: importExportService),
         ChangeNotifierProvider(
           create: (_) => AppProvider()..setThemeMode(initialThemeMode),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => HomeNavigationProvider(),
         ),
       ],
       child: const MyApp(),
@@ -97,14 +101,20 @@ class _MyAppState extends State<MyApp> {
     }
   }
 
-  void _showImportDialog(String jsonData) {
+  Future<void> _showImportDialog(String jsonData) async {
     final context = navigatorKey.currentContext;
     if (context != null) {
-      showDialog(
+      final result = await showDialog<ImportType?>(
         context: context,
         barrierDismissible: false,
         builder: (context) => ImportDialog(jsonData: jsonData),
       );
+
+      // If lists were imported successfully, navigate to Lists tab
+      if (result == ImportType.lists && context.mounted) {
+        final navProvider = context.read<HomeNavigationProvider>();
+        navProvider.navigateToTab(2); // Lists tab is index 2
+      }
     }
   }
 

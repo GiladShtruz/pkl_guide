@@ -324,14 +324,21 @@ class ImportExportService {
     }
   }
 
-  Future<File?> exportToFile({bool includeLists = true}) async {
+  Future<File?> exportToFile({bool includeLists = true, String? customFilename}) async {
     try {
       final jsonString = await exportToJson(includeLists: includeLists);
 
       final directory = await getApplicationDocumentsDirectory();
 
-      final timestamp = DateTime.now().toIso8601String().replaceAll(':', '-');
-      final fileName = 'backup_$timestamp.json';
+      // Use custom filename or generate timestamp-based name
+      String fileName;
+      if (customFilename != null && customFilename.isNotEmpty) {
+        final sanitized = sanitizeFilename(customFilename);
+        fileName = '$sanitized.json';
+      } else {
+        final timestamp = DateTime.now().toIso8601String().replaceAll(':', '-');
+        fileName = 'backup_$timestamp.json';
+      }
       final file = File('${directory.path}/$fileName');
 
       await file.writeAsString(jsonString);
@@ -343,9 +350,9 @@ class ImportExportService {
     }
   }
 
-  Future<void> shareExport({bool includeLists = true}) async {
+  Future<void> shareExport({bool includeLists = true, String? customFilename}) async {
     try {
-      final file = await exportToFile(includeLists: includeLists);
+      final file = await exportToFile(includeLists: includeLists, customFilename: customFilename);
       if (file != null) {
         await Share.shareXFiles(
           [XFile(file.path)],

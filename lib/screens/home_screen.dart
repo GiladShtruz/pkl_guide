@@ -18,7 +18,10 @@ import '../screens/games_classification_screen.dart';
 import '../screens/search_screen.dart';
 import '../screens/lists_screen.dart';
 import '../dialogs/about_dialog.dart';
+import '../dialogs/export_filename_dialog.dart';
 import '../utils/theme_helper.dart'; // ← הוסף
+import '../providers/home_navigation_provider.dart';
+import 'package:intl/intl.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -41,6 +44,34 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     _quickInit();
     _initWrapped();
+    _setupNavigationListener();
+  }
+
+  void _setupNavigationListener() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final navProvider = context.read<HomeNavigationProvider>();
+      navProvider.addListener(_onNavigationChanged);
+    });
+  }
+
+  void _onNavigationChanged() {
+    final navProvider = context.read<HomeNavigationProvider>();
+    final pendingIndex = navProvider.pendingNavigationIndex;
+    if (pendingIndex >= 0 && pendingIndex <= 2) {
+      setState(() {
+        _currentIndex = pendingIndex;
+      });
+      navProvider.clearPendingNavigation();
+    }
+  }
+
+  @override
+  void dispose() {
+    try {
+      final navProvider = context.read<HomeNavigationProvider>();
+      navProvider.removeListener(_onNavigationChanged);
+    } catch (_) {}
+    super.dispose();
   }
 
   Future<void> _initWrapped() async {
@@ -520,7 +551,25 @@ class _HomeScreenState extends State<HomeScreen> {
       );
 
       if (confirmed == true) {
-        await importExportService.shareExport(includeLists: exportLists);
+        // Generate default filename with today's date
+        final dateFormat = DateFormat('dd.MM.yyyy');
+        final today = dateFormat.format(DateTime.now());
+        final defaultFilename = 'גיבוי פקל למדריך $today';
+
+        // Show filename dialog
+        final filename = await showDialog<String>(
+          context: context,
+          builder: (context) => ExportFilenameDialog(
+            suggestedName: defaultFilename,
+          ),
+        );
+
+        if (filename != null && filename.isNotEmpty) {
+          await importExportService.shareExport(
+            includeLists: exportLists,
+            customFilename: filename,
+          );
+        }
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
