@@ -29,22 +29,21 @@ class ItemModelAdapter extends TypeAdapter<ItemModel> {
       userClassification: fields[9] as String?,
       originalEquipment: fields[10] as String?,
       userEquipment: fields[11] as String?,
-      elements: _buildElementsList(
-        fields[13] as List<String>? ?? [],
-        fields[14] as List<bool>? ?? [],
-      ),
       isElementsChanged: fields[15] as bool,
       lastAccessed: fields[16] as DateTime?,
       clickCount: fields[17] as int,
       isUserCreated: fields[18] as bool,
       isUserChanged: fields[19] as bool,
+      selectedElements: (fields[20] as List?)?.cast<bool>(),
+      elementTextsParam: (fields[13] as List?)?.cast<String>(),
+      isUserElementListParam: (fields[14] as List?)?.cast<bool>(),
     );
   }
 
   @override
   void write(BinaryWriter writer, ItemModel obj) {
     writer
-      ..writeByte(19)
+      ..writeByte(20)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -82,7 +81,9 @@ class ItemModelAdapter extends TypeAdapter<ItemModel> {
       ..writeByte(18)
       ..write(obj.isUserCreated)
       ..writeByte(19)
-      ..write(obj.isUserChanged);
+      ..write(obj.isUserChanged)
+      ..writeByte(20)
+      ..write(obj.selectedElements);
   }
 
   @override
@@ -91,19 +92,7 @@ class ItemModelAdapter extends TypeAdapter<ItemModel> {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-          other is ItemModelAdapter &&
-              runtimeType == other.runtimeType &&
-              typeId == other.typeId;
-
-  // Helper method to build elements list from two parallel lists
-  static List<ElementModel> _buildElementsList(List<String> texts, List<bool> types) {
-    final result = <ElementModel>[];
-    for (int i = 0; i < texts.length; i++) {
-      result.add(ElementModel(
-        texts[i],
-        i < types.length ? types[i] : false,
-      ));
-    }
-    return result;
-  }
+      other is ItemModelAdapter &&
+          runtimeType == other.runtimeType &&
+          typeId == other.typeId;
 }

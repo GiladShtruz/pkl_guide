@@ -63,6 +63,9 @@ class ItemModel extends HiveObject {
   @HiveField(19)
   bool isUserChanged;
 
+  @HiveField(20)
+  List<bool> selectedElements;
+
   ItemModel({
     required this.id,
     required this.category,
@@ -76,14 +79,21 @@ class ItemModel extends HiveObject {
     this.userClassification,
     this.originalEquipment,
     this.userEquipment,
-    required List<ElementModel> elements,
+    List<ElementModel>? elements,
     this.isElementsChanged = false,
     this.lastAccessed,
     this.clickCount = 0,
     this.isUserCreated = false,
     this.isUserChanged = false,
-  }) : elementTexts = elements.map((e) => e.text).toList(),
-        isUserElementList = elements.map((e) => e.isUserElement).toList();
+    List<bool>? selectedElements,
+    List<String>? elementTextsParam,
+    List<bool>? isUserElementListParam,
+  }) : elementTexts = elementTextsParam ?? elements?.map((e) => e.text).toList() ?? [],
+        isUserElementList = isUserElementListParam ?? elements?.map((e) => e.isUserElement).toList() ?? [],
+        selectedElements = selectedElements ?? List.filled(
+          elementTextsParam?.length ?? elements?.length ?? 0,
+          false
+        );
 
   // Validation check
   bool get isValidState => elementTexts.length == isUserElementList.length;
@@ -160,8 +170,15 @@ class ItemModel extends HiveObject {
 
   // Private method to sync both lists
   void _updateElementLists(List<ElementModel> newElements) {
+    final oldLength = elementTexts.length;
     elementTexts = newElements.map((e) => e.text).toList();
     isUserElementList = newElements.map((e) => e.isUserElement).toList();
+    // Resize selectedElements to match new length, preserving existing selections where possible
+    if (newElements.length > oldLength) {
+      selectedElements.addAll(List.filled(newElements.length - oldLength, false));
+    } else if (newElements.length < oldLength) {
+      selectedElements = selectedElements.sublist(0, newElements.length);
+    }
     isElementsChanged = hasUserElements;
     if (isElementsChanged) {
       isUserChanged = true;
@@ -185,9 +202,12 @@ class ItemModel extends HiveObject {
 
     final text = elementTexts.removeAt(oldIndex);
     final type = isUserElementList.removeAt(oldIndex);
+    _ensureSelectedElementsSize();
+    final selected = selectedElements.removeAt(oldIndex);
 
     elementTexts.insert(newIndex, text);
     isUserElementList.insert(newIndex, type);
+    selectedElements.insert(newIndex, selected);
 
     save();
   }
@@ -199,12 +219,16 @@ class ItemModel extends HiveObject {
 
     final tempText = elementTexts[index1];
     final tempType = isUserElementList[index1];
+    _ensureSelectedElementsSize();
+    final tempSelected = selectedElements[index1];
 
     elementTexts[index1] = elementTexts[index2];
     isUserElementList[index1] = isUserElementList[index2];
+    selectedElements[index1] = selectedElements[index2];
 
     elementTexts[index2] = tempText;
     isUserElementList[index2] = tempType;
+    selectedElements[index2] = tempSelected;
 
     save();
   }
@@ -215,6 +239,8 @@ class ItemModel extends HiveObject {
 
     elementTexts.insert(index, elementText);
     isUserElementList.insert(index, isUserCreated);
+    _ensureSelectedElementsSize();
+    selectedElements.insert(index, false);
 
     if (isUserCreated) {
       isElementsChanged = true;
@@ -227,6 +253,8 @@ class ItemModel extends HiveObject {
   void addElement(String elementText, {bool isUserCreated = true}) {
     elementTexts.add(elementText);
     isUserElementList.add(isUserCreated);
+    _ensureSelectedElementsSize();
+    selectedElements.add(false);
 
     if (isUserCreated) {
       isElementsChanged = true;
@@ -243,6 +271,10 @@ class ItemModel extends HiveObject {
 
     elementTexts.removeAt(index);
     isUserElementList.removeAt(index);
+    _ensureSelectedElementsSize();
+    if (index < selectedElements.length) {
+      selectedElements.removeAt(index);
+    }
 
     if (wasUserElement && !hasUserElements) {
       isElementsChanged = false;
@@ -291,6 +323,52 @@ class ItemModel extends HiveObject {
   bool hasElement(String text) {
     return elementTexts.contains(text);
   }
+
+  // Ensure selectedElements list is synced with elementTexts size
+  void _ensureSelectedElementsSize() {
+    while (selectedElements.length < elementTexts.length) {
+      selectedElements.add(false);
+    }
+    while (selectedElements.length > elementTexts.length) {
+      selectedElements.removeLast();
+    }
+  }
+
+  // Check if element at index is selected
+  bool isElementSelected(int index) {
+    _ensureSelectedElementsSize();
+    if (index >= 0 && index < selectedElements.length) {
+      return selectedElements[index];
+    }
+    return false;
+  }
+
+  // Toggle element selection
+  void toggleElementSelection(int index) {
+    _ensureSelectedElementsSize();
+    if (index >= 0 && index < selectedElements.length) {
+      selectedElements[index] = !selectedElements[index];
+      save();
+    }
+  }
+
+  // Set element selection
+  void setElementSelected(int index, bool selected) {
+    _ensureSelectedElementsSize();
+    if (index >= 0 && index < selectedElements.length) {
+      selectedElements[index] = selected;
+      save();
+    }
+  }
+
+  // Clear all selections
+  void clearAllSelections() {
+    selectedElements = List.filled(elementTexts.length, false);
+    save();
+  }
+
+  // Get count of selected elements
+  int get selectedCount => selectedElements.where((s) => s).length;
 
   // Reset specific field methods
   void resetTitle() {

@@ -25,8 +25,6 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
   late ListsService _listsService;
   late StorageService _storageService;
 
-  final Set<int> _selectedIndices = {};
-
   final ScrollController _scrollController = ScrollController();
   bool _showTitleInAppBar = false;
 
@@ -99,11 +97,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
 
   void _toggleSelection(int index) {
     setState(() {
-      if (_selectedIndices.contains(index)) {
-        _selectedIndices.remove(index);
-      } else {
-        _selectedIndices.add(index);
-      }
+      widget.item.toggleElementSelection(index);
     });
   }
 
@@ -141,8 +135,6 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
         widget.item.classification?.toLowerCase().contains("אינטראקטיבי") ??
         false;
     final hasModifications = widget.item.hasUserModifications;
-    final originalCount = widget.item.originalElements.length;
-    final userAddedCount = widget.item.userElements.length;
 
     final allElements = widget.item.elements;
     final totalItems = allElements.length;
@@ -277,6 +269,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                             ),
                           ),
                           Row(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
                               Container(
                                 padding: const EdgeInsets.symmetric(
@@ -290,7 +283,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Text(
-                                  '$originalCount פריטים',
+                                  '$totalItems פריטים',
                                   style: TextStyle(
                                     fontSize: 14,
                                     fontWeight: FontWeight.bold,
@@ -300,28 +293,18 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                                   ),
                                 ),
                               ),
-                              if (userAddedCount > 0) ...[
-                                const SizedBox(width: 8),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 4,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Colors.blue.withOpacity(0.2),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Text(
-                                    '+$userAddedCount נוספו',
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.blue,
-                                    ),
-                                  ),
+                              if (widget.item.selectedCount > 0) ...[
+                                const SizedBox(width: 4),
+                                IconButton(
+                                  icon: const Icon(Icons.clear_all, color: Colors.green),
+                                  onPressed: () {
+                                    setState(() {
+                                      widget.item.clearAllSelections();
+                                    });
+                                  },
+                                  tooltip: 'נקה סימונים',
                                 ),
                               ],
-                              const SizedBox(width: 8),
                               IconButton(
                                 icon: Icon(_isSearching ? Icons.close : Icons.search),
                                 onPressed: _toggleSearch,
@@ -363,7 +346,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                   final element = allElements[index];
                   final itemText = element.text;
                   final isUserAdded = element.isUserElement;
-                  final isSelected = _selectedIndices.contains(index);
+                  final isSelected = widget.item.isElementSelected(index);
 
                   if (widget.item.category == 'riddles') {
                     final isDarkMode =
