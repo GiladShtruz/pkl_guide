@@ -40,18 +40,18 @@ class ContentHelper {
     switch (categoryName.toLowerCase()) {
       case 'games':
       case 'משחקים':
-        return 'הכנס מילה חדשה...';
+        return 'הוסף טקסט חדש';
       case 'activities':
       case 'פעילויות':
-        return 'הכנס פעילות חדשה...';
+        return 'הוסף טקסט חדש';
       case 'riddles':
       case 'חידות':
-        return 'הכנס חידה חדשה...';
+        return 'הוסף חידה חדשה';
       case 'texts':
       case 'קטעים':
-        return 'הכנס קטע חדש...';
+        return 'הוסף שאלה לקטע';
       default:
-        return 'הכנס תוכן חדש...';
+        return 'הוסף תוכן חדש...';
     }
   }
 
@@ -60,16 +60,16 @@ class ContentHelper {
     switch (categoryName.toLowerCase()) {
       case 'games':
       case 'משחקים':
-        return 'מילים';
+        return 'רשימה:';
       case 'activities':
       case 'פעילויות':
-        return 'תוכן';
+        return 'רשימה:';
       case 'riddles':
       case 'חידות':
-        return 'חידות';
+        return 'חידות:';
       case 'texts':
       case 'קטעים':
-        return 'קטעים';
+        return 'קטעים:';
       default:
         return 'תוכן';
     }

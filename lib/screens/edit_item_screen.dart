@@ -98,7 +98,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
     if (trimmedName != widget.item.originalTitle) {
       await _storageService.updateItemTitle(
         widget.item.id,
-        trimmedName,
+        trimmedName
       );
     }
 
@@ -106,7 +106,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
     if (trimmedDetail != (widget.item.originalDetail ?? '')) {
       await _storageService.updateItemDetail(
         widget.item.id,
-        trimmedDetail.isNotEmpty ? trimmedDetail : null,
+        trimmedDetail
       );
     }
 
@@ -114,15 +114,16 @@ class _EditItemScreenState extends State<EditItemScreen> {
     if (trimmedLink != (widget.item.originalLink ?? '')) {
       await _storageService.updateItemLink(
         widget.item.id,
-        trimmedLink.isNotEmpty ? trimmedLink : null,
+        trimmedLink
       );
     }
 
     final trimmedEquipment = _equipmentController.text.trim();
+    print(trimmedEquipment != (widget.item.originalEquipment ?? ''));
     if (trimmedEquipment != (widget.item.originalEquipment ?? '')) {
       await _storageService.updateItemEquipment(
         widget.item.id,
-        trimmedEquipment.isNotEmpty ? trimmedEquipment : null,
+        trimmedEquipment
       );
     }
 
@@ -130,7 +131,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
     if (trimmedClassification != (widget.item.originalClassification ?? '')) {
       await _storageService.updateItemClassification(
         widget.item.id,
-        trimmedClassification.isNotEmpty ? trimmedClassification : null,
+        trimmedClassification
       );
     }
 
@@ -523,14 +524,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
               : Colors.grey,
           child: const Icon(Icons.delete),
         )
-            : FloatingActionButton.extended(
-          onPressed: () async {
-            await _saveChanges();
-            Navigator.pop(context, true);
-          },
-          label: const Text('שמור'),
-          icon: const Icon(Icons.save),
-        ),
+            : null,
         floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       ),
     );
@@ -541,11 +535,6 @@ class _EditItemScreenState extends State<EditItemScreen> {
       // Add new content
       Row(
         children: [
-          const Text(
-            'הוסף תוכן:',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(width: 8),
           Expanded(
             child: TextField(
               textInputAction: TextInputAction.next,
