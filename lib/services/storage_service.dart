@@ -175,7 +175,6 @@ class StorageService {
   }
 
   SortingMethod getSortingMethod(CategoryType category) {
-    // TODO: check why return SortingMethod.original and if it works
     final methodName = settingsBox.get('sorting_${category.name}');
     if (methodName != null) {
       return SortingMethod.values.firstWhere(
@@ -183,7 +182,7 @@ class StorageService {
         orElse: () => SortingMethod.original,
       );
     }
-    return SortingMethod.lastAccessed;
+    return SortingMethod.original;
   }
   Future<void> saveAboutText(String aboutText) async {
     await settingsBox.put('about_text', aboutText);

@@ -71,8 +71,10 @@ class _CategoryItemsScreenState extends State<CategoryItemsScreen> {
     !_listsService.isFavorite(item.id)).toList();
     _filteredFavoriteItems = List.from(_favoriteItems);
     _filteredRegularItems = List.from(_regularItems);
-    // Apply sorting
-    final sortingMethod = appProvider.getSortingMethod(widget.category);
+
+    // Load sorting from Hive and sync with AppProvider
+    final sortingMethod = storageService.getSortingMethod(widget.category);
+    appProvider.setSortingMethod(widget.category, sortingMethod);
     _sortItems(sortingMethod);
   }
 
@@ -272,6 +274,8 @@ class _CategoryItemsScreenState extends State<CategoryItemsScreen> {
               PopupMenuButton<SortingMethod>(
                 icon: const Icon(Icons.sort),
                 onSelected: (method) {
+                  final storageService = context.read<StorageService>();
+                  storageService.saveSortingMethod(widget.category, method);
                   appProvider.setSortingMethod(widget.category, method);
                   setState(() {
                     _sortItems(method);
