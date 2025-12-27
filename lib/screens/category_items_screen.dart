@@ -74,7 +74,12 @@ class _CategoryItemsScreenState extends State<CategoryItemsScreen> {
 
     // Load sorting from Hive and sync with AppProvider
     final sortingMethod = storageService.getSortingMethod(widget.category);
-    appProvider.setSortingMethod(widget.category, sortingMethod);
+    // Defer the setSortingMethod call to after build to avoid setState during build error
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        appProvider.setSortingMethod(widget.category, sortingMethod);
+      }
+    });
     _sortItems(sortingMethod);
   }
 
