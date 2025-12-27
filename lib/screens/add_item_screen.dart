@@ -58,6 +58,67 @@ class _AddItemScreenState extends State<AddItemScreen> {
     });
   }
 
+  bool _hasContent() {
+    final nameSet = _nameController.text.trim().isNotEmpty;
+    final detailSet = _detailController.text.trim().isNotEmpty;
+    final linkSet = _linkController.text.trim().isNotEmpty;
+    final classificationSet = _classificationController.text.trim().isNotEmpty;
+    final classificationSame = _classificationController.text.trim() != widget.classification;
+    final equipmentSet = _equipmentController.text.trim().isNotEmpty;
+    final listNotEmpty = _contentList.isNotEmpty;
+
+    // הדפסת המצב של כל שדה בנפרד לטרמינל
+    print("""
+  --- בדיקת תוכן ---
+  Name: $nameSet ('${_nameController.text}')
+  Detail: $detailSet
+  Link: $linkSet
+  ClassificationSet: ${(classificationSet )}
+  ClassificationSame: ${classificationSame}
+  ClassificationAll: ${!(classificationSet || classificationSame)}
+  Equipment: $equipmentSet
+  List: $listNotEmpty
+  ------------------
+  """);
+
+    return nameSet ||
+        detailSet ||
+        linkSet ||
+        (classificationSet && classificationSame) ||
+        equipmentSet ||
+        listNotEmpty;
+  }
+
+  // bool _hasContent() {
+  //   return _nameController.text.trim().isNotEmpty ||
+  //       _detailController.text.trim().isNotEmpty ||
+  //       _linkController.text.trim().isNotEmpty ||
+  //       (_classificationController.text.trim().isNotEmpty || _classificationController.text.trim() == widget.classification) ||
+  //       _equipmentController.text.trim().isNotEmpty ||
+  //       _contentList.isNotEmpty;
+  // }
+
+  Future<bool> _confirmDiscard() async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('יציאה ללא שמירה'),
+        content: const Text('הזנת תוכן שלא נשמר. האם לצאת בלי לשמור?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('ביטול'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('צא', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;
+  }
+
   void _saveItem() async {
     if (_formKey.currentState!.validate()) {
       final storageService = context.read<StorageService>();
@@ -93,11 +154,25 @@ class _AddItemScreenState extends State<AddItemScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(ContentHelper.getAddItemTitle(widget.category.name)), // ← שינוי כאן
-        centerTitle: true,
-      ),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        if (_hasContent()) {
+
+          final shouldDiscard = await _confirmDiscard();
+          if (shouldDiscard && mounted) {
+            Navigator.pop(context);
+          }
+        } else {
+          Navigator.pop(context);
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(ContentHelper.getAddItemTitle(widget.category.name)),
+          centerTitle: true,
+        ),
       body: Form(
         key: _formKey,
         child: SingleChildScrollView(
@@ -225,12 +300,13 @@ class _AddItemScreenState extends State<AddItemScreen> {
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _saveItem,
-        label: const Text('שמור'),
-        icon: const Icon(Icons.save),
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: _saveItem,
+          label: const Text('שמור'),
+          icon: const Icon(Icons.save),
+        ),
+        floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
   }
 }
