@@ -38,6 +38,11 @@ class _EditItemScreenState extends State<EditItemScreen> {
 
   late List<ElementModel> _currentElements;
 
+  // Search
+  bool _isSearchingElements = false;
+  final TextEditingController _searchController = TextEditingController();
+  List<int> _filteredIndices = [];
+
   @override
   void initState() {
     super.initState();
@@ -67,9 +72,42 @@ class _EditItemScreenState extends State<EditItemScreen> {
     _linkController.addListener(_markChanged);
     _equipmentController.addListener(_markChanged);
     _classificationController.addListener(_markChanged);
+    _searchController.addListener(_filterElements);
+
+    _initFilteredIndices();
 
     setState(() {
       _isInitializing = false;
+    });
+  }
+
+  void _initFilteredIndices() {
+    _filteredIndices = List.generate(_currentElements.length, (i) => i);
+  }
+
+  void _filterElements() {
+    final query = _searchController.text.toLowerCase().trim();
+    setState(() {
+      if (query.isEmpty) {
+        _initFilteredIndices();
+      } else {
+        _filteredIndices = [];
+        for (int i = 0; i < _currentElements.length; i++) {
+          if (_currentElements[i].text.toLowerCase().contains(query)) {
+            _filteredIndices.add(i);
+          }
+        }
+      }
+    });
+  }
+
+  void _toggleElementsSearch() {
+    setState(() {
+      _isSearchingElements = !_isSearchingElements;
+      if (!_isSearchingElements) {
+        _searchController.clear();
+        _initFilteredIndices();
+      }
     });
   }
 
@@ -89,6 +127,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
     _equipmentController.dispose();
     _classificationController.dispose();
     _newItemController.dispose();
+    _searchController.dispose();
     _addElementsFocusNode.dispose();
     super.dispose();
   }
@@ -220,6 +259,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
         _currentElements.insert(0, ElementModel(trimmedText, true));
         _hasChanges = true;
         _isChangeElements = true;
+        _initFilteredIndices();
       });
 
       _newItemController.clear();
@@ -557,27 +597,35 @@ class _EditItemScreenState extends State<EditItemScreen> {
       ),
       const SizedBox(height: 16),
 
+
+
       // Content list header
       Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
-            ContentHelper.getContentSectionLabel(widget.item.category), // ← שינוי כאן
+            ContentHelper.getContentSectionLabel(widget.item.category),
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           Row(
             children: [
-              if (_isChangeElements)
-                TextButton.icon(
-                  onPressed: () => _resetData(
-                    CategoryEntry.elements,
-                    "שחזר שינויים",
-                    "האם לחזור למצב שהיה לפני השינויים?",
-                  ),
-                  icon: const Icon(Icons.restore, size: 16),
-                  label: const Text('שחזר שינויים'),
-                  style: TextButton.styleFrom(foregroundColor: Colors.orange),
+              if (_currentElements.isNotEmpty && !_isSearchingElements)
+                IconButton(
+                  icon: const Icon(Icons.search),
+                  onPressed: _toggleElementsSearch,
+                  tooltip: 'חיפוש',
                 ),
+              // if (_isChangeElements)
+              //   TextButton.icon(
+              //     onPressed: () => _resetData(
+              //       CategoryEntry.elements,
+              //       "שחזר שינויים",
+              //       "האם לחזור למצב שהיה לפני השינויים?",
+              //     ),
+              //     icon: const Icon(Icons.restore, size: 16),
+              //     label: const Text('שחזר שינויים'),
+              //     style: TextButton.styleFrom(foregroundColor: Colors.orange),
+              //   ),
               TextButton.icon(
                 onPressed: _isChangingMode
                     ? null
@@ -609,7 +657,25 @@ class _EditItemScreenState extends State<EditItemScreen> {
         ],
       ),
       const SizedBox(height: 8),
-
+      // Search field for elements
+      if (_isSearchingElements)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 16),
+          child: TextField(
+            controller: _searchController,
+            autofocus: true,
+            decoration: InputDecoration(
+              hintText: 'חפש באלמנטים...',
+              prefixIcon: const Icon(Icons.search),
+              suffixIcon: IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: _toggleElementsSearch,
+              ),
+              border: const OutlineInputBorder(),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            ),
+          ),
+        ),
       _buildElementsList(),
     ];
   }
@@ -633,14 +699,37 @@ class _EditItemScreenState extends State<EditItemScreen> {
       final screenHeight = MediaQuery.of(context).size.height;
       final maxHeight = screenHeight * 0.5;
       final estimatedItemHeight = 72.0;
-      final calculatedHeight = min(maxHeight, _currentElements.length * estimatedItemHeight);
+      final displayCount = _filteredIndices.length;
+      final calculatedHeight = min(maxHeight, displayCount * estimatedItemHeight);
+
+      if (_isSearchingElements && displayCount == 0) {
+        return Card(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Center(
+              child: Text(
+                'לא נמצאו תוצאות עבור "${_searchController.text}"',
+                style: TextStyle(color: Colors.grey[600]),
+              ),
+            ),
+          ),
+        );
+      }
 
       return Card(
         child: SizedBox(
           height: calculatedHeight,
           child: ReorderableListView.builder(
-            itemCount: _currentElements.length,
-            onReorder: (oldIndex, newIndex) {
+            itemCount: displayCount,
+            onReorder: (oldListIndex, newListIndex) {
+              // Convert filtered indices to actual indices
+              final oldIndex = _filteredIndices[oldListIndex];
+              var newIndex = newListIndex >= displayCount
+                  ? _filteredIndices[displayCount - 1] + 1
+                  : _filteredIndices[newListIndex];
+              if (newListIndex > oldListIndex && newListIndex < displayCount) {
+                newIndex = _filteredIndices[newListIndex];
+              }
               setState(() {
                 if (newIndex > oldIndex) {
                   newIndex -= 1;
@@ -649,9 +738,11 @@ class _EditItemScreenState extends State<EditItemScreen> {
                 _currentElements.insert(newIndex, element);
                 _isChangeElements = true;
                 _hasChanges = true;
+                _filterElements(); // Refresh filtered indices
               });
             },
-            itemBuilder: (context, index) {
+            itemBuilder: (context, listIndex) {
+              final index = _filteredIndices[listIndex];
               final element = _currentElements[index];
               final isSelected = _selectedIndices.contains(index);
               final canDelete = element.isUserElement;
@@ -702,21 +793,38 @@ class _EditItemScreenState extends State<EditItemScreen> {
       );
     }
 
-    // Normal view
+    // Normal view - show filtered elements
+    final displayCount = _filteredIndices.length;
+
+    if (_isSearchingElements && displayCount == 0) {
+      return Card(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Center(
+            child: Text(
+              'לא נמצאו תוצאות עבור "${_searchController.text}"',
+              style: TextStyle(color: Colors.grey[600]),
+            ),
+          ),
+        ),
+      );
+    }
+
     return Card(
       child: Container(
         constraints: BoxConstraints(
-          maxHeight: _currentElements.length > 50
+          maxHeight: displayCount > 50
               ? MediaQuery.of(context).size.height * 0.5
               : double.infinity,
         ),
         child: ListView.builder(
-          shrinkWrap: _currentElements.length <= 50,
-          physics: _currentElements.length <= 50
+          shrinkWrap: displayCount <= 50,
+          physics: displayCount <= 50
               ? const NeverScrollableScrollPhysics()
               : const AlwaysScrollableScrollPhysics(),
-          itemCount: _currentElements.length,
-          itemBuilder: (context, index) {
+          itemCount: displayCount,
+          itemBuilder: (context, listIndex) {
+            final index = _filteredIndices[listIndex];
             final element = _currentElements[index];
             final isUserElement = element.isUserElement;
 
@@ -744,7 +852,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
                   )
                       : null,
                 ),
-                if (index < _currentElements.length - 1)
+                if (listIndex < displayCount - 1)
                   const Divider(height: 1),
               ],
             );

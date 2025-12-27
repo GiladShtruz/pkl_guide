@@ -30,6 +30,11 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
   final ScrollController _scrollController = ScrollController();
   bool _showTitleInAppBar = false;
 
+  // Search
+  bool _isSearching = false;
+  final TextEditingController _searchController = TextEditingController();
+  List<int> _filteredIndices = [];
+
   @override
   void initState() {
     super.initState();
@@ -38,12 +43,45 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
 
     _storageService.updateItemAccess(widget.item.id);
     _scrollController.addListener(_onScroll);
+    _searchController.addListener(_filterElements);
+    _initFilteredIndices();
+  }
+
+  void _initFilteredIndices() {
+    _filteredIndices = List.generate(widget.item.elements.length, (i) => i);
+  }
+
+  void _filterElements() {
+    final query = _searchController.text.toLowerCase().trim();
+    setState(() {
+      if (query.isEmpty) {
+        _initFilteredIndices();
+      } else {
+        _filteredIndices = [];
+        for (int i = 0; i < widget.item.elements.length; i++) {
+          if (widget.item.elements[i].text.toLowerCase().contains(query)) {
+            _filteredIndices.add(i);
+          }
+        }
+      }
+    });
+  }
+
+  void _toggleSearch() {
+    setState(() {
+      _isSearching = !_isSearching;
+      if (!_isSearching) {
+        _searchController.clear();
+        _initFilteredIndices();
+      }
+    });
   }
 
   @override
   void dispose() {
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
   void _onScroll() {
@@ -110,38 +148,40 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     final totalItems = allElements.length;
 
     return Scaffold(
-      appBar: AppBar(
+        appBar: AppBar(
         title: _showTitleInAppBar
-            ? Column(
-          children: [
-            Text(widget.item.name),
-            if (hasModifications)
-              const Text(
-                'עודכן',
-                style: TextStyle(fontSize: 12, color: Colors.blue),
-              ),
-          ],
-        )
-            : null,
+                ? Column(
+                    children: [
+                      Text(widget.item.name),
+                      if (hasModifications)
+                        const Text(
+                          'עודכן',
+                          style: TextStyle(fontSize: 12, color: Colors.blue),
+                        ),
+                    ],
+                  )
+                : null,
         centerTitle: true,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.bookmark_border),
-            onPressed: _openListsDialog,
-          ),
-          IconButton(
-            icon: const Icon(Icons.edit),
-            onPressed: () =>
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => EditItemScreen(item: widget.item),
-                  ),
-                ).then((_) {
-                  setState(() {});
-                }),
-          ),
-        ],
+                IconButton(
+                  icon: const Icon(Icons.bookmark_border),
+                  onPressed: _openListsDialog,
+                ),
+                IconButton(
+                  icon: const Icon(Icons.edit),
+                  onPressed: () =>
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => EditItemScreen(item: widget.item),
+                        ),
+                      ).then((_) {
+                        setState(() {
+                          _initFilteredIndices();
+                        });
+                      }),
+                ),
+              ],
       ),
 
       body: CustomScrollView(
@@ -281,11 +321,31 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                                   ),
                                 ),
                               ],
+                              const SizedBox(width: 8),
+                              IconButton(
+                                icon: Icon(_isSearching ? Icons.close : Icons.search),
+                                onPressed: _toggleSearch,
+                                tooltip: _isSearching ? 'סגור חיפוש' : 'חיפוש',
+                              ),
                             ],
                           ),
                         ],
                       ),
                     ),
+                    if (_isSearching)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: TextField(
+                          controller: _searchController,
+                          autofocus: true,
+                          decoration: InputDecoration(
+                            hintText: 'חפש באלמנטים...',
+                            prefixIcon: const Icon(Icons.search),
+                            border: const OutlineInputBorder(),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          ),
+                        ),
+                      ),
                     const Divider(),
                   ],
                 ],
@@ -297,8 +357,9 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
             SliverPadding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               sliver: SliverList.builder(
-                itemCount: totalItems,
-                itemBuilder: (context, index) {
+                itemCount: _filteredIndices.length,
+                itemBuilder: (context, listIndex) {
+                  final index = _filteredIndices[listIndex];
                   final element = allElements[index];
                   final itemText = element.text;
                   final isUserAdded = element.isUserElement;
@@ -481,7 +542,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
               backgroundColor: Colors.green,
             )
           : null,
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+        floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
   }
 
