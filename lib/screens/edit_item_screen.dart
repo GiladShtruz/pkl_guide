@@ -255,6 +255,22 @@ class _EditItemScreenState extends State<EditItemScreen> {
   void _addContent() async {
     final trimmedText = _newItemController.text.trim();
     if (trimmedText.isNotEmpty) {
+      // Check if element already exists
+      final exists = _currentElements.any(
+        (element) => element.text.trim().toLowerCase() == trimmedText.toLowerCase()
+      );
+
+      if (exists) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('הטקסט שניסית להוסיף כבר קיים'),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 2),
+          ),
+        );
+        return;
+      }
+
       setState(() {
         _currentElements.insert(0, ElementModel(trimmedText, true));
         _hasChanges = true;
