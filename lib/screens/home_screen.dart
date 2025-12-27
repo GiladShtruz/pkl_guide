@@ -36,6 +36,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Map<String, dynamic>? _updateInfo;
   bool _isInitialLoad = true;
   final GlobalKey<SearchScreenState> _searchKey = GlobalKey<SearchScreenState>();
+  final GlobalKey<ListsScreenState> _listsKey = GlobalKey<ListsScreenState>();
   bool _showWrappedBanner = false;
   late WrappedService _wrappedService;
 
@@ -274,7 +275,14 @@ class _HomeScreenState extends State<HomeScreen> {
       canPop: _currentIndex == 0,
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
-        // If not on home tab, go to home tab instead of exiting
+
+        // If on Lists tab and in edit mode, exit edit mode first
+        if (_currentIndex == 2) {
+          final exited = _listsKey.currentState?.exitEditMode() ?? false;
+          if (exited) return; // Handled by ListsScreen
+        }
+
+        // Otherwise, go to home tab
         setState(() {
           _currentIndex = 0;
         });
@@ -369,7 +377,7 @@ class _HomeScreenState extends State<HomeScreen> {
       body: [
         _buildHomeGrid(),
         SearchScreen(key: _searchKey),
-        const ListsScreen(),
+        ListsScreen(key: _listsKey),
       ][_currentIndex],
       bottomNavigationBar: Column(
         mainAxisSize: MainAxisSize.min,

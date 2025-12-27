@@ -19,11 +19,22 @@ class ListsScreen extends StatefulWidget {
   const ListsScreen({super.key});
 
   @override
-  State<ListsScreen> createState() => _ListsScreenState();
+  State<ListsScreen> createState() => ListsScreenState();
 }
 
-class _ListsScreenState extends State<ListsScreen> {
+class ListsScreenState extends State<ListsScreen> {
   bool _isEditMode = false;
+
+  bool get isEditMode => _isEditMode;
+
+  /// Exit edit mode - returns true if was in edit mode
+  bool exitEditMode() {
+    if (_isEditMode) {
+      _toggleEditMode();
+      return true;
+    }
+    return false;
+  }
   final Set<int> _selectedLists = {};
   late ListsService _listsService;
   late ImportExportService _importExportService;
@@ -35,6 +46,8 @@ class _ListsScreenState extends State<ListsScreen> {
     _listsService = context.read<ListsService>();
     _importExportService = context.read<ImportExportService>();
   }
+
+
 
   void _toggleEditMode() {
     setState(() {
@@ -191,17 +204,7 @@ class _ListsScreenState extends State<ListsScreen> {
   Widget build(BuildContext context) {
     final lists = _getSortedLists();
 
-    return PopScope(
-      canPop: true, // Allows popping by default
-      onPopInvokedWithResult: (didPop, result) async {
-        if (didPop) return; // If already popped, do nothing
-        if (_isEditMode) {
-          _toggleEditMode();
-          return; // Prevent popping
-        }
-        // Allow default pop behavior when not in edit mode
-      },
-      child: Scaffold(
+    return Scaffold(
         appBar: AppBar(
           title: Text('רשימות',
           style: TextStyle(color: Theme.of(context).colorScheme.onSurface),),
@@ -425,7 +428,6 @@ class _ListsScreenState extends State<ListsScreen> {
           child: const Icon(Icons.add),
         ),
         floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-      ),
     );
   }
 }
