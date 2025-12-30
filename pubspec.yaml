@@ -3,10 +3,10 @@ description: "אפליקציית ערכת הדרכה למדריך"
 
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 
-version: 1.0.6+13
+version: 1.0.6+12
 
 environment:
-  sdk: ^3.9.0
+  sdk: ^3.10.3
 
 
 dependencies:
